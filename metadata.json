@@ -1,0 +1,8 @@
+{
+  "name": "Yakult DP Jember 1 Sales System Pro",
+  "description": "Jember Operation Sales System - Sistem Manajemen Penjualan dan Evaluasi Kinerja Yakult Lady Unit DP Jember 1",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

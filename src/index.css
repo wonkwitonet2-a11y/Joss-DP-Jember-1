@@ -1,0 +1,304 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  font-variant-numeric: normal;
+  -webkit-font-feature-settings: "zero" 0;
+  font-feature-settings: "zero" 0;
+}
+
+body {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Ensure date inputs are always high-contrast and crystal clear across all browsers */
+input[type="date"] {
+  color-scheme: light !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+}
+
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-marquee {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee 16s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Global typography & readability scaling for YL View components */
+.yl-view-root {
+  font-size: 1.025rem;
+}
+
+.yl-view-root .text-\[8px\],
+.yl-view-root .text-\[9px\],
+.yl-view-root .text-\[10px\] {
+  font-size: 0.78rem !important;
+  line-height: 1.1rem !important;
+}
+
+.yl-view-root .text-xs {
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+}
+
+.yl-view-root .text-sm {
+  font-size: 0.98rem !important;
+  line-height: 1.375rem !important;
+}
+
+.yl-view-root .text-base {
+  font-size: 1.125rem !important;
+  line-height: 1.6rem !important;
+}
+
+.yl-view-root .text-lg {
+  font-size: 1.25rem !important;
+  line-height: 1.75rem !important;
+}
+
+.yl-view-root .text-xl {
+  font-size: 1.4rem !important;
+  line-height: 1.85rem !important;
+}
+
+.yl-view-root input,
+.yl-view-root select,
+.yl-view-root button,
+.yl-view-root textarea,
+.yl-view-root td,
+.yl-view-root th {
+  font-family: inherit;
+}
+
+.yl-view-root table td,
+.yl-view-root table th {
+  vertical-align: middle;
+}
+
+/* Mobile Performance & Scrolling Optimizations */
+.fast-scroll {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  scroll-behavior: smooth;
+  will-change: scroll-position;
+}
+
+.sticky-header-gpu {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.optimized-table-row {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 36px;
+}
+
+/* Prevent lag during mobile tap/touch */
+.active-touch-none {
+  touch-action: none;
+}
+
+/* ==========================================================================
+   SLIDE PRESENTATION LIGHT THEME OVERRIDES
+   Memastikan saat tema terang (Putih, Pink Ceria, Biru Muda, Mint, dll.) dipilih,
+   seluruh font isi, kartu, tabel, dan badge terlihat hitam pekat, kontras tinggi,
+   tajam, dan sangat nyaman dibaca di semua slide presentasi (layar proyektor/HP/laptop).
+   ========================================================================== */
+
+.slide-theme-light {
+  color: #0f172a !important;
+}
+
+/* 1. Teks Dasar & Judul: Font Hitam & Gelap Kontras Tinggi */
+.slide-theme-light .text-white {
+  color: #0f172a !important;
+}
+.slide-theme-light .text-slate-100 {
+  color: #0f172a !important;
+}
+.slide-theme-light .text-slate-200 {
+  color: #1e293b !important;
+}
+.slide-theme-light .text-slate-300 {
+  color: #334155 !important;
+}
+.slide-theme-light .text-slate-400 {
+  color: #475569 !important;
+}
+.slide-theme-light .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* 2. Warna Aksen Tulisan (Dibuat Lebih Pekat agar Terbaca Jelas di Background Terang) */
+.slide-theme-light .text-orange-300,
+.slide-theme-light .text-orange-400 {
+  color: #c2410c !important;
+}
+.slide-theme-light .text-amber-200,
+.slide-theme-light .text-amber-300,
+.slide-theme-light .text-amber-400 {
+  color: #b45309 !important;
+}
+.slide-theme-light .text-emerald-400,
+.slide-theme-light .text-emerald-300 {
+  color: #047857 !important;
+}
+.slide-theme-light .text-red-400,
+.slide-theme-light .text-rose-400 {
+  color: #b91c1c !important;
+}
+.slide-theme-light .text-sky-400,
+.slide-theme-light .text-blue-400 {
+  color: #0369a1 !important;
+}
+.slide-theme-light .text-purple-400,
+.slide-theme-light .text-violet-400 {
+  color: #6b21a8 !important;
+}
+
+/* 3. Kartu & Kotak: Diubah Menjadi Kartu Terang Bersih dengan Border Lembut */
+.slide-theme-light [class*="bg-slate-900"],
+.slide-theme-light [class*="bg-slate-950"],
+.slide-theme-light [class*="bg-slate-800"] {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(203, 213, 225, 0.85) !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+}
+
+/* 4. Garis & Border */
+.slide-theme-light [class*="border-slate-800"],
+.slide-theme-light [class*="border-slate-700"],
+.slide-theme-light [class*="border-slate-900"] {
+  border-color: rgba(203, 213, 225, 0.85) !important;
+}
+.slide-theme-light .divide-slate-800,
+.slide-theme-light [class*="divide-slate-800"],
+.slide-theme-light [class*="divide-slate-700"] > * + * {
+  border-color: rgba(226, 232, 240, 0.9) !important;
+}
+
+/* 5. Tabel: Header, Row, Hover */
+.slide-theme-light table thead tr,
+.slide-theme-light table thead th {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+.slide-theme-light table tbody tr {
+  border-color: #e2e8f0 !important;
+}
+.slide-theme-light table tbody tr:hover {
+  background-color: rgba(241, 245, 249, 0.8) !important;
+}
+.slide-theme-light table td {
+  color: #0f172a !important;
+}
+
+/* 6. Badge Status & Tag */
+.slide-theme-light [class*="bg-emerald-500/"] {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
+  border-color: #a7f3d0 !important;
+}
+.slide-theme-light [class*="bg-amber-500/"] {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #fde68a !important;
+}
+.slide-theme-light [class*="bg-orange-500/"] {
+  background-color: #ffedd5 !important;
+  color: #9a3412 !important;
+  border-color: #fed7aa !important;
+}
+.slide-theme-light [class*="bg-red-500/"],
+.slide-theme-light [class*="bg-rose-500/"] {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: #fecaca !important;
+}
+.slide-theme-light [class*="bg-sky-500/"],
+.slide-theme-light [class*="bg-blue-500/"] {
+  background-color: #e0f2fe !important;
+  color: #075985 !important;
+  border-color: #bae6fd !important;
+}
+
+/* 7. Input Form di Slide (Action Plan, dll.) */
+.slide-theme-light input,
+.slide-theme-light textarea,
+.slide-theme-light select {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+.slide-theme-light input::placeholder,
+.slide-theme-light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* 8. Tombol Solid & Elemen yang Tetap Harus Putih */
+.slide-theme-light button[class*="bg-orange-"],
+.slide-theme-light button[class*="bg-emerald-"],
+.slide-theme-light button[class*="bg-red-"],
+.slide-theme-light button[class*="bg-blue-"],
+.slide-theme-light .btn-solid,
+.slide-theme-light .keep-white,
+.slide-theme-light .keep-white * {
+  color: #ffffff !important;
+}
+.slide-theme-light .keep-white-bg {
+  background-color: transparent !important;
+}
+
+/* 9. Recharts SVG Elements di Slide */
+.slide-theme-light .recharts-cartesian-axis-tick text {
+  fill: #334155 !important;
+}
+.slide-theme-light .recharts-legend-item-text {
+  color: #0f172a !important;
+}
+.slide-theme-light .recharts-cartesian-grid line {
+  stroke: #cbd5e1 !important;
+}
+.slide-theme-light .recharts-default-tooltip {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+
