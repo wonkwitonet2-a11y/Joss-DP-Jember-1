@@ -18,7 +18,6 @@ interface AIChatBotProps {
 
 function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatBotProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const isDraggingRef = useRef(false);
 
   // Listen for open-ai-chat event from menus
   useEffect(() => {
@@ -27,6 +26,32 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
     return () => window.removeEventListener("open-ai-chat", handleOpen);
   }, []);
 
+  // Tombol/gestur kembali di HP: saat chat terbuka, kembali = menutup chat (bukan pindah menu di belakangnya).
+  // Chat mendapat satu entri riwayat sendiri; ditutup lewat tombol X -> entri itu dibuang lagi.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    window.history.pushState(
+      { overlay: "ai_chat", scope: window.history.state?.scope },
+      ""
+    );
+
+    const handlePop = (e: PopStateEvent) => {
+      // Tetap terbuka kalau yang dituju entri chat itu sendiri (mis. tombol maju)
+      if (e.state && e.state.overlay === "ai_chat") return;
+      setIsOpen(false);
+    };
+    window.addEventListener("popstate", handlePop);
+
+    return () => {
+      window.removeEventListener("popstate", handlePop);
+      // Ditutup lewat tombol X (entri chat masih di puncak riwayat) -> buang entrinya
+      if (window.history.state && window.history.state.overlay === "ai_chat") {
+        window.history.back();
+      }
+    };
+  }, [isOpen]);
+
   // Dynamic storage key for chat history based on user role and username
   const storageKey = `yakult_chat_history_${role}_${(userName || "user").trim().toLowerCase().replace(/\s+/g, "_")}`;
 
@@ -34,7 +59,9 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
   const createWelcomeMessage = (): Message => ({
     id: "welcome",
     role: "assistant",
-    content: `Halo ${role === "manager" ? "Manager Wito" : "Ibu " + userName}! Saya adalah **${botName}** 🚀. Saya terhubung langsung dengan database Jember 1 Anda.\n\nAnda bisa meminta saya untuk **menganalisa penjualan**, **mengevaluasi kinerja rute**, atau bahkan **bertanya apa saja di luar pekerjaan** seperti resep makanan, tips kesehatan, atau topik lainnya secara bebas. Ada yang bisa saya bantu hari ini?`,
+    content: role === "manager"
+      ? `Halo Manager! Saya adalah **${botName}** 🚀. Saya terhubung langsung dengan database Jember 1 Anda.\n\nAnda bisa meminta saya untuk **menganalisa penjualan**, **mengevaluasi kinerja rute**, atau **menghitung estimasi target & kompensasi** tim. Ada yang bisa saya bantu hari ini?`
+      : `Assalamu'alaikum Ibu ${userName || "Yakult Lady"}! 🌸 Saya adalah **${botName}** 💕.\n\nIbu bisa bertanya mengenai **capaian target penjualan**, **estimasi kompensasi/bonus**, **catatan penjualan harian & arsip Ibu**, atau tips sukses pelanggan di lapangan. Ada yang ingin Ibu tanyakan hari ini?`,
     timestamp: new Date(),
   });
 
@@ -109,7 +136,9 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
     const resetMsg: Message = {
       id: "reset_" + Date.now(),
       role: "assistant",
-      content: `Halo ${role === "manager" ? "Manager Wito" : "Ibu " + userName}! Saya adalah **${botName}** 🚀. Seluruh riwayat percakapan sebelumnya telah **dihapus total** 🧹.\n\nAda yang ingin ditanyakan lagi hari ini?`,
+      content: role === "manager"
+        ? `Halo Manager! Seluruh riwayat percakapan sebelumnya telah dibersihkan 🧹.\n\nAda yang ingin ditanyakan atau dianalisis lagi hari ini?`
+        : `Assalamu'alaikum Ibu ${userName || "Yakult Lady"}! 🌸 Riwayat percakapan sebelumnya telah dibersihkan 🧹.\n\nAda yang ingin ditanyakan lagi hari ini?`,
       timestamp: new Date()
     };
 
@@ -169,11 +198,17 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
     setIsLoading(true);
 
     try {
-      // Prepare history formatted for API
-      const history = (messages || []).map(m => ({
-        role: m.role,
-        content: m.content
-      }));
+      // Prepare history formatted for API (filter out welcome greetings and error warnings)
+      const history = (messages || [])
+        .filter(m => m.id !== "welcome" && !m.id.startsWith("reset_") && !m.content.startsWith("⚠️"))
+        .slice(-8)
+        .map(m => ({
+          role: m.role,
+          content: m.content
+        }));
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
 
       const response = await fetch("/api/ai/chat", {
         method: "POST",
@@ -184,9 +219,12 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
           message: text,
           history: history,
           role: role,
-          user_name: userName
-        })
+          user_name: userName,
+          bot_name: botName
+        }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       const data = await parseJsonResponse(response);
 
@@ -202,11 +240,14 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
         throw new Error(data?.error || "Gagal memperoleh balasan dari AI.");
       }
     } catch (err: any) {
-      console.error(err);
+      console.warn("AI Chat fetch error:", err);
+      const isTimeout = err?.name === "AbortError";
       const errorMessage: Message = {
         id: Math.random().toString(36).substring(7),
         role: "assistant",
-        content: `⚠️ Maaf, terjadi kesalahan koneksi. Pastikan koneksi internet Anda stabil atau silakan coba lagi beberapa saat lagi.`,
+        content: isTimeout
+          ? "⚠️ Respon membutuhkan waktu lebih dari biasanya. Silakan coba tanyakan kembali."
+          : `⚠️ Maaf, terjadi kesalahan koneksi jaringan. Silakan coba kirim ulang dalam beberapa saat.`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -221,7 +262,7 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
       {isOpen && (
         <motion.div
           id="ai-chatbot-window"
-          className="fixed inset-0 z-[9999] w-screen h-screen h-dvh bg-white flex flex-col overflow-hidden animate-fadeInUp"
+          className="fixed inset-0 z-[9999] w-screen h-screen h-dvh bg-white dark:bg-neutral-950 flex flex-col overflow-hidden animate-fadeInUp"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -229,10 +270,10 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
           }}
         >
           {/* Header */}
-          <div className="p-3.5 sm:p-4 pt-safe bg-gradient-to-r from-red-800 via-rose-900 to-rose-950 border-b border-red-700 flex justify-between items-center text-white shrink-0">
+          <div className="p-3.5 sm:p-4 pt-safe bg-slate-900 border-b border-slate-800 flex justify-between items-center text-white shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-red-600 rounded-lg shadow-inner">
-                <Sparkles className="w-5 h-5 text-yellow-300" />
+              <div className="p-2 bg-blue-600/20 border border-blue-500/30 rounded-xl shadow-xs">
+                <Sparkles className="w-5 h-5 text-blue-400" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -241,22 +282,22 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
                     <History className="w-2.5 h-2.5" /> Histori Tersimpan
                   </span>
                 </div>
-                <p className="text-xs text-red-200 font-bold">Asisten Pintar & Analis Data</p>
+                <p className="text-xs text-slate-400 font-bold">Asisten Pintar & Analis Data</p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={handleOpenConfirmDelete}
-                className="px-2.5 py-1.5 bg-red-950/90 hover:bg-red-900 text-rose-100 rounded-lg border border-red-600/70 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+                className="px-2.5 py-1.5 bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 rounded-xl border border-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
                 title="Hapus Total Seluruh Riwayat Chat"
               >
-                <Trash2 className="w-3.5 h-3.5 text-rose-300" />
+                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
                 <span className="text-xs">Hapus Chat</span>
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-white/10 rounded-lg text-red-100 transition-colors cursor-pointer"
+                className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors cursor-pointer"
                 title="Tutup Chat"
               >
                 <X className="w-5 h-5" />
@@ -310,7 +351,7 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
           )}
 
           {/* Messages Body */}
-          <div className="flex-1 min-h-0 p-3.5 overflow-y-auto bg-slate-50 space-y-3.5">
+          <div className="flex-1 min-h-0 p-3.5 overflow-y-auto bg-slate-50 dark:bg-neutral-950 space-y-3.5">
             {(messages || []).map((m) => {
               const formattedTime = (() => {
                 try {
@@ -328,28 +369,28 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
                   className={`flex gap-2 max-w-[88%] sm:max-w-[85%] ${m.role === "user" ? "ml-auto flex-row-reverse" : "mr-auto"}`}
                 >
                   {m.role === "assistant" && (
-                    <div className="w-6 h-6 rounded-lg bg-red-100 text-red-700 flex items-center justify-center shrink-0 border border-red-200 mt-1">
+                    <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0 border border-blue-200 dark:border-blue-800 mt-1">
                       <Bot className="w-3.5 h-3.5" />
                     </div>
                   )}
                   <div
                     className={`p-3 rounded-xl text-base leading-relaxed shadow-sm border ${
                       m.role === "user"
-                        ? "bg-red-600 text-white border-red-500 rounded-tr-none"
-                        : "bg-white text-slate-800 border-slate-150 rounded-tl-none"
+                        ? "bg-blue-600 text-white border-blue-500 rounded-tr-none"
+                        : "bg-white text-slate-800 border-slate-150 rounded-tl-none dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700"
                     }`}
                   >
                     {/* Simplistic markdown bold parser to keep code fully static and robust */}
                     {m.content.split("\n").map((para, pIdx) => (
                       <p key={pIdx} className={pIdx > 0 ? "mt-1.5" : ""}>
                         {para.split("**").map((text, tIdx) => 
-                          tIdx % 2 === 1 ? <strong key={tIdx} className={`font-extrabold px-0.5 rounded ${m.role === "user" ? "text-yellow-200 bg-red-700/80" : "text-red-950 bg-red-50"}`}>{text}</strong> : text
+                          tIdx % 2 === 1 ? <strong key={tIdx} className={`font-extrabold px-0.5 rounded ${m.role === "user" ? "text-cyan-200 bg-blue-700/80" : "text-blue-950 bg-blue-50 dark:text-blue-200 dark:bg-blue-950/60"}`}>{text}</strong> : text
                         )}
                       </p>
                     ))}
 
                     {formattedTime && (
-                      <div className={`text-[9.5px] font-mono font-medium mt-1.5 text-right ${m.role === "user" ? "text-red-200" : "text-slate-400"}`}>
+                      <div className={`text-[9.5px] font-mono font-medium mt-1.5 text-right ${m.role === "user" ? "text-blue-200" : "text-slate-400 dark:text-neutral-400"}`}>
                         {formattedTime}
                       </div>
                     )}
@@ -360,13 +401,13 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
 
             {isLoading && (
               <div className="flex gap-2 max-w-[80%] mr-auto items-center">
-                <div className="w-6 h-6 rounded-lg bg-red-100 text-red-700 flex items-center justify-center border border-red-200">
+                <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center justify-center border border-blue-200 dark:border-blue-800">
                   <Bot className="w-3.5 h-3.5 animate-bounce" />
                 </div>
-                <div className="p-3 bg-white text-slate-500 rounded-xl rounded-tl-none shadow-sm border border-slate-150 text-sm font-bold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                <div className="p-3 bg-white dark:bg-neutral-800 text-slate-500 dark:text-neutral-200 rounded-xl rounded-tl-none shadow-sm border border-slate-150 dark:border-neutral-700 text-sm font-bold flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
                   <span>AI sedang menganalisis...</span>
                 </div>
               </div>
@@ -375,13 +416,13 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
           </div>
 
           {/* Quick suggestions */}
-          <div className="px-3 py-2 bg-white border-t border-slate-100 overflow-x-auto whitespace-nowrap flex gap-1.5 scrollbar-thin shrink-0">
+          <div className="px-3 py-2 bg-white dark:bg-neutral-900 border-t border-slate-100 dark:border-neutral-800 overflow-x-auto whitespace-nowrap flex gap-1.5 scrollbar-thin shrink-0">
             {quickPrompts.map((p, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSendMessage(p.text)}
                 disabled={isLoading}
-                className="inline-flex items-center gap-1 bg-slate-50 hover:bg-red-50 hover:text-red-700 border border-slate-200 hover:border-red-200 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-600 transition-all cursor-pointer whitespace-nowrap active:scale-95 disabled:opacity-50"
+                className="inline-flex items-center gap-1 bg-slate-50 dark:bg-neutral-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-700 dark:hover:text-blue-200 border border-slate-200 dark:border-neutral-700 hover:border-blue-200 dark:hover:border-blue-800 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-600 dark:text-neutral-200 transition-all cursor-pointer whitespace-nowrap active:scale-95 disabled:opacity-50"
               >
                 {p.label}
               </button>
@@ -394,7 +435,7 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
               e.preventDefault();
               handleSendMessage(inputValue);
             }}
-            className="p-2 pb-safe border-t border-slate-100 bg-white flex gap-2 shrink-0"
+            className="p-2 pb-safe border-t border-slate-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex gap-2 shrink-0"
           >
             <input
               type="text"
@@ -402,12 +443,12 @@ function AIChatBotInner({ role, userName, botName = "AI Jember 1 Pro" }: AIChatB
               onChange={(e) => setInputValue(e.target.value)}
               placeholder={`Tanya ${botName} (Contoh: analisa penjualan / resep bakso)...`}
               disabled={isLoading}
-              className="flex-1 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-500 focus:bg-white disabled:opacity-50"
+              className="flex-1 px-3 py-2.5 bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-xl text-base font-medium text-slate-800 dark:text-neutral-100 placeholder-slate-400 dark:placeholder-neutral-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-neutral-800 disabled:opacity-50"
             />
             <button
               type="submit"
               disabled={isLoading || !inputValue.trim()}
-              className="p-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center shrink-0"
+              className="p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center shrink-0"
             >
               <Send className="w-4 h-4" />
             </button>

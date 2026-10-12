@@ -42,17 +42,17 @@ export const SpreadsheetInputBar: React.FC<SpreadsheetInputBarProps> = ({
   return (
     <div
       data-spreadsheet-bar="true"
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-300 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] p-2 sm:px-4 flex flex-col gap-1.5 animate-in slide-in-from-bottom duration-150 select-none"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-300 dark:border-neutral-700 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] p-2 sm:px-4 flex flex-col gap-1.5 animate-in slide-in-from-bottom duration-150 select-none"
     >
       <div className="max-w-4xl mx-auto w-full flex items-center justify-between gap-2">
         {/* Cell Identifier Badge */}
         <div className="flex items-center gap-1.5 shrink-0 max-w-[40%] sm:max-w-none truncate">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold font-mono truncate shadow-xs">
-            <Calculator size={13} className="shrink-0 text-blue-600" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800 text-xs font-bold font-mono truncate shadow-xs">
+            <Calculator size={13} className="shrink-0 text-brand-600 dark:text-brand-400" />
             <span className="truncate">{cellLabel || `R${activeCell.r + 1} : C${activeCell.c + 1}`}</span>
           </span>
           {!isEditable && (
-            <span className="text-[11px] font-semibold text-slate-500 hidden sm:inline">
+            <span className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 hidden sm:inline">
               (Rumus Otomatis)
             </span>
           )}
@@ -64,7 +64,7 @@ export const SpreadsheetInputBar: React.FC<SpreadsheetInputBarProps> = ({
             <button
               type="button"
               onClick={onPrev}
-              className="p-1.5 hover:bg-slate-100 active:bg-slate-200 rounded-lg text-slate-600 border border-slate-200 transition-colors cursor-pointer"
+              className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 rounded-lg text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 transition-colors cursor-pointer"
               title="Kolom Sebelumnya (Shift+Tab)"
             >
               <ChevronLeft size={16} />
@@ -74,7 +74,7 @@ export const SpreadsheetInputBar: React.FC<SpreadsheetInputBarProps> = ({
             <button
               type="button"
               onClick={onNext}
-              className="p-1.5 hover:bg-slate-100 active:bg-slate-200 rounded-lg text-slate-600 border border-slate-200 transition-colors cursor-pointer"
+              className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 rounded-lg text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 transition-colors cursor-pointer"
               title="Kolom Selanjutnya (Tab / Enter)"
             >
               <ChevronRight size={16} />
@@ -84,7 +84,7 @@ export const SpreadsheetInputBar: React.FC<SpreadsheetInputBarProps> = ({
             <button
               type="button"
               onClick={() => onChange(0)}
-              className="p-1.5 hover:bg-rose-50 active:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+              className="p-1.5 hover:bg-rose-50 active:bg-rose-100 text-neutral-500 dark:text-neutral-400 hover:text-rose-600 rounded-lg border border-neutral-200 dark:border-neutral-800 transition-colors cursor-pointer"
               title="Kosongkan / Reset ke 0"
             >
               <X size={16} />
@@ -94,7 +94,7 @@ export const SpreadsheetInputBar: React.FC<SpreadsheetInputBarProps> = ({
             <button
               type="button"
               onClick={onDone}
-              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-sm"
+              className="px-3 py-1 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-sm"
               title="Selesai (Tutup Keyboard)"
             >
               <Check size={14} />
@@ -142,8 +142,8 @@ export const SpreadsheetInputBar: React.FC<SpreadsheetInputBarProps> = ({
             }}
             className={`w-full px-3.5 py-1.5 text-base sm:text-lg font-black font-mono rounded-xl border transition-all outline-none ${
               isEditable
-                ? "bg-blue-50/40 text-slate-900 border-blue-300 focus:bg-white focus:border-blue-600 focus:ring-3 focus:ring-blue-100"
-                : "bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed"
+                ? "bg-brand-50/40 dark:bg-brand-950/40 text-neutral-900 dark:text-neutral-100 border-brand-300 dark:border-brand-700 focus:bg-white dark:focus:bg-neutral-900 focus:border-brand-600 dark:focus:border-brand-400 focus:ring-3 focus:ring-brand-100 dark:focus:ring-brand-900/40"
+                : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 cursor-not-allowed"
             }`}
           />
         </div>

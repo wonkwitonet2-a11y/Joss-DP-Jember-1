@@ -382,28 +382,6 @@ export function getFallbackEvaluasiData(month?: string): EvaluasiData {
   const realMap = getStoredBreakdownRealisasi(currentM);
   const prevRealMap = getStoredBreakdownRealisasi(prevMonthKey);
 
-  const getSalesFromRealMap = (map: any, areaKey: string, dayNum: number): number => {
-    let aData = map[areaKey];
-    if (!aData) {
-      const k = Object.keys(map).find(x => x === areaKey || x.startsWith(areaKey) || areaKey.startsWith(x));
-      if (k) aData = map[k];
-    }
-    const dObj = aData?.days?.[String(dayNum)];
-    if (!dObj) return 0;
-    return (Number(dObj.yo) || 0) + (Number(dObj.om) || 0) + (Number(dObj.os) || 0) + (Number(dObj.yt) || 0);
-  };
-
-  const getDateWithOffsetLocal = (baseMonth: string, baseDay: number, offsetDays: number) => {
-    const [ys, ms] = baseMonth.split("-");
-    const y = parseInt(ys, 10);
-    const mIdx = parseInt(ms, 10) - 1;
-    const d = new Date(y, mIdx, baseDay - offsetDays);
-    const resY = d.getFullYear();
-    const resM = String(d.getMonth() + 1).padStart(2, "0");
-    const resD = d.getDate();
-    return { monthKey: `${resY}-${resM}`, day: resD };
-  };
-
   const dataRows = ylList.map(y => {
     const area = y.area;
     let areaData = realMap[area];

@@ -5,9 +5,10 @@ interface JossLogoProps {
   compact?: boolean;
   className?: string;
   animated?: boolean;
+  inverted?: boolean;
 }
 
-export default function JossLogo({ size = 40, compact = false, className = "", animated = false }: JossLogoProps) {
+export default function JossLogo({ size = 40, compact = false, className = "", animated = false, inverted = false }: JossLogoProps) {
   return (
     <svg
       width={size}
@@ -66,7 +67,7 @@ export default function JossLogo({ size = 40, compact = false, className = "", a
           }
         `}</style>
       )}
-      <rect width="200" height="200" rx="44" fill="#0F172A" />
+      <rect width="200" height="200" rx="44" fill={inverted ? "#FFFFFF" : "#0F172A"} />
       {/* Top Cyan Ring */}
       <circle
         cx="100"
@@ -81,7 +82,7 @@ export default function JossLogo({ size = 40, compact = false, className = "", a
       <path
         d="M 54 110 C 54 84, 84 80, 100 96 C 116 112, 134 114, 146 84"
         fill="none"
-        stroke="#FFFFFF"
+        stroke={inverted ? "#0F172A" : "#FFFFFF"}
         strokeWidth="22"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -100,3 +101,5 @@ export default function JossLogo({ size = 40, compact = false, className = "", a
     </svg>
   );
 }
+
+export { JossLogo };

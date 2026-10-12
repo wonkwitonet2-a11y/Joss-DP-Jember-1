@@ -1,19 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import {
-  Bell,
-  Cake,
-  AlertTriangle,
-  CheckCircle2,
-  Trash2,
-  X,
-  ChevronDown,
-  ChevronUp,
-  RotateCcw,
-  Sparkles,
-  Calendar,
-  AlertCircle,
-  ExternalLink
-} from "lucide-react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Bell, Cake, AlertTriangle, CheckCircle2, Trash2, X, ChevronDown, ChevronUp, RotateCcw, Sparkles } from "lucide-react";
 import { safeFetchJson } from "../lib/safeFetch";
 import { saveToSupabase, loadFromSupabase } from "../lib/supabaseClient";
 
@@ -195,13 +181,13 @@ export function NotificationBell({
           const id = `bday_${yl.area || yl.nama}_${targetDate.getFullYear()}_${birth.month}_${birth.day}`;
 
           let countdownLabel = `H-${days}`;
-          let badgeColor = "bg-rose-100 text-rose-700 border-rose-200";
+          let badgeColor = "bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800";
           if (isToday) {
             countdownLabel = "🎉 HARI INI!";
             badgeColor = "bg-red-500 text-white border-red-600 animate-pulse";
           } else if (isTomorrow) {
             countdownLabel = "⏰ BESOK (H-1)";
-            badgeColor = "bg-amber-100 text-amber-800 border-amber-300";
+            badgeColor = "bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700";
           }
 
           list.push({
@@ -250,8 +236,8 @@ export function NotificationBell({
         subtitle,
         badgeText: unfilled.length > 0 ? `⚠️ ${unfilled.length} Hari Kosong` : `⚡ ${mismatch.length} Hari Selisih`,
         badgeColor: unfilled.length > 0
-          ? "bg-rose-50 text-rose-700 border-rose-200"
-          : "bg-amber-50 text-amber-700 border-amber-200",
+          ? "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
+          : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
         unfilledDates: unfilled,
         mismatchDates: mismatch,
         details: item.details || []
@@ -332,19 +318,19 @@ export function NotificationBell({
             fetchPotensiNotifications();
           }
         }}
-        className={`relative flex items-center justify-center p-2 rounded-xl transition-all duration-200 cursor-pointer shadow-md ${
+        className={`relative flex items-center justify-center p-2 rounded-xl transition-all duration-200 cursor-pointer shadow-xs ${
           unreadCount > 0
-            ? "bg-red-950/40 hover:bg-red-900/60 border border-red-500/70 text-white"
-            : "bg-black/20 hover:bg-black/40 border border-white/20 text-white"
+            ? "bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/50 dark:hover:bg-brand-900/50 border border-brand-300 dark:border-brand-700 text-brand-700 dark:text-brand-300"
+            : "bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 text-brand-600 dark:text-brand-300"
         }`}
         title={unreadCount > 0 ? `${unreadCount} Notifikasi Penting` : "Notifikasi"}
         aria-label="Notifikasi"
       >
-        <Bell className={`w-5 h-5 ${unreadCount > 0 ? "animate-wiggle text-red-200" : "text-white"}`} />
+        <Bell className={`w-4 h-4 text-brand-600 dark:text-brand-300 ${unreadCount > 0 ? "animate-wiggle" : ""}`} />
 
-        {/* Tanda Titik / Badge Merah */}
+        {/* Tanda Titik / Badge */}
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[20px] h-5 px-1 bg-red-600 border-2 border-slate-900 rounded-full text-[10px] font-black text-white shadow-lg animate-pulse">
+          <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-4.5 px-1 bg-brand-600 border-2 border-white dark:border-neutral-900 rounded-full text-[9px] font-bold text-white shadow-md animate-pulse">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -352,25 +338,25 @@ export function NotificationBell({
 
       {/* Modal / Flyout Notifikasi */}
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-start justify-center sm:justify-end sm:pr-6 sm:pt-16 p-3 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center sm:justify-end sm:pr-6 sm:pt-16 p-3 bg-neutral-950/70 backdrop-blur-xs animate-in fade-in duration-150">
           <div
-            className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200"
+            className="w-full max-w-lg bg-neutral-900 dark:bg-neutral-950 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200 text-neutral-100"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="p-4 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white flex items-center justify-between shadow-md">
+            <div className="p-4 bg-neutral-900 dark:bg-neutral-950 border-b border-neutral-800 text-white flex items-center justify-between shadow-xs">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-xs">
-                  <Bell className="w-5 h-5 text-white" />
+                <div className="p-2 bg-brand-600/20 border border-brand-500/30 rounded-xl">
+                  <Bell className="w-5 h-5 text-brand-400" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-sm sm:text-base leading-tight">Pusat Notifikasi</h3>
-                    <span className="bg-white/25 text-white text-[11px] font-black px-2 py-0.5 rounded-full">
+                    <h3 className="font-bold text-sm sm:text-base leading-tight text-white">Pusat Notifikasi</h3>
+                    <span className="bg-brand-500/20 border border-brand-500/30 text-brand-400 text-[11px] font-bold px-2 py-0.5 rounded-full">
                       {activeNotifications.length} Aktif
                     </span>
                   </div>
-                  <p className="text-[11px] text-red-100 font-medium">
+                  <p className="text-[11px] text-neutral-400 font-medium">
                     {role === "yl" ? "Pengingat Realisasi Potensi" : "Pengingat Ultah (H-7) & Realisasi Potensi"}
                   </p>
                 </div>
@@ -386,14 +372,14 @@ export function NotificationBell({
             </div>
 
             {/* Filter Tabs & Quick Action */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="p-3 bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200 dark:border-neutral-700/60 flex flex-wrap items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setActiveFilter("all")}
                   className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                     activeFilter === "all"
-                      ? "bg-red-600 text-white shadow-sm"
-                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100"
+                      ? "bg-brand-600 text-white shadow-sm"
+                      : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
                   }`}
                 >
                   Semua ({showHistory ? dismissedNotifications.length : activeNotifications.length})
@@ -404,7 +390,7 @@ export function NotificationBell({
                     className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${
                       activeFilter === "birthday"
                         ? "bg-rose-600 text-white shadow-sm"
-                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100"
+                        : "bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                     }`}
                   >
                     <span>🎂</span>
@@ -416,7 +402,7 @@ export function NotificationBell({
                   className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${
                     activeFilter === "potensi"
                       ? "bg-amber-600 text-white shadow-sm"
-                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100"
+                      : "bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                   }`}
                 >
                   <span>🎯</span>
@@ -428,7 +414,7 @@ export function NotificationBell({
                 {!showHistory && activeNotifications.length > 0 && (
                   <button
                     onClick={handleDismissAll}
-                    className="text-slate-500 hover:text-red-600 dark:text-slate-400 font-bold text-[11px] px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
+                    className="text-neutral-500 hover:text-red-600 dark:text-neutral-400 font-bold text-[11px] px-2 py-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center gap-1 cursor-pointer"
                     title="Hapus / Tandai Selesai Semua"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -440,8 +426,8 @@ export function NotificationBell({
                   onClick={() => setShowHistory(!showHistory)}
                   className={`text-[11px] font-bold px-2 py-1 rounded transition-colors cursor-pointer ${
                     showHistory
-                      ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                      : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
+                      ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
+                      : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-100 dark:text-neutral-400"
                   }`}
                   title="Lihat riwayat notifikasi yang telah dihapus"
                 >
@@ -453,7 +439,7 @@ export function NotificationBell({
             {/* Notification List Body */}
             <div className="flex-1 overflow-y-auto p-3 space-y-2.5 divide-y divide-transparent">
               {isLoading && (
-                <div className="py-8 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+                <div className="py-8 text-center text-neutral-400 text-xs flex flex-col items-center gap-2">
                   <div className="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
                   <span>Memeriksa data notifikasi...</span>
                 </div>
@@ -461,13 +447,13 @@ export function NotificationBell({
 
               {!isLoading && displayedNotifications.length === 0 && (
                 <div className="py-12 px-4 text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 mx-auto flex items-center justify-center mb-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center mb-3">
                     <CheckCircle2 className="w-7 h-7" />
                   </div>
-                  <h4 className="font-extrabold text-sm text-slate-800 dark:text-slate-200">
+                  <h4 className="font-bold text-sm text-neutral-800 dark:text-neutral-200">
                     {showHistory ? "Tidak ada riwayat notifikasi terhapus." : "Semua Sudah Beres & Bersih!"}
                   </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 max-w-xs mx-auto">
                     {showHistory
                       ? "Notifikasi yang Anda hapus akan tercatat di sini dan tersimpan aman di Supabase."
                       : role === "yl"
@@ -487,8 +473,8 @@ export function NotificationBell({
                       key={notif.id}
                       className={`rounded-2xl border p-3.5 transition-all shadow-xs ${
                         isBirthday
-                          ? "bg-gradient-to-br from-rose-50/70 via-white to-pink-50/50 dark:from-rose-950/20 dark:via-slate-800 dark:to-pink-950/10 border-rose-200 dark:border-rose-900/40"
-                          : "bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700/70 hover:border-amber-300 dark:hover:border-amber-700/60"
+                          ? "bg-gradient-to-br from-rose-50/70 via-white to-pink-50/50 dark:from-rose-950/20 dark:via-neutral-800 dark:to-pink-950/10 border-rose-200 dark:border-rose-900/40"
+                          : "bg-white dark:bg-neutral-800/90 border-neutral-200 dark:border-neutral-700/70 hover:border-amber-300 dark:hover:border-amber-700/60"
                       }`}
                     >
                       {/* Top Bar of Card */}
@@ -506,20 +492,20 @@ export function NotificationBell({
 
                           <div>
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-900 text-white">
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-neutral-900 dark:bg-neutral-950 text-white">
                                 Area {notif.area}
                               </span>
                               <span
-                                className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${notif.badgeColor}`}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${notif.badgeColor}`}
                               >
                                 {notif.badgeText}
                               </span>
                             </div>
 
-                            <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100 mt-1 leading-snug">
+                            <h4 className="font-bold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100 mt-1 leading-snug">
                               {notif.title}
                             </h4>
-                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                            <p className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">
                               {notif.subtitle}
                             </p>
                           </div>
@@ -530,7 +516,7 @@ export function NotificationBell({
                           {showHistory ? (
                             <button
                               onClick={() => handleRestore(notif.id)}
-                              className="p-1.5 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all cursor-pointer"
+                              className="p-1.5 text-neutral-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all cursor-pointer"
                               title="Pulihkan notifikasi ini ke daftar aktif"
                             >
                               <RotateCcw className="w-4 h-4" />
@@ -538,7 +524,7 @@ export function NotificationBell({
                           ) : (
                             <button
                               onClick={() => handleDismiss(notif.id)}
-                              className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
+                              className="p-1.5 text-neutral-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
                               title="Hapus / Tutup notifikasi ini"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -549,7 +535,7 @@ export function NotificationBell({
 
                       {/* Detail Section for Potensi (Expandable) */}
                       {!isBirthday && notif.details && notif.details.length > 0 && (
-                        <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+                        <div className="mt-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-700/60">
                           <button
                             onClick={() => toggleExpand(notif.id)}
                             className="text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
@@ -572,7 +558,7 @@ export function NotificationBell({
                                     }`}
                                   >
                                     <div>
-                                      <span className="font-black font-sans bg-slate-900 text-white px-1.5 py-0.5 rounded text-[10px] mr-1.5">
+                                      <span className="font-bold font-sans bg-neutral-900 dark:bg-neutral-950 text-white px-1.5 py-0.5 rounded text-[10px] mr-1.5">
                                         Tgl {d.date}
                                       </span>
                                       <span>
@@ -613,14 +599,14 @@ export function NotificationBell({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <div className="p-3 bg-neutral-50 dark:bg-neutral-800/80 border-t border-neutral-200 dark:border-neutral-700 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
               <span className="text-[10px]">
                 ☁️ Riwayat hapus tersinkron ke Supabase Cloud
               </span>
               {showHistory && dismissedIds.length > 0 && (
                 <button
                   onClick={handleRestoreAll}
-                  className="text-red-600 dark:text-red-400 font-black hover:underline cursor-pointer text-[11px]"
+                  className="text-red-600 dark:text-red-400 font-bold hover:underline cursor-pointer text-[11px]"
                 >
                   Pulihkan Semua
                 </button>

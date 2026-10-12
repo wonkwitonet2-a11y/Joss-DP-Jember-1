@@ -1,18 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { YLLady, Transaction, MotivasiConfig } from "../types";
-import { safeFetchJson, parseJsonResponse } from "../lib/safeFetch";
+import { safeFetchJson } from "../lib/safeFetch";
 import { NumberInput } from "./NumberInput";
-import {
-  Users,
-  Building2,
-  School,
-  Store,
-  Award,
-  PieChart,
-  TrendingUp,
-  FileSpreadsheet,
-  Download
-} from "lucide-react";
+import { MenuTitleIcon } from "./AppSidebar";
+import { Users, Building2, School, Store, Award, PieChart, FileSpreadsheet } from "lucide-react";
 import { downloadBlob } from "../utils/fileDownloader";
 
 interface PlgPjlViewProps {
@@ -344,32 +335,32 @@ function PlgPjlViewInner({
     {
       key: "rmh",
       label: "RUMAH",
-      bgColor: "bg-amber-100 text-slate-950 font-bold"
+      bgColor: "bg-amber-100 dark:bg-amber-900/50 text-neutral-950 dark:text-neutral-100 font-bold"
     },
     {
       key: "psr",
       label: "PASAR",
-      bgColor: "bg-yellow-200 text-slate-950 font-bold"
+      bgColor: "bg-yellow-200 dark:bg-yellow-900/40 text-neutral-950 dark:text-neutral-100 font-bold"
     },
     {
       key: "skh",
       label: "SEKOLAH",
-      bgColor: "bg-sky-100 text-slate-950 font-bold"
+      bgColor: "bg-sky-100 dark:bg-sky-900/50 text-neutral-950 dark:text-neutral-100 font-bold"
     },
     {
       key: "ktr",
       label: "KANTOR",
-      bgColor: "bg-emerald-100 text-slate-950 font-bold"
+      bgColor: "bg-emerald-100 dark:bg-emerald-900/50 text-neutral-950 dark:text-neutral-100 font-bold"
     },
     {
       key: "tk",
       label: "TOKO",
-      bgColor: "bg-indigo-100 text-slate-950 font-bold"
+      bgColor: "bg-indigo-100 dark:bg-indigo-900/50 text-neutral-950 dark:text-neutral-100 font-bold"
     },
     {
       key: "ib",
       label: "IB",
-      bgColor: "bg-pink-100 text-slate-950 font-bold"
+      bgColor: "bg-pink-100 dark:bg-pink-900/50 text-neutral-950 dark:text-neutral-100 font-bold"
     }
   ];
 
@@ -502,28 +493,28 @@ function PlgPjlViewInner({
   return (
     <div className="space-y-6 pb-12">
       {/* Top Header Card */}
-      <div className="bg-white dark:bg-white rounded-2xl p-4 md:p-5 border border-slate-200 shadow-md space-y-4 text-slate-900">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-cyan-500 pl-3">
+      <div className="bd-card p-4 md:p-5 space-y-4 text-neutral-900 dark:text-neutral-100">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <PieChart className="w-5 h-5 text-cyan-600" />
-              <h2 className="text-base font-black text-slate-900 uppercase tracking-wider">
+              <MenuTitleIcon id="plg_pjl" />
+              <h2 className="bd-title uppercase">
                 LAPORAN PELANGGAN & PENJUALAN
               </h2>
             </div>
-            <p className="text-xs text-slate-600 font-bold">
+            <p className="bd-sub font-medium">
               Analisis akumulasi penjualan per potensi, rasio kunjungan, pelanggan, dan ketercapaian tembus.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 flex items-center gap-1.5">
-              <span className="text-cyan-700 font-black text-sm">📅 {pembagi} Hari</span>
+            <div className="bd-field text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5 font-mono tabular-nums">
+              <span className="text-brand-700 dark:text-brand-300 font-bold text-sm">📅 {pembagi} Hari</span>
             </div>
 
             <button
               onClick={handleDownloadExcel}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all shadow cursor-pointer flex items-center gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow cursor-pointer flex items-center gap-1.5"
               title="Unduh Laporan Format Excel: plg pjl(laporan Dp 1)"
             >
               <FileSpreadsheet className="w-4 h-4" />
@@ -533,15 +524,15 @@ function PlgPjlViewInner({
         </div>
 
         {/* Dropdown Selector for All Active YLs + TKU DP 1 */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-          <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5 min-w-[120px]">
-            <Users className="w-4 h-4 text-cyan-600" />
+        <div className="bd-subcard p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-1.5 min-w-[120px]">
+            <Users className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
             <span>Pilih YL / Unit:</span>
           </label>
           <select
             value={selectedArea}
             onChange={(e) => setSelectedArea(e.target.value)}
-            className="flex-1 bg-white text-slate-950 font-extrabold text-sm border-2 border-cyan-500 rounded-xl px-3 py-2 focus:ring-2 focus:ring-cyan-400 outline-none cursor-pointer shadow-sm"
+            className="flex-1 bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white font-bold text-sm border-2 border-cyan-500 rounded-xl px-3 py-2 focus:ring-2 focus:ring-cyan-400 outline-none cursor-pointer shadow-sm"
           >
             <option value="TKU_DP1">
               🏆 TKU DP 1 - TOTAL TIM KESELURUHAN ({activeYlList.length} YL)
@@ -556,29 +547,29 @@ function PlgPjlViewInner({
       </div>
 
       {/* Main Table Container matching Excel Layout with Crisp Grid Lines */}
-      <div className="bg-white rounded-2xl border-2 border-slate-400 shadow-md overflow-hidden text-slate-900">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-300 dark:border-neutral-800 shadow-md overflow-hidden text-neutral-900 dark:text-neutral-100">
         <div className="overflow-x-auto">
           <table className="w-full text-xs sm:text-sm font-bold border-collapse min-w-[700px]">
             <thead>
               {/* Header Row matching bright cyan Excel format with clear borders */}
-              <tr className="bg-cyan-400 text-slate-950 font-black text-xs sm:text-sm border-b-2 border-slate-900 divide-x-2 divide-slate-900">
-                <th className="p-2.5 text-left uppercase w-48 border-r-2 border-slate-900">
+              <tr className="bg-cyan-500 text-neutral-950 font-bold text-xs sm:text-sm border-b-2 border-neutral-900 divide-x-2 divide-neutral-900">
+                <th className="p-2.5 text-left uppercase w-48 border-r-2 border-neutral-900">
                   {isTkuDp1 ? "TKU DP 1 (TOTAL TIM)" : `${selectedArea} \u00a0 ${cleanYlName(currentYl.nama)}`}
                 </th>
-                <th className="p-2.5 text-right uppercase w-24 border-r-2 border-slate-900">AKM</th>
-                <th className="p-2.5 text-right uppercase w-24 border-r-2 border-slate-900 bg-cyan-300">
+                <th className="p-2.5 text-right uppercase w-24 border-r-2 border-neutral-900 font-mono">AKM</th>
+                <th className="p-2.5 text-right uppercase w-24 border-r-2 border-neutral-900 bg-cyan-400 font-mono">
                   SUB AKM
                 </th>
-                <th className="p-2.5 text-right uppercase w-28 border-r-2 border-slate-900">RATA RATA</th>
-                <th className="p-2.5 text-right uppercase w-28 border-r-2 border-slate-900 bg-cyan-300">
+                <th className="p-2.5 text-right uppercase w-28 border-r-2 border-neutral-900 font-mono">RATA RATA</th>
+                <th className="p-2.5 text-right uppercase w-28 border-r-2 border-neutral-900 bg-cyan-400 font-mono">
                   SUB RATA
                 </th>
-                <th className="p-2.5 text-right uppercase w-28 border-r-2 border-slate-900">PERSEN</th>
-                <th className="p-2.5 text-right uppercase w-28">SUB PERSEN</th>
+                <th className="p-2.5 text-right uppercase w-28 border-r-2 border-neutral-900 font-mono">PERSEN</th>
+                <th className="p-2.5 text-right uppercase w-28 font-mono">SUB PERSEN</th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-300">
+            <tbody className="divide-y divide-neutral-300">
               {sectorConfigs.map((sec) => {
                 const sData = sectorsData[sec.key as keyof typeof sectorsData];
                 const subAkm = sData.yo + sData.om + sData.os + sData.yt;
@@ -606,18 +597,18 @@ function PlgPjlViewInner({
                       return (
                         <tr
                           key={`${sec.key}_${prod.code}`}
-                          className={`${sec.bgColor} border-b border-slate-400 hover:brightness-95 transition-all`}
+                          className={`${sec.bgColor} border-b border-neutral-400 dark:border-neutral-600 hover:brightness-95 transition-all`}
                         >
                           {/* 1. Item Name */}
-                          <td className="p-2 border-r-2 border-slate-400 font-extrabold uppercase pl-4 text-slate-900">
+                          <td className="p-2 border-r-2 border-neutral-400 dark:border-neutral-600 font-bold uppercase pl-4 text-neutral-900 dark:text-neutral-100">
                             {prod.label}
                           </td>
 
                           {/* 2. AKM Row */}
-                          <td className="p-0 border-r border-slate-400 font-black text-slate-900">
+                          <td className="p-0 border-r border-neutral-400 dark:border-neutral-600 font-black font-mono tabular-nums text-neutral-900 dark:text-neutral-100">
                             {historicalData?.editableAkm && !isTkuDp1 ? (
                               <NumberInput
-                                className="w-full h-full p-2 text-right bg-yellow-50 outline-none focus:bg-yellow-200 focus:ring-2 focus:ring-yellow-500 font-black text-slate-900 border-none"
+                                className="w-full h-full p-2 text-right bg-yellow-50 dark:bg-yellow-950/40 outline-none focus:bg-yellow-200 dark:focus:bg-yellow-900/50 focus:ring-2 focus:ring-yellow-500 font-black font-mono tabular-nums text-neutral-900 dark:text-neutral-100 border-none"
                                 value={valAkm}
                                 onChange={(val) => historicalData.onAkmChange?.(currentYl.nama, sec.key, prod.code, val)}
                                 onPaste={(e) => {
@@ -628,7 +619,7 @@ function PlgPjlViewInner({
                                 }}
                               />
                             ) : (
-                              <div className="p-2 text-right">{fmtInt(valAkm)}</div>
+                              <div className="p-2 text-right font-mono tabular-nums">{fmtInt(valAkm)}</div>
                             )}
                           </td>
 
@@ -636,14 +627,14 @@ function PlgPjlViewInner({
                           {pIdx === 0 && (
                             <td
                               rowSpan={4}
-                              className="p-2 text-right border-r-2 border-slate-400 font-black text-sm sm:text-base bg-slate-100/90 text-slate-950 align-middle shadow-inner"
+                              className="p-2 text-right border-r-2 border-neutral-400 dark:border-neutral-600 font-black font-mono tabular-nums text-sm sm:text-base bg-neutral-100/90 dark:bg-neutral-800/90 text-neutral-950 dark:text-white align-middle shadow-inner"
                             >
                               {fmtInt(subAkm)}
                             </td>
                           )}
 
                           {/* 4. RATA RATA Row */}
-                          <td className="p-2 text-right border-r border-slate-400 font-black text-slate-900">
+                          <td className="p-2 text-right border-r border-neutral-400 dark:border-neutral-600 font-black font-mono tabular-nums text-neutral-900 dark:text-neutral-100">
                             {fmtDec(valRata)}
                           </td>
 
@@ -651,14 +642,14 @@ function PlgPjlViewInner({
                           {pIdx === 0 && (
                             <td
                               rowSpan={4}
-                              className="p-2 text-right border-r-2 border-slate-400 font-black text-sm sm:text-base bg-slate-100/90 text-slate-950 align-middle shadow-inner"
+                              className="p-2 text-right border-r-2 border-neutral-400 dark:border-neutral-600 font-black font-mono tabular-nums text-sm sm:text-base bg-neutral-100/90 dark:bg-neutral-800/90 text-neutral-950 dark:text-white align-middle shadow-inner"
                             >
                               {fmtDec(subRata)}
                             </td>
                           )}
 
                           {/* 6. PERSEN Row */}
-                          <td className="p-2 text-right border-r border-slate-400 font-black text-slate-900">
+                          <td className="p-2 text-right border-r border-neutral-400 dark:border-neutral-600 font-black font-mono tabular-nums text-neutral-900 dark:text-neutral-100">
                             {fmtPct(valPct)}
                           </td>
 
@@ -666,7 +657,7 @@ function PlgPjlViewInner({
                           {pIdx === 0 && (
                             <td
                               rowSpan={4}
-                              className="p-2 text-right font-black text-sm sm:text-base bg-slate-100/90 text-slate-950 align-middle shadow-inner"
+                              className="p-2 text-right font-black font-mono tabular-nums text-sm sm:text-base bg-neutral-100/90 dark:bg-neutral-800/90 text-neutral-950 dark:text-white align-middle shadow-inner"
                             >
                               {fmtPct(subPct)}
                             </td>
@@ -679,41 +670,41 @@ function PlgPjlViewInner({
               })}
 
               {/* GRAND TOTAL ROW matching Cyan Excel Footer */}
-              <tr className="bg-cyan-400 text-slate-950 font-black text-xs sm:text-sm border-t-2 border-b-2 border-slate-950">
-                <td className="p-2 border-r-2 border-slate-950 uppercase">TOTAL YO</td>
-                <td className="p-2 text-right border-r border-slate-950">{fmtInt(totalYo)}</td>
-                <td rowSpan={4} className="p-2 text-right border-r-2 border-slate-950 bg-cyan-300 font-black text-base sm:text-lg align-middle">
+              <tr className="bg-cyan-500 text-neutral-950 font-bold text-xs sm:text-sm border-t-2 border-b-2 border-neutral-950">
+                <td className="p-2 border-r-2 border-neutral-950 uppercase">TOTAL YO</td>
+                <td className="p-2 text-right border-r border-neutral-950 font-mono tabular-nums">{fmtInt(totalYo)}</td>
+                <td rowSpan={4} className="p-2 text-right border-r-2 border-neutral-950 bg-cyan-400 font-black font-mono tabular-nums text-base sm:text-lg align-middle">
                   {fmtInt(grandTotal)}
                 </td>
-                <td className="p-2 text-right border-r border-slate-950">{fmtDec(pembagi > 0 ? totalYo / pembagi : 0)}</td>
-                <td rowSpan={4} className="p-2 text-right border-r-2 border-slate-950 bg-cyan-300 font-black text-base sm:text-lg align-middle">
+                <td className="p-2 text-right border-r border-neutral-950 font-mono tabular-nums">{fmtDec(pembagi > 0 ? totalYo / pembagi : 0)}</td>
+                <td rowSpan={4} className="p-2 text-right border-r-2 border-neutral-950 bg-cyan-400 font-black font-mono tabular-nums text-base sm:text-lg align-middle">
                   {fmtDec(pembagi > 0 ? grandTotal / pembagi : 0)}
                 </td>
-                <td className="p-2 text-right border-r border-slate-950">100,00%</td>
-                <td rowSpan={4} className="p-2 text-right bg-cyan-300 font-black text-base sm:text-lg align-middle">
+                <td className="p-2 text-right border-r border-neutral-950 font-mono tabular-nums">100,00%</td>
+                <td rowSpan={4} className="p-2 text-right bg-cyan-400 font-black font-mono tabular-nums text-base sm:text-lg align-middle">
                   100,00%
                 </td>
               </tr>
 
-              <tr className="bg-cyan-400 text-slate-950 font-black text-xs sm:text-sm border-b border-slate-950">
-                <td className="p-2 border-r-2 border-slate-950 uppercase">TOTAL OM</td>
-                <td className="p-2 text-right border-r border-slate-950">{fmtInt(totalOm)}</td>
-                <td className="p-2 text-right border-r border-slate-950">{fmtDec(pembagi > 0 ? totalOm / pembagi : 0)}</td>
-                <td className="p-2 text-right border-r border-slate-950">100,00%</td>
+              <tr className="bg-cyan-500 text-neutral-950 font-bold text-xs sm:text-sm border-b border-neutral-950">
+                <td className="p-2 border-r-2 border-neutral-950 uppercase">TOTAL OM</td>
+                <td className="p-2 text-right border-r border-neutral-950 font-mono tabular-nums">{fmtInt(totalOm)}</td>
+                <td className="p-2 text-right border-r border-neutral-950 font-mono tabular-nums">{fmtDec(pembagi > 0 ? totalOm / pembagi : 0)}</td>
+                <td className="p-2 text-right border-r border-neutral-950 font-mono tabular-nums">100,00%</td>
               </tr>
 
-              <tr className="bg-cyan-400 text-slate-950 font-black text-xs sm:text-sm border-b border-slate-950">
-                <td className="p-2 border-r-2 border-slate-950 uppercase">TOTAL OS</td>
-                <td className="p-2 text-right border-r border-slate-950">{fmtInt(totalOs)}</td>
-                <td className="p-2 text-right border-r border-slate-950">{fmtDec(pembagi > 0 ? totalOs / pembagi : 0)}</td>
-                <td className="p-2 text-right border-r border-slate-950">100,00%</td>
+              <tr className="bg-cyan-500 text-neutral-950 font-bold text-xs sm:text-sm border-b border-neutral-950">
+                <td className="p-2 border-r-2 border-neutral-950 uppercase">TOTAL OS</td>
+                <td className="p-2 text-right border-r border-neutral-950 font-mono tabular-nums">{fmtInt(totalOs)}</td>
+                <td className="p-2 text-right border-r border-neutral-950 font-mono tabular-nums">{fmtDec(pembagi > 0 ? totalOs / pembagi : 0)}</td>
+                <td className="p-2 text-right border-r border-neutral-950 font-mono tabular-nums">100,00%</td>
               </tr>
 
-              <tr className="bg-cyan-400 text-slate-950 font-black text-xs sm:text-sm border-b-2 border-slate-950">
-                <td className="p-2 border-r-2 border-slate-950 uppercase">TOTAL YT</td>
-                <td className="p-2 text-right border-r border-slate-950">{fmtInt(totalYt)}</td>
-                <td className="p-2 text-right border-r border-slate-950">{fmtDec(pembagi > 0 ? totalYt / pembagi : 0)}</td>
-                <td className="p-2 text-right border-r border-slate-950">100,00%</td>
+              <tr className="bg-cyan-500 text-neutral-950 font-bold text-xs sm:text-sm border-b-2 border-neutral-950">
+                <td className="p-2 border-r-2 border-neutral-950 uppercase">TOTAL YT</td>
+                <td className="p-2 text-right border-r border-neutral-950 font-mono tabular-nums">{fmtInt(totalYt)}</td>
+                <td className="p-2 text-right border-r border-neutral-950 font-mono tabular-nums">{fmtDec(pembagi > 0 ? totalYt / pembagi : 0)}</td>
+                <td className="p-2 text-right border-r border-neutral-950 font-mono tabular-nums">100,00%</td>
               </tr>
             </tbody>
           </table>
@@ -721,168 +712,168 @@ function PlgPjlViewInner({
       </div>
 
       {/* Detail Metrics & Otomatis dari YLs Section Below Table */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 [&>*]:min-w-0">
         {/* Left Card: Summary Metrics & Percentages */}
-        <div className="bg-white dark:bg-white rounded-2xl p-4 border border-slate-200 shadow-md space-y-3 text-slate-900">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-            <Award className="w-4 h-4 text-cyan-600" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-md space-y-3 text-neutral-900 dark:text-neutral-100">
+          <div className="flex items-center gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-2">
+            <Award className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-900 dark:text-white">
               METRIK PELANGGAN, KUNJUNGAN & RASIO (%)
             </h3>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-bold">
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-[10px] text-slate-600 block uppercase font-bold">JML PELANGGAN</span>
+            <div className="bg-neutral-50 dark:bg-neutral-800/60 p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+              <span className="text-[10px] text-neutral-600 dark:text-neutral-400 block uppercase font-bold">JML PELANGGAN</span>
               {historicalData?.editableAkm && !isTkuDp1 ? (
                 <NumberInput
-                  className="w-full text-sm font-black text-slate-950 bg-white border border-slate-300 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-cyan-500 shadow-inner"
+                  className="w-full text-sm font-black font-mono tabular-nums text-neutral-950 dark:text-white bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-cyan-500 shadow-inner"
                   value={totalPlg}
                   onChange={(val) => historicalData.onTxFieldChange?.(currentYl.nama, "f_plg", val)}
                 />
               ) : (
-                <span className="text-sm font-black text-slate-950">{fmtInt(totalPlg)}</span>
+                <span className="text-sm font-black font-mono tabular-nums text-neutral-950 dark:text-white">{fmtInt(totalPlg)}</span>
               )}
             </div>
 
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-[10px] text-slate-600 block uppercase font-bold">RK (Kunjungan)</span>
+            <div className="bg-neutral-50 dark:bg-neutral-800/60 p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+              <span className="text-[10px] text-neutral-600 dark:text-neutral-400 block uppercase font-bold">RK (Kunjungan)</span>
               {historicalData?.editableAkm && !isTkuDp1 ? (
                 <NumberInput
-                  className="w-full text-sm font-black text-slate-950 bg-white border border-slate-300 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-cyan-500 shadow-inner"
+                  className="w-full text-sm font-black font-mono tabular-nums text-neutral-950 dark:text-white bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-cyan-500 shadow-inner"
                   value={totalRk}
                   onChange={(val) => historicalData.onTxFieldChange?.(currentYl.nama, "f_rk", val)}
                 />
               ) : (
-                <span className="text-sm font-black text-slate-950">{fmtInt(totalRk)}</span>
+                <span className="text-sm font-black font-mono tabular-nums text-neutral-950 dark:text-white">{fmtInt(totalRk)}</span>
               )}
             </div>
 
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-[10px] text-slate-600 block uppercase font-bold">RA (Rumah Ada)</span>
+            <div className="bg-neutral-50 dark:bg-neutral-800/60 p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+              <span className="text-[10px] text-neutral-600 dark:text-neutral-400 block uppercase font-bold">RA (Rumah Ada)</span>
               {historicalData?.editableAkm && !isTkuDp1 ? (
                 <NumberInput
-                  className="w-full text-sm font-black text-slate-950 bg-white border border-slate-300 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-cyan-500 shadow-inner"
+                  className="w-full text-sm font-black font-mono tabular-nums text-neutral-950 dark:text-white bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-cyan-500 shadow-inner"
                   value={totalRa}
                   onChange={(val) => historicalData.onTxFieldChange?.(currentYl.nama, "f_ra", val)}
                 />
               ) : (
-                <span className="text-sm font-black text-slate-950">{fmtInt(totalRa)}</span>
+                <span className="text-sm font-black font-mono tabular-nums text-neutral-950 dark:text-white">{fmtInt(totalRa)}</span>
               )}
             </div>
 
-            <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 shadow-sm">
-              <span className="text-[10px] text-amber-800 block uppercase font-bold">RB (Rumah Beli)</span>
+            <div className="bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-xl border border-amber-200 dark:border-amber-800 shadow-sm">
+              <span className="text-[10px] text-amber-800 dark:text-amber-300 block uppercase font-bold">RB (Rumah Beli)</span>
               {historicalData?.editableAkm && !isTkuDp1 ? (
                 <NumberInput
-                  className="w-full text-sm font-black text-amber-950 bg-white border border-amber-300 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-amber-500 shadow-inner"
+                  className="w-full text-sm font-black font-mono tabular-nums text-amber-950 dark:text-amber-200 bg-white dark:bg-neutral-800 border border-amber-300 dark:border-amber-700 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-amber-500 shadow-inner"
                   value={totalRb}
                   onChange={(val) => historicalData.onTxFieldChange?.(currentYl.nama, "f_rb", val)}
                 />
               ) : (
-                <span className="text-sm font-black text-amber-950">{fmtInt(totalRb)}</span>
+                <span className="text-sm font-black font-mono tabular-nums text-amber-950 dark:text-amber-200">{fmtInt(totalRb)}</span>
               )}
             </div>
 
-            <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 shadow-sm">
-              <span className="text-[10px] text-emerald-800 block uppercase font-bold">PB (Propaganda)</span>
+            <div className="bg-emerald-50 dark:bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 shadow-sm">
+              <span className="text-[10px] text-emerald-800 dark:text-emerald-300 block uppercase font-bold">PB (Propaganda)</span>
               {historicalData?.editableAkm && !isTkuDp1 ? (
                 <NumberInput
-                  className="w-full text-sm font-black text-emerald-950 bg-white border border-emerald-300 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner"
+                  className="w-full text-sm font-black font-mono tabular-nums text-emerald-950 dark:text-emerald-200 bg-white dark:bg-neutral-800 border border-emerald-300 dark:border-emerald-700 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner"
                   value={totalPb}
                   onChange={(val) => historicalData.onTxFieldChange?.(currentYl.nama, "pb_p", val)}
                 />
               ) : (
-                <span className="text-sm font-black text-emerald-950">{fmtInt(totalPb)}</span>
+                <span className="text-sm font-black font-mono tabular-nums text-emerald-950 dark:text-emerald-200">{fmtInt(totalPb)}</span>
               )}
             </div>
 
-            <div className="bg-rose-50 p-2.5 rounded-xl border border-rose-200 shadow-sm">
-              <span className="text-[10px] text-rose-800 block uppercase font-bold">BB (Barang Kembali)</span>
+            <div className="bg-rose-50 dark:bg-rose-950/30 p-2.5 rounded-xl border border-rose-200 dark:border-rose-800 shadow-sm">
+              <span className="text-[10px] text-rose-800 dark:text-rose-300 block uppercase font-bold">BB (Barang Kembali)</span>
               {historicalData?.editableAkm && !isTkuDp1 ? (
                 <NumberInput
-                  className="w-full text-sm font-black text-rose-950 bg-white border border-rose-300 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-rose-500 shadow-inner"
+                  className="w-full text-sm font-black font-mono tabular-nums text-rose-950 dark:text-rose-200 bg-white dark:bg-neutral-800 border border-rose-300 dark:border-rose-700 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-rose-500 shadow-inner"
                   value={totalBb}
                   onChange={(val) => historicalData.onTxFieldChange?.(currentYl.nama, "bb_yo", val)}
                 />
               ) : (
-                <span className="text-sm font-black text-rose-950">{fmtInt(totalBb)}</span>
+                <span className="text-sm font-black font-mono tabular-nums text-rose-950 dark:text-rose-200">{fmtInt(totalBb)}</span>
               )}
             </div>
 
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-[10px] text-slate-600 block uppercase font-bold">PELANGGAN APK</span>
+            <div className="bg-neutral-50 dark:bg-neutral-800/60 p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+              <span className="text-[10px] text-neutral-600 dark:text-neutral-400 block uppercase font-bold">PELANGGAN APK</span>
               {historicalData?.editableAkm && !isTkuDp1 ? (
                 <NumberInput
-                  className="w-full text-sm font-black text-slate-950 bg-white border border-slate-300 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-cyan-500 shadow-inner"
+                  className="w-full text-sm font-black font-mono tabular-nums text-neutral-950 dark:text-white bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-cyan-500 shadow-inner"
                   value={totalPlgApk}
                   onChange={(val) => historicalData.onTxFieldChange?.(currentYl.nama, "apk_plg", val)}
                 />
               ) : (
-                <span className="text-sm font-black text-slate-950">{fmtInt(totalPlgApk)}</span>
+                <span className="text-sm font-black font-mono tabular-nums text-neutral-950 dark:text-white">{fmtInt(totalPlgApk)}</span>
               )}
             </div>
 
-            <div className="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 shadow-sm col-span-2">
-              <span className="text-[10px] text-indigo-800 block uppercase font-bold">SAMPAH BOTOL</span>
+            <div className="bg-indigo-50 dark:bg-indigo-950/30 p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 shadow-sm col-span-2">
+              <span className="text-[10px] text-indigo-800 dark:text-indigo-300 block uppercase font-bold">SAMPAH BOTOL</span>
               {historicalData?.editableAkm && !isTkuDp1 ? (
                 <NumberInput
-                  className="w-full text-sm font-black text-indigo-950 bg-white border border-indigo-300 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
+                  className="w-full text-sm font-black font-mono tabular-nums text-indigo-950 dark:text-indigo-200 bg-white dark:bg-neutral-800 border border-indigo-300 dark:border-indigo-700 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
                   value={totalSampahBotol}
                   onChange={(val) => historicalData.onTxFieldChange?.(currentYl.nama, "apk_botol", val)}
                 />
               ) : (
-                <span className="text-sm font-black text-indigo-950">{fmtInt(totalSampahBotol)}</span>
+                <span className="text-sm font-black font-mono tabular-nums text-indigo-950 dark:text-indigo-200">{fmtInt(totalSampahBotol)}</span>
               )}
             </div>
           </div>
 
           {/* Calculated Percentages Table */}
           <div className="pt-2">
-            <h4 className="text-[11px] font-black uppercase text-slate-800 mb-2">
+            <h4 className="text-[11px] font-bold uppercase text-neutral-800 dark:text-neutral-200 mb-2">
               📊 PERSENTASE RASIO KUNJUNGAN & TRANSAKSI:
             </h4>
-            <div className="grid grid-cols-3 gap-2 text-xs font-bold">
-              <div className="flex items-center justify-between bg-cyan-50 p-2 rounded-lg border border-cyan-200 shadow-sm">
-                <span className="text-cyan-900 font-bold">% RA vs RK:</span>
-                <span className="font-black text-cyan-950 text-sm">{fmtPct(pctRaVsRk)}</span>
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-3 md:grid-cols-1 xl:grid-cols-3 gap-2 text-xs font-bold font-mono tabular-nums [&>*]:min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 bg-cyan-50 dark:bg-cyan-950/40 p-2 rounded-lg border border-cyan-200 dark:border-cyan-800 shadow-sm">
+                <span className="text-cyan-900 dark:text-cyan-300 font-bold font-sans">% RA vs RK:</span>
+                <span className="font-bold text-cyan-950 dark:text-cyan-200 text-sm">{fmtPct(pctRaVsRk)}</span>
               </div>
 
-              <div className="flex items-center justify-between bg-cyan-50 p-2 rounded-lg border border-cyan-200 shadow-sm">
-                <span className="text-cyan-900 font-bold">% RB vs RA:</span>
-                <span className="font-black text-cyan-950 text-sm">{fmtPct(pctRbVsRa)}</span>
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 bg-cyan-50 dark:bg-cyan-950/40 p-2 rounded-lg border border-cyan-200 dark:border-cyan-800 shadow-sm">
+                <span className="text-cyan-900 dark:text-cyan-300 font-bold font-sans">% RB vs RA:</span>
+                <span className="font-bold text-cyan-950 dark:text-cyan-200 text-sm">{fmtPct(pctRbVsRa)}</span>
               </div>
 
-              <div className="flex items-center justify-between bg-cyan-50 p-2 rounded-lg border border-cyan-200 shadow-sm">
-                <span className="text-cyan-900 font-bold">% RB vs Pelanggan:</span>
-                <span className="font-black text-cyan-950 text-sm">{fmtPct(pctRbVsPlg)}</span>
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 bg-cyan-50 dark:bg-cyan-950/40 p-2 rounded-lg border border-cyan-200 dark:border-cyan-800 shadow-sm">
+                <span className="text-cyan-900 dark:text-cyan-300 font-bold font-sans">% RB vs Pelanggan:</span>
+                <span className="font-bold text-cyan-950 dark:text-cyan-200 text-sm">{fmtPct(pctRbVsPlg)}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Right Card: Otomatis dari YLs for Sekolah, Kantor, Toko & Tembus */}
-        <div className="bg-white dark:bg-white rounded-2xl p-4 border border-slate-200 shadow-md space-y-3 flex flex-col justify-between text-slate-900">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-md space-y-3 flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
           <div className="space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
               <div className="flex items-center gap-2">
-                <School className="w-4 h-4 text-cyan-600" />
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                <School className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-900 dark:text-white">
                   {isTkuDp1
                     ? "TOTAL AKUMULASI LEMBAGA & TEMBUS (TKU DP 1)"
                     : `AKUMULASI LEMBAGA & TEMBUS (${selectedArea})`}
                 </h3>
               </div>
-              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                 isTkuDp1
-                  ? "text-cyan-800 bg-cyan-100 border-cyan-300"
-                  : "text-amber-800 bg-amber-100 border-amber-300"
+                  ? "text-cyan-800 dark:text-cyan-300 bg-cyan-100 dark:bg-cyan-950/60 border-cyan-300 dark:border-cyan-800"
+                  : "text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800"
               }`}>
                 {isTkuDp1 ? "Total Otomatis Tim" : "Otomatis dari YL"}
               </span>
             </div>
 
-            <p className="text-[11px] text-slate-600 font-medium">
+            <p className="text-[11px] text-neutral-600 dark:text-neutral-400 font-medium">
               {isTkuDp1
                 ? `Menampilkan total gabungan lembaga & tembus dari seluruh ${activeYlList.length} YL aktif.`
                 : "Menampilkan total kunjungan lembaga dan tembus dari YL yang dipilih."}
@@ -891,84 +882,84 @@ function PlgPjlViewInner({
             {/* Manual Form Controls */}
             <div className="space-y-3 pt-1">
               {/* 1. Sekolah */}
-              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2">
-                <label className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                  <School className="w-3.5 h-3.5 text-sky-600" />
+              <div className="bg-neutral-50 dark:bg-neutral-800/60 p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 space-y-2">
+                <label className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
+                  <School className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
                   <span>TOTAL SKLH / TEMBUS:</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <span className="text-[10px] text-slate-600 block mb-0.5 font-bold">Total Sekolah</span>
+                    <span className="text-[10px] text-neutral-600 dark:text-neutral-400 block mb-0.5 font-bold">Total Sekolah</span>
                     <NumberInput
                       disabled={!historicalData?.editableAkm || isTkuDp1}
                       value={manualSklhTotal}
                       onChange={(val) => historicalData?.onPotensiChange?.(currentYl.nama, "skhTotal", val)}
-                      className="w-full bg-white text-slate-950 font-extrabold text-xs border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none disabled:bg-slate-100 disabled:opacity-80 disabled:cursor-not-allowed shadow-sm"
+                      className="w-full bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white font-extrabold font-mono tabular-nums text-xs border border-neutral-300 dark:border-neutral-600 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none disabled:bg-neutral-100 dark:disabled:bg-neutral-900 disabled:opacity-80 disabled:cursor-not-allowed shadow-sm"
                     />
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-600 block mb-0.5 font-bold">Sekolah Tembus</span>
+                    <span className="text-[10px] text-neutral-600 dark:text-neutral-400 block mb-0.5 font-bold">Sekolah Tembus</span>
                     <NumberInput
                       disabled={!historicalData?.editableAkm || isTkuDp1}
                       value={manualSklhTembus}
                       onChange={(val) => historicalData?.onPotensiChange?.(currentYl.nama, "skhTembus", val)}
-                      className="w-full bg-white text-slate-950 font-extrabold text-xs border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none disabled:bg-slate-100 disabled:opacity-80 disabled:cursor-not-allowed shadow-sm"
+                      className="w-full bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white font-extrabold font-mono tabular-nums text-xs border border-neutral-300 dark:border-neutral-600 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none disabled:bg-neutral-100 dark:disabled:bg-neutral-900 disabled:opacity-80 disabled:cursor-not-allowed shadow-sm"
                     />
                   </div>
                 </div>
               </div>
 
               {/* 2. Kantor */}
-              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2">
-                <label className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="bg-neutral-50 dark:bg-neutral-800/60 p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 space-y-2">
+                <label className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>TOTAL KNTR / TEMBUS:</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <span className="text-[10px] text-slate-600 block mb-0.5 font-bold">Total Kantor</span>
+                    <span className="text-[10px] text-neutral-600 dark:text-neutral-400 block mb-0.5 font-bold">Total Kantor</span>
                     <NumberInput
                       disabled={!historicalData?.editableAkm || isTkuDp1}
                       value={manualKntrTotal}
                       onChange={(val) => historicalData?.onPotensiChange?.(currentYl.nama, "kntrTotal", val)}
-                      className="w-full bg-white text-slate-950 font-extrabold text-xs border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none disabled:bg-slate-100 disabled:opacity-80 disabled:cursor-not-allowed shadow-sm"
+                      className="w-full bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white font-extrabold font-mono tabular-nums text-xs border border-neutral-300 dark:border-neutral-600 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none disabled:bg-neutral-100 dark:disabled:bg-neutral-900 disabled:opacity-80 disabled:cursor-not-allowed shadow-sm"
                     />
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-600 block mb-0.5 font-bold">Kantor Tembus</span>
+                    <span className="text-[10px] text-neutral-600 dark:text-neutral-400 block mb-0.5 font-bold">Kantor Tembus</span>
                     <NumberInput
                       disabled={!historicalData?.editableAkm || isTkuDp1}
                       value={manualKntrTembus}
                       onChange={(val) => historicalData?.onPotensiChange?.(currentYl.nama, "kntrTembus", val)}
-                      className="w-full bg-white text-slate-950 font-extrabold text-xs border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none disabled:bg-slate-100 disabled:opacity-80 disabled:cursor-not-allowed shadow-sm"
+                      className="w-full bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white font-extrabold font-mono tabular-nums text-xs border border-neutral-300 dark:border-neutral-600 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none disabled:bg-neutral-100 dark:disabled:bg-neutral-900 disabled:opacity-80 disabled:cursor-not-allowed shadow-sm"
                     />
                   </div>
                 </div>
               </div>
 
               {/* 3. Toko */}
-              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2">
-                <label className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                  <Store className="w-3.5 h-3.5 text-indigo-600" />
+              <div className="bg-neutral-50 dark:bg-neutral-800/60 p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 space-y-2">
+                <label className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
+                  <Store className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>TOTAL TKO / TEMBUS:</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <span className="text-[10px] text-slate-600 block mb-0.5 font-bold">Total Toko</span>
+                    <span className="text-[10px] text-neutral-600 dark:text-neutral-400 block mb-0.5 font-bold">Total Toko</span>
                     <NumberInput
                       disabled={!historicalData?.editableAkm || isTkuDp1}
                       value={manualTkoTotal}
                       onChange={(val) => historicalData?.onPotensiChange?.(currentYl.nama, "tkoTotal", val)}
-                      className="w-full bg-white text-slate-950 font-extrabold text-xs border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none disabled:bg-slate-100 disabled:opacity-80 disabled:cursor-not-allowed shadow-sm"
+                      className="w-full bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white font-extrabold font-mono tabular-nums text-xs border border-neutral-300 dark:border-neutral-600 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none disabled:bg-neutral-100 dark:disabled:bg-neutral-900 disabled:opacity-80 disabled:cursor-not-allowed shadow-sm"
                     />
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-600 block mb-0.5 font-bold">Toko Tembus</span>
+                    <span className="text-[10px] text-neutral-600 dark:text-neutral-400 block mb-0.5 font-bold">Toko Tembus</span>
                     <NumberInput
                       disabled={!historicalData?.editableAkm || isTkuDp1}
                       value={manualTkoTembus}
                       onChange={(val) => historicalData?.onPotensiChange?.(currentYl.nama, "tkoTembus", val)}
-                      className="w-full bg-white text-slate-950 font-extrabold text-xs border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none disabled:bg-slate-100 disabled:opacity-80 disabled:cursor-not-allowed shadow-sm"
+                      className="w-full bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white font-extrabold font-mono tabular-nums text-xs border border-neutral-300 dark:border-neutral-600 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none disabled:bg-neutral-100 dark:disabled:bg-neutral-900 disabled:opacity-80 disabled:cursor-not-allowed shadow-sm"
                     />
                   </div>
                 </div>

@@ -39,34 +39,34 @@ function TargetManagerRowInner({
   };
 
   return (
-    <tr className="hover:bg-amber-50/50 transition-colors">
+    <tr className="bd-row hover:bg-[var(--bg-hover)] transition-colors">
       <td
         data-r={idx}
-        className="p-2.5 border-r-2 border-slate-300 bg-slate-50/80 cursor-pointer hover:bg-amber-100 transition-colors select-none"
+        className="bd-td-name"
         onClick={() => selectTargetRow(idx)}
       >
-        <span className="text-red-700 font-black mr-2">{yl.area}</span>
-        <span className="text-slate-950 font-black">{cleanYlName(yl.nama)}</span>
+        <span className="bd-td-code">{yl.area}</span>
+        <span>{cleanYlName(yl.nama)}</span>
       </td>
       <td
         {...cellProps0}
-        className={`p-1.5 text-center border-r border-slate-300 font-black text-slate-900 select-none relative ${cellProps0.className || ""}`}
+        className={`bd-td bd-num select-none relative ${cellProps0.className || ""}`}
       >
-        <span className="block truncate">{formatVal(ylTgt.target)}</span>
+        <span className="block truncate font-bold text-neutral-900 dark:text-white">{formatVal(ylTgt.target)}</span>
         {renderTargetSelectionHandle && renderTargetSelectionHandle(idx, 0)}
       </td>
       <td
         {...cellProps1}
-        className={`p-1.5 text-center border-r border-slate-300 font-black text-slate-900 select-none relative ${cellProps1.className || ""}`}
+        className={`bd-td bd-num select-none relative ${cellProps1.className || ""}`}
       >
-        <span className="block truncate">{formatVal(ylTgt.bln_lalu)}</span>
+        <span className="block truncate font-bold text-neutral-900 dark:text-white">{formatVal(ylTgt.bln_lalu)}</span>
         {renderTargetSelectionHandle && renderTargetSelectionHandle(idx, 1)}
       </td>
       <td
         {...cellProps2}
-        className={`p-1.5 text-center border-r border-slate-300 font-black text-slate-900 select-none relative ${cellProps2.className || ""}`}
+        className={`bd-td bd-num select-none relative ${cellProps2.className || ""}`}
       >
-        <span className="block truncate">{formatVal(ylTgt.thn_lalu)}</span>
+        <span className="block truncate font-bold text-neutral-900 dark:text-white">{formatVal(ylTgt.thn_lalu)}</span>
         {renderTargetSelectionHandle && renderTargetSelectionHandle(idx, 2)}
       </td>
     </tr>

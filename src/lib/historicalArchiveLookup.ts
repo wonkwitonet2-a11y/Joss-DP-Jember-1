@@ -433,7 +433,6 @@ export function getPreviousYearDataSync(
   const mPad = String(mNum).padStart(2, "0");
   const ymKey = `${prevYearStr}-${mPad}`;
   const monthKey = MONTH_KEYS[monthIndex] || "jan";
-  const mKey = monthKey;
   const mLabel = MONTH_LABELS[monthIndex] || "Bulan";
 
   if (memoryCache[ymKey]) {

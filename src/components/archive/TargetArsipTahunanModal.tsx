@@ -3,7 +3,7 @@
 // FILE BARU (revisi ke-3) — modal "Arsip Target Tahunan".
 //
 // Perbaikan revisi ini:
-// 1. Semua input diberi warna teks tegas (text-slate-900 + bg-white) supaya kebaca.
+// 1. Semua input diberi warna teks tegas (text-neutral-900 + bg-white) supaya kebaca.
 // 2. AKM Target = Σ target rata-rata harian (hanya area yang aktif di ylList arsip
 //    bulan itu, supaya key basi tidak ikut membengkakkan total) x hari kalender bulan itu.
 // 3. Tabel 2 "Vs Tahun Lalu": baris "AKM Realisasi" SEKARANG SAMA PERSIS dengan baris
@@ -36,7 +36,7 @@ interface TargetArsipTahunanModalProps {
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 const INPUT_CLASS =
-  "w-16 text-center text-[11px] p-1 rounded border border-amber-300 bg-white text-slate-900 font-bold";
+  "w-16 text-center text-[11px] p-1 rounded border border-amber-300 dark:border-amber-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-bold";
 
 function formatNum(v: number): string {
   if (!v && v !== 0) return "0";
@@ -45,7 +45,7 @@ function formatNum(v: number): string {
 
 function pctBadgeClass(pct: number): string {
   if (pct >= 100) return "bg-green-600 text-white";
-  if (pct <= 0) return "bg-slate-300 text-slate-600";
+  if (pct <= 0) return "bg-neutral-300 dark:bg-neutral-600 text-neutral-600 dark:text-neutral-400";
   return "bg-red-600 text-white";
 }
 
@@ -174,9 +174,9 @@ export function TargetArsipTahunanModal({ onClose, defaultYear }: TargetArsipTah
 
   /** Sel ringkasan (Sem 1 / Sem 2 / Tahunan) — angka + badge % di bawahnya, warna teks selalu tegas. */
   const renderSummaryCell = (value: number, pct: number, bgClass: string, key: string) => (
-    <td key={key} className={`p-1.5 text-center font-black text-slate-900 border-l-2 border-emerald-300 ${bgClass}`}>
+    <td key={key} className={`p-1.5 text-center font-bold text-neutral-900 dark:text-neutral-100 border-l-2 border-emerald-300 dark:border-emerald-700 ${bgClass}`}>
       <div>{formatNum(value)}</div>
-      <div className={`text-[9px] font-black mt-0.5 rounded px-1 inline-block ${pctBadgeClass(pct)}`}>
+      <div className={`text-[9px] font-bold mt-0.5 rounded px-1 inline-block ${pctBadgeClass(pct)}`}>
         {pct > 0 ? formatPercentTruncated(pct, 2) : "0,00%"}
       </div>
     </td>
@@ -195,14 +195,14 @@ export function TargetArsipTahunanModal({ onClose, defaultYear }: TargetArsipTah
       return (
         <td key={m} className="p-1 text-center">
           {readOnlyValues ? (
-            <div className="w-16 mx-auto text-center text-[11px] p-1 rounded border border-slate-200 bg-slate-50 text-slate-900 font-bold">
+            <div className="w-16 mx-auto text-center text-[11px] p-1 rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40 text-neutral-900 dark:text-neutral-100 font-bold">
               {formatNum(val)}
             </div>
           ) : (
             <NumberInput value={val} onChange={(v) => updateManualField(field, m, v)} className={INPUT_CLASS} />
           )}
           {pctRowValues && (
-            <div className={`text-[9px] font-black mt-0.5 rounded px-1 ${pctBadgeClass(pctRowValues[m - 1])}`}>
+            <div className={`text-[9px] font-bold mt-0.5 rounded px-1 ${pctBadgeClass(pctRowValues[m - 1])}`}>
               {pctRowValues[m - 1] > 0 ? formatPercentTruncated(pctRowValues[m - 1], 2) : "0,00%"}
             </div>
           )}
@@ -211,13 +211,13 @@ export function TargetArsipTahunanModal({ onClose, defaultYear }: TargetArsipTah
     };
 
     return (
-      <tr className="bg-amber-50/60">
-        <td className="p-2 font-black text-slate-700 sticky left-0 bg-amber-50/90">{label}</td>
+      <tr className="bg-amber-50/60 dark:bg-amber-950/40">
+        <td className="p-2 font-bold text-neutral-700 dark:text-neutral-300 sticky left-0 bg-amber-50/90 dark:bg-amber-950/40">{label}</td>
         {MONTHS.slice(0, 6).map(renderMonthCell)}
-        {renderSummaryCell(summary.sem1, summary.sem1Pct, "bg-sky-100", `${label}-sem1`)}
+        {renderSummaryCell(summary.sem1, summary.sem1Pct, "bg-sky-100 dark:bg-sky-900/50", `${label}-sem1`)}
         {MONTHS.slice(6, 12).map(renderMonthCell)}
-        {renderSummaryCell(summary.sem2, summary.sem2Pct, "bg-sky-100", `${label}-sem2`)}
-        {renderSummaryCell(summary.year, summary.yearPct, "bg-emerald-200", `${label}-year`)}
+        {renderSummaryCell(summary.sem2, summary.sem2Pct, "bg-sky-100 dark:bg-sky-900/50", `${label}-sem2`)}
+        {renderSummaryCell(summary.year, summary.yearPct, "bg-emerald-200 dark:bg-emerald-900/50", `${label}-year`)}
       </tr>
     );
   };
@@ -230,56 +230,56 @@ export function TargetArsipTahunanModal({ onClose, defaultYear }: TargetArsipTah
   );
 
   const renderHeaderRow = () => (
-    <tr className="bg-green-100">
-      <th className="p-2 text-left font-black text-slate-700 sticky left-0 bg-green-100">Baris</th>
+    <tr className="bg-green-100 dark:bg-green-900/50">
+      <th className="p-2 text-left font-bold text-neutral-700 dark:text-neutral-300 sticky left-0 bg-green-100 dark:bg-green-900/50">Baris</th>
       {MONTHS.slice(0, 6).map((m) => (
-        <th key={m} className="p-2 font-black text-slate-700 min-w-[60px]">
+        <th key={m} className="p-2 font-bold text-neutral-700 dark:text-neutral-300 min-w-[60px]">
           {INDO_MONTH_LABELS[m - 1]}
         </th>
       ))}
-      <th className="p-2 font-black text-slate-900 min-w-[74px] bg-sky-200 border-l-2 border-emerald-300">
+      <th className="p-2 font-bold text-neutral-900 dark:text-neutral-100 min-w-[74px] bg-sky-200 dark:bg-sky-900/60 border-l-2 border-emerald-300 dark:border-emerald-700">
         Sem 1
       </th>
       {MONTHS.slice(6, 12).map((m) => (
-        <th key={m} className="p-2 font-black text-slate-700 min-w-[60px]">
+        <th key={m} className="p-2 font-bold text-neutral-700 dark:text-neutral-300 min-w-[60px]">
           {INDO_MONTH_LABELS[m - 1]}
         </th>
       ))}
-      <th className="p-2 font-black text-slate-900 min-w-[74px] bg-sky-200 border-l-2 border-emerald-300">
+      <th className="p-2 font-bold text-neutral-900 dark:text-neutral-100 min-w-[74px] bg-sky-200 dark:bg-sky-900/60 border-l-2 border-emerald-300 dark:border-emerald-700">
         Sem 2
       </th>
-      <th className="p-2 font-black text-slate-900 min-w-[80px] bg-emerald-300 border-l-2 border-emerald-400">
+      <th className="p-2 font-bold text-neutral-900 dark:text-neutral-100 min-w-[80px] bg-emerald-300 dark:bg-emerald-800/70 border-l-2 border-emerald-400 dark:border-emerald-600">
         Tahunan
       </th>
     </tr>
   );
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[100] flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl">
+    <div className="fixed inset-0 bg-neutral-950/70 backdrop-blur-sm z-[100] flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between gap-3 bg-emerald-50">
+        <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-3 bg-emerald-50 dark:bg-emerald-950/40">
           <div>
-            <h2 className="text-sm font-black text-emerald-900">📊 Arsip Target Tahunan</h2>
-            <p className="text-[10px] text-slate-500 font-medium">
+            <h2 className="text-sm font-bold text-emerald-900 dark:text-emerald-300">📊 Arsip Target Tahunan</h2>
+            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">
               AKM Target vs AKM Realisasi per bulan &amp; total tahunan — auto dari arsip, tetap bisa diedit manual.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-slate-800 font-black text-lg leading-none px-2"
+            className="text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 font-bold text-lg leading-none px-2"
           >
             ✕
           </button>
         </div>
 
         {/* Toolbar */}
-        <div className="p-3 border-b border-slate-100 flex flex-wrap items-center gap-2 bg-white">
-          <span className="text-xs font-bold text-slate-600">Tahun:</span>
+        <div className="p-3 border-b border-neutral-100 dark:border-neutral-800 flex flex-wrap items-center gap-2 bg-white dark:bg-neutral-900">
+          <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400">Tahun:</span>
           <select
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
-            className="p-1.5 text-xs font-bold bg-slate-50 rounded-xl border border-slate-200 text-slate-800 outline-none"
+            className="p-1.5 text-xs font-bold bg-neutral-50 dark:bg-neutral-800/40 rounded-xl border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 outline-none"
           >
             {yearOptions.map((y) => (
               <option key={y} value={y}>
@@ -291,7 +291,7 @@ export function TargetArsipTahunanModal({ onClose, defaultYear }: TargetArsipTah
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="ml-1 text-[11px] font-bold px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50"
+            className="ml-1 text-[11px] font-bold px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 disabled:opacity-50"
           >
             🔄 Refresh / Sync Ulang
           </button>
@@ -304,7 +304,7 @@ export function TargetArsipTahunanModal({ onClose, defaultYear }: TargetArsipTah
             {saving ? "Menyimpan..." : "💾 Simpan Isian Manual"}
           </button>
 
-          <span className="text-[10px] text-slate-400 font-medium ml-auto">
+          <span className="text-[10px] text-neutral-400 font-medium ml-auto">
             {filledMonths}/12 bulan terisi
           </span>
         </div>
@@ -312,15 +312,15 @@ export function TargetArsipTahunanModal({ onClose, defaultYear }: TargetArsipTah
         {/* Body */}
         <div className="overflow-auto p-3 space-y-6">
           {loading || !manual ? (
-            <div className="text-center py-10 text-sm text-slate-400 font-bold">Memuat data...</div>
+            <div className="text-center py-10 text-sm text-neutral-400 font-bold">Memuat data...</div>
           ) : (
             <>
               {/* TABEL 1: Vs Target */}
               <div>
-                <h3 className="text-xs font-black text-slate-800 mb-2 bg-green-100 inline-block px-2 py-1 rounded">
+                <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-2 bg-green-100 dark:bg-green-900/50 inline-block px-2 py-1 rounded">
                   Vs Target — Tahun {year}
                 </h3>
-                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
                   <table className="w-full text-[11px] border-collapse">
                     <thead>{renderHeaderRow()}</thead>
                     <tbody>
@@ -349,9 +349,9 @@ export function TargetArsipTahunanModal({ onClose, defaultYear }: TargetArsipTah
                     </tbody>
                   </table>
                 </div>
-                <p className="text-[9.5px] text-slate-400 font-medium mt-1.5">
+                <p className="text-[10px] text-neutral-400 font-medium mt-1.5">
                   Persentase kecil di bawah AKM Realisasi = AKM Realisasi ÷ AKM Target bulan itu. Total tahunan:{" "}
-                  <span className={`font-black ${totalPct >= 100 ? "text-green-600" : "text-red-600"}`}>
+                  <span className={`font-bold ${totalPct >= 100 ? "text-green-600 dark:text-green-400" : "text-red-600"}`}>
                     {formatPercentTruncated(totalPct, 2)}
                   </span>
                 </p>
@@ -359,10 +359,10 @@ export function TargetArsipTahunanModal({ onClose, defaultYear }: TargetArsipTah
 
               {/* TABEL 2: Vs Tahun Lalu */}
               <div>
-                <h3 className="text-xs font-black text-slate-800 mb-2 bg-green-100 inline-block px-2 py-1 rounded">
+                <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-2 bg-green-100 dark:bg-green-900/50 inline-block px-2 py-1 rounded">
                   Vs Tahun Lalu — {year - 1}
                 </h3>
-                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
                   <table className="w-full text-[11px] border-collapse">
                     <thead>{renderHeaderRow()}</thead>
                     <tbody>
@@ -392,12 +392,12 @@ export function TargetArsipTahunanModal({ onClose, defaultYear }: TargetArsipTah
                     </tbody>
                   </table>
                 </div>
-                <p className="text-[9.5px] text-slate-400 font-medium mt-1.5">
+                <p className="text-[10px] text-neutral-400 font-medium mt-1.5">
                   Baris "AKM Tahun Lalu" ditarik dari arsip <b>tahun {year - 1}</b> (target x hari kalender) —
                   bisa diedit manual kalau arsipnya belum ada. Baris "AKM Realisasi" di sini{" "}
                   <b>selalu sama persis</b> dengan AKM Realisasi di Tabel 1 (realisasi tahun {year}), edit di
                   Tabel 1 kalau mau ubah. Total tahunan:{" "}
-                  <span className={`font-black ${totalPctTahunLalu >= 100 ? "text-green-600" : "text-red-600"}`}>
+                  <span className={`font-bold ${totalPctTahunLalu >= 100 ? "text-green-600 dark:text-green-400" : "text-red-600"}`}>
                     {formatPercentTruncated(totalPctTahunLalu, 2)}
                   </span>
                 </p>

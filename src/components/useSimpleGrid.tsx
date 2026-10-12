@@ -654,8 +654,8 @@ export function useSimpleGrid({
         className: `relative transition-colors cursor-cell ${
           selected
             ? active
-              ? "!bg-blue-200/90 ring-2 ring-blue-600 ring-inset z-20"
-              : "!bg-blue-100/80 ring-1 ring-blue-400 ring-inset z-10"
+              ? "!bg-brand-200/90 dark:!bg-brand-700/70 ring-2 ring-brand-600 dark:ring-brand-400 ring-inset z-20"
+              : "!bg-brand-100/80 dark:!bg-brand-800/50 ring-1 ring-brand-400 dark:ring-brand-500 ring-inset z-10"
             : ""
         }`,
         style: {
@@ -690,7 +690,7 @@ export function useSimpleGrid({
           className="absolute -bottom-2 -right-2 w-6 h-6 flex items-center justify-center z-50 cursor-crosshair touch-none select-none"
           title="Tarik bulatan ini untuk memperluas / melanjutkan blok"
         >
-          <div className="w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full shadow-md pointer-events-none transition-transform hover:scale-125 active:scale-150" />
+          <div className="w-3.5 h-3.5 bg-brand-600 border-2 border-white rounded-full shadow-md pointer-events-none transition-transform hover:scale-125 active:scale-150" />
         </div>
       );
     },

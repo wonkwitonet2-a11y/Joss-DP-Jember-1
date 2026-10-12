@@ -1,16 +1,6 @@
+import { MenuTitleIcon } from "./AppSidebar";
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import {
-  BarChart3, TrendingUp, Calendar, AlertTriangle,
-  ThumbsUp, ThumbsDown, Users, Package, MapPin, ChevronLeft, ChevronRight,
-  Loader2, Sparkles, Maximize2, Minimize2, X, Trophy, Play, Pause, RotateCcw,
-  Copy, Check, Printer, RefreshCw, List, Layers, Plus, Trash2, CheckSquare, Square, Share2,
-  ArrowUpDown, TrendingDown, Clock, ShieldAlert, Activity, UserCheck, UserX,
-  AlertCircle, ArrowUpRight, ArrowDownRight, ArrowRight as ArrowRightIcon,
-  PieChart as PieChartIcon, CheckCircle2, Target, Archive, Camera, Award, Search,
-  BookOpen, FileText, HelpCircle, Home, Store, GraduationCap, Building2, ShoppingBag, Zap, Heart,
-  Image as ImageIcon, Upload, Eye, EyeOff, Smile, HeartHandshake, Palette, Menu,
-  Download, ChevronUp, ChevronDown, Settings2
-} from "lucide-react";
+import { BarChart3, TrendingUp, Calendar, AlertTriangle, ThumbsUp, ThumbsDown, Users, Package, MapPin, ChevronLeft, ChevronRight, Loader2, Sparkles, Maximize2, Minimize2, X, Trophy, Play, RotateCcw, Check, Printer, RefreshCw, Layers, Plus, Trash2, CheckSquare, Square, Share2, ArrowUpDown, ShieldAlert, Activity, ArrowUpRight, ArrowDownRight, ArrowRight as ArrowRightIcon, PieChart as PieChartIcon, Target, Camera, Award, Search, BookOpen, HelpCircle, Image as ImageIcon, Upload, Eye, EyeOff, HeartHandshake, Palette, Menu, Download, ChevronUp, ChevronDown, Settings2 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend, PieChart, Pie, Cell, LabelList, AreaChart, Area
@@ -18,9 +8,9 @@ import {
 import { loadFromSupabase, saveToSupabase, deleteFromSupabase } from "../lib/supabaseClient";
 import { cleanYlName } from "../types";
 import { SEED_DATA_2026 } from "./SalesRecordTKU";
-import { getPreviousYearDataSync, lookupPreviousYearData, applyTahunLaluFallback, get2025FullYearAveragePerYL } from "../lib/historicalArchiveLookup";
+import { applyTahunLaluFallback, get2025FullYearAveragePerYL } from "../lib/historicalArchiveLookup";
 import { downloadBlob } from "../utils/fileDownloader";
-import { formatTruncated, formatPercentTruncated } from "../utils/numberFormat";
+import { formatTruncated, bbColorClass } from "../utils/numberFormat";
 
 // ----------------------------------------------------------------------------
 // Konstanta & helper
@@ -1057,7 +1047,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 function SectionTitle({ icon: Icon, children }: { icon: any; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2 mb-3">
-      <div className="w-7 h-7 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
+      <div className="w-7 h-7 rounded-lg bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
         <Icon className="w-4 h-4" />
       </div>
       <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">{children}</h3>
@@ -2011,12 +2001,12 @@ function YlOfTheMonthCard({
                 {record.foto ? (
                   <img src={record.foto} alt={record.nama} className="w-full h-full object-cover" />
                 ) : (
-                  <Trophy className="w-7 h-7 text-amber-400" />
+                  <Trophy className="w-7 h-7 text-brand-400" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-black text-slate-900 dark:text-white truncate">{record.nama}</p>
-                <p className="text-[10px] text-orange-500 font-bold uppercase tracking-wide">
+                <p className="text-[10px] text-brand-500 font-bold uppercase tracking-wide">
                   Area {record.area} &middot; {record.categoryLabel}
                 </p>
                 {record.valueLabel && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{record.valueLabel}</p>}
@@ -2039,7 +2029,7 @@ function YlOfTheMonthCard({
           ) : (
             <button
               onClick={handleStartEdit}
-              className="w-full flex items-center justify-center gap-2 bg-amber-50 dark:bg-amber-950/20 border border-dashed border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 text-xs font-bold py-3 rounded-xl cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-950/40 transition-all"
+              className="w-full flex items-center justify-center gap-2 bg-brand-50 dark:bg-brand-950/20 border border-dashed border-brand-300 dark:border-brand-700 text-brand-600 dark:text-brand-400 text-xs font-bold py-3 rounded-xl cursor-pointer hover:bg-brand-100 dark:hover:bg-brand-950/40 transition-all"
             >
               <Trophy className="w-4 h-4" /> Atur {otmTitle}
             </button>
@@ -2056,7 +2046,7 @@ function YlOfTheMonthCard({
             <select
               value={category}
               onChange={(e) => handleCategoryChange(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               {YL_OTM_CATEGORIES.map((c) => (
                 <option key={c.id} value={c.id}>{c.label}</option>
@@ -2073,10 +2063,10 @@ function YlOfTheMonthCard({
               value={customCategoryLabel}
               onChange={(e) => setCustomCategoryLabel(e.target.value)}
               placeholder={category === "bebas" ? "Contoh: Ibu Teramah, Pelayanan Prima, dll." : currentCat.label}
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
             {category === "bebas" && (
-              <p className="text-[10px] text-orange-500 mt-1">
+              <p className="text-[10px] text-brand-500 mt-1">
                 💡 Masukkan nama atau alasan kategori penghargaan di sini agar muncul di slide presentasi.
               </p>
             )}
@@ -2087,7 +2077,7 @@ function YlOfTheMonthCard({
               <button
                 onClick={handleSearch}
                 disabled={loadingData}
-                className="w-full flex items-center justify-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold py-2 rounded-xl cursor-pointer transition-all"
+                className="w-full flex items-center justify-center gap-1.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-xs font-bold py-2 rounded-xl cursor-pointer transition-all"
               >
                 {loadingData ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
                 {loadingData ? "Memuat data..." : "Cari / Segarkan Data"}
@@ -2106,8 +2096,8 @@ function YlOfTheMonthCard({
                       onClick={() => setPending({ area: r.c.area, nama: r.c.nama, valueLabel: r.display })}
                       className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-left cursor-pointer transition-all ${
                         pending?.area === r.c.area
-                          ? "bg-orange-500 border-orange-500 text-white"
-                          : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-orange-300"
+                          ? "bg-brand-600 border-brand-600 text-white"
+                          : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-brand-300"
                       }`}
                     >
                       <span className="flex items-center gap-2 min-w-0">
@@ -2138,7 +2128,7 @@ function YlOfTheMonthCard({
                 <select
                   value={manualArea}
                   onChange={(e) => setManualArea(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <option value="">— Pilih Yakult Lady —</option>
                   {perYL.map((yl) => (
@@ -2157,7 +2147,7 @@ function YlOfTheMonthCard({
                   value={manualValueLabel}
                   onChange={(e) => setManualValueLabel(e.target.value)}
                   placeholder="cth: 3 karung sampah botol, atau 115% dari target"
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
             </div>
@@ -2197,7 +2187,7 @@ function YlOfTheMonthCard({
             <button
               onClick={handleSave}
               disabled={!winner || !winner.area || saving}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white cursor-pointer"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
               Simpan
@@ -2306,10 +2296,10 @@ function CustomSlideCard({
   };
 
   return (
-    <Card className="border-orange-200/60 dark:border-orange-950/40 bg-gradient-to-br from-white via-white to-orange-50/20 dark:from-slate-900 dark:via-slate-900 dark:to-orange-950/10">
+    <Card className="border-brand-200/60 dark:border-brand-950/40 bg-gradient-to-br from-white via-white to-brand-50/20 dark:from-slate-900 dark:via-slate-900 dark:to-brand-950/10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="flex items-start gap-2.5">
-          <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 shrink-0">
+          <div className="p-2 rounded-xl bg-brand-100 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 shrink-0">
             <Camera className="w-4 h-4" />
           </div>
           <div>
@@ -2341,7 +2331,7 @@ function CustomSlideCard({
             className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl cursor-pointer transition-all ${
               record.enabled
                 ? "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-700"
-                : "bg-orange-500 hover:bg-orange-600 text-white shadow-xs"
+                : "bg-brand-600 hover:bg-brand-700 text-white shadow-xs"
             }`}
           >
             {record.enabled ? (
@@ -2358,7 +2348,7 @@ function CustomSlideCard({
           <button
             type="button"
             onClick={() => setOpenEditor(!openEditor)}
-            className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-orange-400 cursor-pointer transition-all"
+            className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-brand-400 cursor-pointer transition-all"
           >
             {openEditor ? "Tutup Pengaturan" : "Kelola Foto & Judul"}
           </button>
@@ -2377,7 +2367,7 @@ function CustomSlideCard({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="cth: Data Dokumentasi & Tabel Tambahan"
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
             <div>
@@ -2389,7 +2379,7 @@ function CustomSlideCard({
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
                 placeholder="cth: Foto realisasi penjualan rute khusus"
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
           </div>
@@ -2425,7 +2415,7 @@ function CustomSlideCard({
                 <p className="text-[11px] text-slate-400">
                   Format gambar JPG, PNG, atau WEBP. Gambar otomatis dioptimalkan agar tajam saat diproyeksikan.
                 </p>
-                <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs transition-all active:scale-95 mt-1">
+                <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs transition-all active:scale-95 mt-1">
                   {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                   {uploading ? "Mengompres..." : foto ? "Ganti Foto Ini" : "Pilih & Unggah Foto"}
                   <input type="file" accept="image/*" className="hidden" onChange={handleUploadFoto} disabled={uploading} />
@@ -2443,7 +2433,7 @@ function CustomSlideCard({
               onChange={(e) => setCatatan(e.target.value)}
               rows={2}
               placeholder="Tuliskan keterangan pendukung jika diperlukan..."
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
 
@@ -2459,7 +2449,7 @@ function CustomSlideCard({
               type="button"
               onClick={handleSaveEditor}
               disabled={saving}
-              className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
               Terapkan ke Slide
@@ -3057,7 +3047,7 @@ export default function PresentasiView({ globalMonth }: { globalMonth?: string }
       <div className="flex items-center justify-between no-print">
         <div>
           <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-orange-500" /> Presentasi &amp; Evaluasi
+            <MenuTitleIcon id="presentasi" className="w-5 h-5 text-orange-500" /> Presentasi &amp; Evaluasi
           </h2>
           <p className="text-xs text-slate-400 font-medium">{data.tku || "DP JEMBER 1"} &middot; {data.cabang || "JEMBER"}</p>
         </div>
@@ -3127,7 +3117,7 @@ export default function PresentasiView({ globalMonth }: { globalMonth?: string }
             setSlideMode(true);
           }}
           disabled={slides.length === 0}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed text-white font-black text-xs sm:text-sm py-3 rounded-2xl shadow-md cursor-pointer transition-all active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-brand-700 to-brand-600 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed text-white font-black text-xs sm:text-sm py-3 rounded-2xl shadow-md cursor-pointer transition-all active:scale-[0.98]"
         >
           <Play className="w-4 h-4 fill-white" /> Mode Presentasi (Layar Penuh)
         </button>
@@ -3136,10 +3126,10 @@ export default function PresentasiView({ globalMonth }: { globalMonth?: string }
           <button
             onClick={handleSyncFromArchives}
             disabled={isSyncing}
-            className="flex items-center justify-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-orange-400 dark:hover:border-orange-500 text-slate-700 dark:text-slate-200 text-xs font-bold py-2 px-2 rounded-xl shadow-xs cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+            className="flex items-center justify-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-400 dark:hover:border-brand-500 text-slate-700 dark:text-slate-200 text-xs font-bold py-2 px-2 rounded-xl shadow-xs cursor-pointer transition-all active:scale-95 disabled:opacity-50"
             title="Tarik & Sinkronkan Data dari Arsip Supabase"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-orange-500 shrink-0 ${isSyncing ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-brand-500 shrink-0 ${isSyncing ? "animate-spin" : ""}`} />
             <span className="truncate">{isSyncing ? "Menyinkronkan..." : "Tarik Arsip"}</span>
           </button>
 
@@ -3180,7 +3170,7 @@ export default function PresentasiView({ globalMonth }: { globalMonth?: string }
             onClick={() => setPeriode(opt.id)}
             className={`text-[11px] sm:text-xs font-bold py-2 rounded-xl transition-all cursor-pointer ${
               periode === opt.id
-                ? "bg-orange-500 text-white shadow-md"
+                ? "bg-brand-600 text-white shadow-md"
                 : "text-slate-500 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-700/60"
             }`}
           >
@@ -3198,7 +3188,7 @@ export default function PresentasiView({ globalMonth }: { globalMonth?: string }
             className="w-full flex items-center justify-between p-3 cursor-pointer"
           >
             <div className="flex items-center gap-2">
-              <Settings2 className="w-4 h-4 text-orange-500" />
+              <Settings2 className="w-4 h-4 text-brand-500" />
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Atur Urutan & Tampilkan/Sembunyikan Slide</span>
             </div>
             {showSlideOrderPanel ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
@@ -3228,7 +3218,7 @@ export default function PresentasiView({ globalMonth }: { globalMonth?: string }
                       type="button"
                       onClick={() => moveSlideUp(item.id)}
                       disabled={i === 0}
-                      className="p-1 rounded-md text-slate-400 hover:text-orange-500 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                      className="p-1 rounded-md text-slate-400 hover:text-brand-500 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                       title="Pindah ke atas"
                     >
                       <ChevronUp className="w-3.5 h-3.5" />
@@ -3237,7 +3227,7 @@ export default function PresentasiView({ globalMonth }: { globalMonth?: string }
                       type="button"
                       onClick={() => moveSlideDown(item.id)}
                       disabled={i === slideOrder.length - 1}
-                      className="p-1 rounded-md text-slate-400 hover:text-orange-500 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                      className="p-1 rounded-md text-slate-400 hover:text-brand-500 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                       title="Pindah ke bawah"
                     >
                       <ChevronDown className="w-3.5 h-3.5" />
@@ -3256,7 +3246,7 @@ export default function PresentasiView({ globalMonth }: { globalMonth?: string }
               <button
                 type="button"
                 onClick={resetSlideOrder}
-                className="w-full mt-1 text-[10px] font-bold text-slate-500 hover:text-orange-500 py-1.5 cursor-pointer"
+                className="w-full mt-1 text-[10px] font-bold text-slate-500 hover:text-brand-500 py-1.5 cursor-pointer"
               >
                 Kembalikan ke Urutan Default
               </button>
@@ -3379,7 +3369,7 @@ export function TabelRataRataYL({
 }) {
   const [sortBy, setSortBy] = useState<"rank" | "area">("rank");
   const [colMode, setColMode] = useState<"compact" | "all">("all");
-  const [density, setDensity] = useState<"compact" | "normal">(isDarkSlide ? "compact" : "normal");
+  const [density] = useState<"compact" | "normal">(isDarkSlide ? "compact" : "normal");
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 640) {
@@ -5754,7 +5744,7 @@ function SlideShow({
   return (
     <div
       className={`fixed z-[200] bg-[#07090F] text-white flex flex-col justify-between overflow-hidden select-none ${
-        forceRotate ? "" : "inset-0"
+        forceRotate ? "" : "inset-x-0 top-0"
       }`}
       style={
         forceRotate
@@ -5766,7 +5756,7 @@ function SlideShow({
               transformOrigin: "top left",
               transform: "rotate(90deg) translateY(-100%)",
             }
-          : undefined
+          : { height: "100dvh", maxHeight: "100%" }
       }
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
@@ -7326,7 +7316,7 @@ function buildBulananSlides({
           <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 sm:p-3.5 landscape:p-1.5 flex flex-col justify-center gap-1.5 landscape:gap-0.5">
             <span className="text-sm sm:text-base landscape:text-[10.5px] uppercase font-bold text-slate-400 tracking-wider">Kembali Botol (BB)</span>
             <div>
-              <p className={`text-3xl sm:text-4xl landscape:text-lg font-black ${isBBAman ? "text-emerald-400" : "text-red-400"}`}>
+              <p className={`text-3xl sm:text-4xl landscape:text-lg font-black ${bbColorClass(m.persenKembaliBotol)}`}>
                 {fmtPct(m.persenKembaliBotol)}%
               </p>
               <p className="text-base landscape:text-[10.5px] text-slate-400">AKM Retur: <strong className="text-slate-200">{fmtNum(m.akmKembaliBotol)} btl</strong></p>
@@ -7935,7 +7925,7 @@ function buildBulananSlides({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">Kembali Botol (BB):</span>
-                  <span className={`font-bold ${isBBAman ? "text-emerald-400" : "text-amber-400"}`}>
+                  <span className={`font-bold ${bbColorClass(bbPct)}`}>
                     {fmtPct(bbPct)}% ({isBBAman ? "Aman" : "Perlu Penataan"})
                   </span>
                 </div>

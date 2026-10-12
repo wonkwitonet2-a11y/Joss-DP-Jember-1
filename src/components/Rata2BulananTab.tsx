@@ -1,20 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import {
-  Calendar,
-  Save,
-  Trash2,
-  Plus,
-  RefreshCw,
-  CheckCircle,
-  AlertTriangle,
-  FileSpreadsheet,
-  Search,
-  Database,
-  ArrowDownToLine,
-  Layers,
-  Copy,
-  ClipboardPaste
-} from "lucide-react";
+import { Calendar, Save, Trash2, Plus, AlertTriangle, Database, Copy, ClipboardPaste } from "lucide-react";
 import { loadFromSupabase, saveToSupabase, deleteFromSupabase } from "../lib/supabaseClient";
 import { getPreviousYearDataSync } from "../lib/historicalArchiveLookup";
 import { useSimpleGrid } from "./useSimpleGrid";
@@ -607,18 +592,18 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
       </div>
 
       {/* Control Toolbar: Unified Month Picker & Quick Actions */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-slate-200 dark:border-neutral-700 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-end">
           
           {/* Unified Dropdown Selector */}
           <div className="space-y-1.5 w-full md:w-auto flex-1 max-w-sm">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
+            <label className="text-[10px] font-black text-slate-500 dark:text-neutral-300 uppercase tracking-wider block">
               Pilih Bulan & Tahun
             </label>
             <select
               value={activeYearMonth}
               onChange={(e) => handleSelectMonthYear(e.target.value)}
-              className="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+              className="w-full p-2.5 text-xs bg-slate-50 dark:bg-neutral-800 border border-slate-300 dark:border-neutral-600 rounded-xl font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
             >
               {allMonthsOptions.map(ymKey => {
                 const [yr, mo] = ymKey.split("-");
@@ -657,7 +642,7 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
             {savedMonthsList.includes(activeYearMonth) && (
               <button
                 onClick={() => setDeleteModalMonth({ ym: activeYearMonth, label: activeLabel })}
-                className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition-all cursor-pointer flex items-center gap-1.5"
+                className="px-4 py-2.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-bold text-xs rounded-xl border border-rose-200 dark:border-rose-700 transition-all cursor-pointer flex items-center gap-1.5"
                 title="Hapus permanen data bulan ini dari Supabase & lokal"
               >
                 <Trash2 className="w-4 h-4 text-rose-600" />
@@ -671,10 +656,10 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
         {statusMsg && (
           <div className={`p-3 rounded-xl border text-xs font-bold text-center animate-fade-in flex items-center justify-center gap-2 ${
             statusMsg.includes("⚠️") || statusMsg.includes("❌")
-              ? "bg-amber-50 border-amber-300 text-amber-900"
+              ? "bg-amber-50 dark:bg-amber-950/50 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200"
               : statusMsg.includes("🗑️")
-              ? "bg-rose-50 border-rose-300 text-rose-900"
-              : "bg-emerald-50 border-emerald-300 text-emerald-900"
+              ? "bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-700 text-rose-900 dark:text-rose-200"
+              : "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200"
           }`}>
             {statusMsg}
           </div>
@@ -682,7 +667,7 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
       </div>
 
       {/* Main Table View / Edit Section */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-0">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200 dark:border-neutral-700 shadow-sm overflow-hidden space-y-0">
         <div className="bg-emerald-950 text-white p-4 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-extrabold uppercase tracking-wide flex items-center gap-2">
@@ -782,30 +767,30 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-950 dark:text-emerald-100 font-extrabold border-b border-emerald-200">
-                <th className="p-2.5 border-r border-emerald-200 w-16 text-center">Area</th>
-                <th className="p-2.5 border-r border-emerald-200 min-w-[140px]">Nama YL</th>
-                <th className="p-2.5 border-r border-emerald-200 bg-red-100 text-red-950 text-right w-28">YO</th>
-                <th className="p-2.5 border-r border-emerald-200 bg-amber-100 text-amber-950 text-right w-28">OM</th>
-                <th className="p-2.5 border-r border-emerald-200 bg-fuchsia-100 text-fuchsia-950 text-right w-28">OS</th>
-                <th className="p-2.5 border-r border-emerald-200 bg-sky-100 text-sky-950 text-right w-28">YT</th>
-                <th className="p-2.5 bg-emerald-300 text-emerald-950 font-black text-right min-w-[130px]">RATA-RATA</th>
+              <tr className="bg-emerald-100/60 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 font-extrabold border-b border-emerald-200 dark:border-emerald-800">
+                <th className="p-2.5 border-r border-emerald-200 dark:border-emerald-800 w-16 text-center font-mono">Area</th>
+                <th className="p-2.5 border-r border-emerald-200 dark:border-emerald-800 min-w-[140px]">Nama YL</th>
+                <th className="p-2.5 border-r border-emerald-200 dark:border-emerald-800 bg-red-500/10 dark:bg-red-950/30 text-red-600 dark:text-red-400 font-black text-right w-28">YO</th>
+                <th className="p-2.5 border-r border-emerald-200 dark:border-emerald-800 bg-amber-500/10 dark:bg-amber-950/30 text-amber-500 dark:text-amber-400 font-black text-right w-28">OM</th>
+                <th className="p-2.5 border-r border-emerald-200 dark:border-emerald-800 bg-pink-500/10 dark:bg-pink-950/30 text-pink-600 dark:text-pink-400 font-black text-right w-28">OS</th>
+                <th className="p-2.5 border-r border-emerald-200 dark:border-emerald-800 bg-blue-500/10 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 font-black text-right w-28">YT</th>
+                <th className="p-2.5 bg-emerald-500/20 dark:bg-emerald-900/40 text-emerald-950 dark:text-emerald-100 font-black text-right min-w-[130px]">RATA-RATA</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 text-slate-800 font-medium">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200 font-medium">
               {(isEditing ? editableRows : (currentData?.rows || [])).map((row, idx) => (
-                <tr key={row.area || idx} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-2.5 border-r border-slate-200 font-bold text-center bg-slate-50 text-slate-700">
+                <tr key={row.area || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <td className="p-2.5 border-r border-slate-200 dark:border-slate-800 font-bold text-center bg-slate-50/70 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-mono">
                     {row.area}
                   </td>
-                  <td className="p-2.5 border-r border-slate-200 font-bold text-slate-900">
+                  <td className="p-2.5 border-r border-slate-200 dark:border-slate-800 font-bold text-slate-900 dark:text-white">
                     {row.nama}
                   </td>
 
                   {/* YO */}
                   <td
                     {...getRata2CellProps(idx, 0)}
-                    className={`p-2 border-r border-slate-200 text-right font-bold text-red-700 relative select-none ${getRata2CellProps(idx, 0).className}`}
+                    className={`p-2 border-r border-slate-200 dark:border-slate-800 text-right font-bold font-mono tabular-nums text-neutral-900 dark:text-white relative select-none ${getRata2CellProps(idx, 0).className}`}
                   >
                     {isEditing ? (
                       <input
@@ -814,7 +799,7 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
                         value={row.yo}
                         onChange={(e) => handleRowInputChange(idx, "yo", e.target.value)}
                         onPaste={(e) => handleInputCellPaste(e, idx, "yo")}
-                        className="w-full p-1 text-right bg-white border border-slate-300 rounded text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none"
+                        className="w-full p-1 text-right bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs font-bold font-mono tabular-nums text-neutral-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none"
                       />
                     ) : (
                       row.yo.toFixed(2)
@@ -825,7 +810,7 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
                   {/* OM */}
                   <td
                     {...getRata2CellProps(idx, 1)}
-                    className={`p-2 border-r border-slate-200 text-right font-bold text-amber-700 relative select-none ${getRata2CellProps(idx, 1).className}`}
+                    className={`p-2 border-r border-slate-200 dark:border-slate-800 text-right font-bold font-mono tabular-nums text-neutral-900 dark:text-white relative select-none ${getRata2CellProps(idx, 1).className}`}
                   >
                     {isEditing ? (
                       <input
@@ -834,7 +819,7 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
                         value={row.om}
                         onChange={(e) => handleRowInputChange(idx, "om", e.target.value)}
                         onPaste={(e) => handleInputCellPaste(e, idx, "om")}
-                        className="w-full p-1 text-right bg-white border border-slate-300 rounded text-xs font-bold focus:ring-2 focus:ring-amber-500 outline-none"
+                        className="w-full p-1 text-right bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs font-bold font-mono tabular-nums text-neutral-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
                       />
                     ) : (
                       row.om.toFixed(2)
@@ -845,7 +830,7 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
                   {/* OS */}
                   <td
                     {...getRata2CellProps(idx, 2)}
-                    className={`p-2 border-r border-slate-200 text-right font-bold text-fuchsia-700 relative select-none ${getRata2CellProps(idx, 2).className}`}
+                    className={`p-2 border-r border-slate-200 dark:border-slate-800 text-right font-bold font-mono tabular-nums text-neutral-900 dark:text-white relative select-none ${getRata2CellProps(idx, 2).className}`}
                   >
                     {isEditing ? (
                       <input
@@ -854,7 +839,7 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
                         value={row.os}
                         onChange={(e) => handleRowInputChange(idx, "os", e.target.value)}
                         onPaste={(e) => handleInputCellPaste(e, idx, "os")}
-                        className="w-full p-1 text-right bg-white border border-slate-300 rounded text-xs font-bold focus:ring-2 focus:ring-fuchsia-500 outline-none"
+                        className="w-full p-1 text-right bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs font-bold font-mono tabular-nums text-neutral-900 dark:text-white focus:ring-2 focus:ring-pink-500 outline-none"
                       />
                     ) : (
                       row.os.toFixed(2)
@@ -865,7 +850,7 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
                   {/* YT */}
                   <td
                     {...getRata2CellProps(idx, 3)}
-                    className={`p-2 border-r border-slate-200 text-right font-bold text-sky-700 relative select-none ${getRata2CellProps(idx, 3).className}`}
+                    className={`p-2 border-r border-slate-200 dark:border-slate-800 text-right font-bold font-mono tabular-nums text-neutral-900 dark:text-white relative select-none ${getRata2CellProps(idx, 3).className}`}
                   >
                     {isEditing ? (
                       <input
@@ -874,7 +859,7 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
                         value={row.yt}
                         onChange={(e) => handleRowInputChange(idx, "yt", e.target.value)}
                         onPaste={(e) => handleInputCellPaste(e, idx, "yt")}
-                        className="w-full p-1 text-right bg-white border border-slate-300 rounded text-xs font-bold focus:ring-2 focus:ring-sky-500 outline-none"
+                        className="w-full p-1 text-right bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs font-bold font-mono tabular-nums text-neutral-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     ) : (
                       row.yt.toFixed(2)
@@ -885,7 +870,7 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
                   {/* TOTAL RATA-RATA */}
                   <td
                     {...getRata2CellProps(idx, 4)}
-                    className={`p-2 bg-emerald-100/70 text-right font-black text-emerald-950 border-l border-emerald-200 relative select-none ${getRata2CellProps(idx, 4).className}`}
+                    className={`p-2 bg-emerald-500/10 dark:bg-emerald-950/30 text-right font-black font-mono tabular-nums text-neutral-900 dark:text-white border-l border-emerald-200/60 dark:border-emerald-800/40 relative select-none ${getRata2CellProps(idx, 4).className}`}
                   >
                     {isEditing ? (
                       <input
@@ -894,7 +879,7 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
                         value={row.totalRata2}
                         onChange={(e) => handleRowInputChange(idx, "totalRata2", e.target.value)}
                         onPaste={(e) => handleInputCellPaste(e, idx, "totalRata2")}
-                        className="w-full p-1 text-right bg-white border border-emerald-400 rounded text-xs font-black text-emerald-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className="w-full p-1 text-right bg-white dark:bg-slate-800 border border-emerald-400 rounded text-xs font-black font-mono tabular-nums text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
                       />
                     ) : (
                       row.totalRata2.toFixed(2)
@@ -907,23 +892,23 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
 
             {/* TOTAL FOOTER ROW */}
             <tfoot>
-              <tr className="bg-amber-100 text-amber-950 font-black border-t-2 border-amber-300 text-xs">
-                <td className="p-3 text-center border-r border-amber-200" colSpan={2}>
+              <tr className="bg-amber-500/15 dark:bg-amber-950/40 text-amber-950 dark:text-amber-200 font-black border-t-2 border-amber-300 dark:border-amber-800 text-xs">
+                <td className="p-3 text-center border-r border-amber-200 dark:border-amber-800" colSpan={2}>
                   TOTAL REKAPITULASI ({activeLabel})
                 </td>
-                <td className="p-3 text-right border-r border-amber-200 text-red-950">
+                <td className="p-3 text-right border-r border-amber-200 dark:border-amber-800 font-mono tabular-nums font-black text-neutral-900 dark:text-white">
                   {totals.yo.toFixed(2)}
                 </td>
-                <td className="p-3 text-right border-r border-amber-200 text-amber-950">
+                <td className="p-3 text-right border-r border-amber-200 dark:border-amber-800 font-mono tabular-nums font-black text-neutral-900 dark:text-white">
                   {totals.om.toFixed(2)}
                 </td>
-                <td className="p-3 text-right border-r border-amber-200 text-fuchsia-950">
+                <td className="p-3 text-right border-r border-amber-200 dark:border-amber-800 font-mono tabular-nums font-black text-neutral-900 dark:text-white">
                   {totals.os.toFixed(2)}
                 </td>
-                <td className="p-3 text-right border-r border-amber-200 text-sky-950">
+                <td className="p-3 text-right border-r border-amber-200 dark:border-amber-800 font-mono tabular-nums font-black text-neutral-900 dark:text-white">
                   {totals.yt.toFixed(2)}
                 </td>
-                <td className="p-3 text-right bg-amber-200 text-emerald-950 font-black text-sm">
+                <td className="p-3 text-right bg-amber-500/25 dark:bg-amber-900/50 font-mono tabular-nums text-neutral-900 dark:text-white font-black text-sm">
                   {totals.totalRata2.toFixed(2)}
                 </td>
               </tr>
@@ -953,14 +938,14 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
 
         {/* Footer save bar in edit mode */}
         {isEditing && (
-          <div className="p-4 bg-emerald-50 border-t border-emerald-200 flex flex-wrap items-center justify-between gap-3">
+          <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-t border-emerald-200 dark:border-emerald-800 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-emerald-900 font-bold flex items-center gap-2">
               <span>💡 Setelah selesai mengubah angka di atas, klik tombol simpan untuk menyimpan permanen ke Supabase.</span>
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsEditing(false)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-neutral-200 font-bold text-xs rounded-xl transition-all cursor-pointer"
               >
                 Batal
               </button>
@@ -1022,7 +1007,7 @@ export function Rata2BulananTab({ ylList = [], defaultYearMonth }: Rata2BulananT
               <button
                 onClick={() => setDeleteModalMonth(null)}
                 disabled={isDeleting}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+                className="px-4 py-2.5 bg-slate-100 dark:bg-neutral-800 hover:bg-slate-200 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-200 font-bold text-xs rounded-xl cursor-pointer"
               >
                 Batal
               </button>

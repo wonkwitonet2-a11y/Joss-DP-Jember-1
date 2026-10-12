@@ -1,28 +1,37 @@
-import ProductKnowledgeView from "./ProductKnowledgeView";
-import { OfficialLinksViewer } from "./OfficialLinksViewer";
-import { ClipboardFallbackModal } from "./ClipboardFallbackModal";
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import JossLogo from "./JossLogo";
+import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from "react";
 import { useTabHistory } from "../hooks/useTabHistory";
-import {
-  PieChart as Sparkles,
-  AlertCircle,
-  Camera,
-  RefreshCw
-} from "lucide-react";
+import { NotificationBell } from "./NotificationBell";
+import { PieChart as Sparkles, AlertCircle, Camera } from "lucide-react";
 import { Transaction, MotivasiConfig, cleanYlName } from "../types";
-import { safeFetchJson, parseJsonResponse } from "../lib/safeFetch";
+import { safeFetchJson } from "../lib/safeFetch";
 import { getStoredBreakdownPlan, getStoredBreakdownRealisasi } from "../lib/fallbackData";
 import { getStoredYlList } from "../lib/storage";
 import { NumberInput } from "./NumberInput";
 import { useSimpleGrid } from "./useSimpleGrid";
-import { GridSelectionToolbar } from "./GridSelectionToolbar";
-import { YlRealisasiPotensiTab } from "./YlRealisasiPotensiTab";
-import YLSeragamView from "./YLSeragamView";
-import { NotificationBell } from "./NotificationBell";
-import { EvaluasiView } from "./EvaluasiView";
-import { formatTruncated, formatPercentTruncated, truncateDecimal } from "../utils/numberFormat";
+import { AppNavbar } from "./AppNavbar";
+import { AppSidebar } from "./AppSidebar";
+import { formatPercentTruncated, bbColorClass, rata2ColorClass } from "../utils/numberFormat";
 
+const ProductKnowledgeView = lazy(() => import("./ProductKnowledgeView"));
+const OfficialLinksViewer = lazy(() => import("./OfficialLinksViewer").then(m => ({ default: m.OfficialLinksViewer })));
+const ClipboardFallbackModal = lazy(() => import("./ClipboardFallbackModal").then(m => ({ default: m.ClipboardFallbackModal })));
+const YlRealisasiPotensiTab = lazy(() => import("./YlRealisasiPotensiTab").then(m => ({ default: m.YlRealisasiPotensiTab })));
+const YLSeragamView = lazy(() => import("./YLSeragamView"));
+const EvaluasiView = lazy(() => import("./EvaluasiView").then(m => ({ default: m.EvaluasiView })));
+
+const TabLoadingFallback: React.FC = () => (
+  <div className="bd-card p-8 flex flex-col items-center justify-center gap-3 text-center my-4">
+    <div className="w-7 h-7 rounded-full border-3 border-red-500 border-t-transparent animate-spin" />
+    <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Memuat modul halaman...</span>
+  </div>
+);
+
+
+
+// Gaya kartu beranda akun YL: memakai bd-card (token tema: bg-card, border-line) sama dengan menu admin,
+// dengan garis tepi & bayangan sedikit lebih tegas di mode terang supaya kartu tidak menyatu dengan latar.
+const YL_CARD_BASE = "bd-card !shadow-[0_2px_10px_-3px_rgba(0,0,0,0.14)] dark:!shadow-none";
+const YL_CARD = `${YL_CARD_BASE} !border-[var(--line-strong)]`;
 
 const formatRp = (val: number) => {
   return "Rp" + Math.trunc(val).toLocaleString("id-ID");
@@ -97,6 +106,7 @@ export function YLView({
   breakdownRealisasi = [],
   tanggalValid = [],
   motivasiConfig,
+  theme = "light",
   onToggleTheme,
   globalMonth,
   evaluasiData
@@ -112,8 +122,30 @@ export function YLView({
     | "seragam"
     | "product_knowledge"
     | "tautan"
+    | "ai_chat"
   >("beranda");
-  useTabHistory(activeTab, setActiveTab, "beranda");
+  useTabHistory(activeTab, (tab) => {
+    if (tab === "ai_chat") {
+      window.dispatchEvent(new CustomEvent("open-ai-chat"));
+    } else {
+      setActiveTab(tab as any);
+    }
+  }, "beranda", "yl");
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
+
+  // Tombol keluar di header ikut berfungsi sebagai tombol kembali:
+  // di menu mana pun selain Beranda -> kembali ke Beranda; di Beranda -> konfirmasi logout.
+  const handleBackOrLogout = () => {
+    if (activeTab !== "beranda") {
+      setActiveTab("beranda");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      setShowLogoutConfirm(true);
+    }
+  };
 
   const currentYlInfo = useMemo(() => {
     const list = (ylList && ylList.length > 0) ? ylList : getStoredYlList();
@@ -212,7 +244,7 @@ export function YLView({
   const [totOs, setTotOs] = useState<number>(0);
   const [isPotensiTembusSaving, setIsPotensiTembusSaving] = useState(false);
   const [potensiTembusMsg, setPotensiTembusMsg] = useState("");
-  const [isBreakdownLoading, setIsBreakdownLoading] = useState(false);
+  const [, setIsBreakdownLoading] = useState(false);
   const [potensiTembus, setPotensiTembus] = useState<any>({
     skhTotal: 0, skhTembus: 0,
     kntrTotal: 0, kntrTembus: 0,
@@ -381,7 +413,7 @@ export function YLView({
     
   // Papan Attention Manager state
   const [attentionNote, setAttentionNote] = useState<string>("");
-  const [isLoadingAttention, setIsLoadingAttention] = useState<boolean>(false);
+  const [, setIsLoadingAttention] = useState<boolean>(false);
   const motYlLines = useMemo(() => attentionNote ? attentionNote.split('\n').filter(Boolean) : [], [attentionNote]);
 
   // Global Keyboard Shortcuts (Ctrl+Z, Ctrl+Y / Ctrl+Shift+Z, Copy/Paste/Delete)
@@ -668,8 +700,6 @@ export function YLView({
     return () => clearInterval(timer);
   }, [motivasiConfig, ylName]);
 
-  const loadedDateRef = useRef<string>("");
-
   // Load existing transaction for chosen date
   useEffect(() => {
     const existing = transactions.find(t => t.tanggal === selectedDate);
@@ -868,6 +898,7 @@ export function YLView({
       if (res && res.ok) {
         setIsEditRealisasi(false);
         if (onRefresh) await onRefresh(); 
+        window.dispatchEvent(new Event("bd_realisasi_updated"));
         alert("✅ Data berhasil disimpan!");
       } else {
         alert("❌ Gagal menyimpan data ke server.");
@@ -939,6 +970,7 @@ export function YLView({
       if (json && json.ok) {
         setInputHarianMsg("✅ Laporan harian berhasil disimpan ke Realisasi Potensi!");
         if (onRefresh) await onRefresh();
+        window.dispatchEvent(new Event("bd_realisasi_updated"));
       } else {
         setInputHarianMsg("❌ Gagal menyimpan laporan.");
       }
@@ -1106,97 +1138,134 @@ export function YLView({
   };
 
   return (
-    <div className="yl-view-root min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 text-slate-800 dark:text-slate-100 transition-colors duration-200">
-      {/* Header Area matching Manager Account */}
-      <header className="bg-gradient-to-r from-red-950 to-red-800 border-b-2 border-red-600 text-white py-2 px-3 sm:py-2.5 sm:px-4 sticky top-0 z-50 shadow-md">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            {activeTab === "beranda" ? (
-               <div className="flex items-center gap-2.5 min-w-0">
-                 <JossLogo size={34} compact />
-                 <div className="min-w-0 flex flex-col justify-center">
-                   <h1 className="text-base sm:text-lg font-black tracking-tight leading-none uppercase text-white">JOSS</h1>
-                   <p className="text-[11px] sm:text-xs font-semibold text-red-200 leading-none mt-1">DP Jember 1</p>
-                 </div>
-               </div>
-            ) : (
-               <div className="flex items-center gap-2 min-w-0">
-                 <button 
-                   onClick={() => setActiveTab("beranda")}
-                   className="p-1.5 bg-black/20 hover:bg-black/40 text-white rounded-lg border border-red-500/40 transition-all cursor-pointer shrink-0 active:scale-95"
-                   title="Kembali ke Beranda"
-                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-left"><path d="m15 18-6-6 6-6"/></svg>
-                 </button>
-                 <JossLogo size={34} compact />
-                 <div className="min-w-0 flex flex-col justify-center">
-                   <h1 className="text-sm sm:text-base font-black tracking-tight leading-none uppercase truncate text-white">{cleanYlName(ylName)}</h1>
-                   <p className="text-[10px] sm:text-[11px] font-semibold text-red-200 leading-none mt-1 truncate">DP Jember 1 • Area {displayAreaNumber || "-"}</p>
-                 </div>
-               </div>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <NotificationBell
-              role="yl"
-              currentYlName={ylName}
-              currentYlArea={displayAreaNumber}
-              globalMonth={globalMonth}
-              ylList={ylList}
-            />
-            <button
-              onClick={handleHeaderRefresh}
-              className="flex items-center justify-center p-1.5 bg-black/20 hover:bg-black/40 text-white rounded-lg border border-red-500/40 transition-all cursor-pointer shadow-xs active:scale-95"
-              title="Refresh Data"
-            >
-              <RefreshCw className={`w-4 h-4 text-white ${isRefreshing ? "animate-spin" : ""}`} />
-            </button>
-            {onBackToAdmin && (
+    <div className={`yl-view-root min-h-screen bg-neutral-100/60 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex flex-col font-sans transition-colors ${theme === 'dark' ? 'dark' : ''}`}>
+      {/* Responsive Top Navbar */}
+      <AppNavbar
+        role="yl"
+        title={activeTab === "beranda" ? cleanYlName(ylName) : activeTab.toUpperCase().replace(/_/g, ' ')}
+        subtitle={`Area ${displayAreaNumber || '-'} • DP Jember 1`}
+        currentMenu={activeTab}
+        onSelectMenu={(menu: string) => {
+          if (menu === "ai_chat") {
+            window.dispatchEvent(new CustomEvent("open-ai-chat"));
+          } else {
+            setActiveTab(menu as any);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
+        onToggleSidebar={() => {
+          setDrawerOpen(o => !o);
+          setSidebarCollapsed(o => !o);
+        }}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
+        onRefresh={handleHeaderRefresh}
+        isRefreshing={isRefreshing}
+        onLogout={handleBackOrLogout}
+        logoutAsBack={activeTab !== "beranda"}
+        onSwitchToManager={onBackToAdmin}
+        activeYlName={ylName}
+        notificationSlot={<NotificationBell role="yl" currentYlName={ylName} currentYlArea={String(displayAreaNumber || "")} globalMonth={globalMonth} ylList={ylList} />}
+      />
+
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="yl-logout-title"
+            className="w-full max-w-xs rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xl p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="yl-logout-title" className="text-base font-bold text-neutral-900 dark:text-neutral-100">Keluar dari akun?</h3>
+            <p className="mt-1.5 text-sm text-neutral-600 dark:text-neutral-400">Kamu akan keluar dan perlu memasukkan PIN lagi untuk masuk.</p>
+            <div className="mt-4 flex gap-2">
               <button
-                onClick={onBackToAdmin}
-                className="bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-black px-2.5 py-1.5 rounded-lg border border-amber-300 shadow-xs transition-all active:scale-95"
-                title="Kembali ke akun Admin"
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-2 rounded-lg text-sm font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700"
               >
-                ← Admin
+                Batal
               </button>
-            )}
-            <button
-              onClick={onLogout}
-              className="bg-slate-900/80 hover:bg-slate-950 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg border border-red-500/40 shadow-xs transition-all active:scale-95"
-            >
-              Keluar
-            </button>
+              <button
+                type="button"
+                onClick={() => { setShowLogoutConfirm(false); onLogout(); }}
+                className="flex-1 py-2 rounded-lg text-sm font-semibold bg-rose-600 text-white hover:bg-rose-700"
+              >
+                Ya, keluar
+              </button>
+            </div>
           </div>
         </div>
-      </header>
+      )}
 
-      {/* Floating Rotating & Moving Motivasi Banner */}
+      {/* Main Workspace Layout with Responsive Sidebar and Drawer */}
+      <div className="flex-1 flex flex-col md:flex-row w-full max-w-[1700px] mx-auto">
+        <AppSidebar
+          role="yl"
+          currentMenu={activeTab}
+          onSelectMenu={(menu: string) => {
+            if (menu === "ai_chat") {
+              window.dispatchEvent(new CustomEvent("open-ai-chat"));
+            } else {
+              setActiveTab(menu as any);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+          isDrawerOpen={drawerOpen}
+          onCloseDrawer={() => setDrawerOpen(false)}
+          onOpenDrawer={() => setDrawerOpen(true)}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(o => !o)}
+          userName={cleanYlName(ylName)}
+        />
+
+        <div className="flex-1 min-w-0 flex flex-col">
+
+      {/* Floating Rotating & Moving Motivasi Banner
+          Tinggi TETAP = 2 baris, 1 card. Kalimat pendek (1 baris) ditaruh di tengah,
+          kalimat panjang dipakai 2 baris (ukuran huruf mengecil otomatis kalau sangat panjang),
+          sehingga menu/konten di bawahnya TIDAK ikut bergeser. */}
       {motivasiConfig.enabled && (
-        <div className="sticky top-16 z-30 mx-3 my-3 bg-slate-900 border-2 border-red-500 shadow-xl rounded-2xl p-3 max-w-xl sm:mx-auto overflow-hidden">
-          <div className="flex items-center gap-2.5">
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center font-black text-sm sm:text-base text-yellow-300 tracking-wide line-clamp-2">
-                {activeMotivasi}
-              </div>
+        <div className="sticky top-16 z-30 px-3 py-3">
+          <div className="w-full max-w-xl lg:max-w-3xl mx-auto bg-brand-900 border border-brand-400/40 shadow-xl rounded-2xl px-4 py-2.5 overflow-hidden">
+            <div
+              className={`flex items-center justify-center text-center font-black text-yellow-300 tracking-wide break-words ${
+                activeMotivasi.length > 140
+                  ? "text-[11px] sm:text-xs lg:text-sm"
+                  : activeMotivasi.length > 90
+                  ? "text-xs sm:text-sm lg:text-base"
+                  : "text-sm sm:text-base lg:text-lg"
+              }`}
+              style={{ lineHeight: "1.35em", height: "2.7em" }}
+            >
+              <span className="line-clamp-2 w-full">{activeMotivasi}</span>
             </div>
           </div>
         </div>
       )}
 
       {/* Main Content Area */}
-      <main className={`p-3 sm:p-5 space-y-5 mx-auto ${
-        ["realisasi_potensi", "breakdown", "potensi_tembus", "ringkasan", "evaluasi"].includes(activeTab)
-          ? "w-full max-w-5xl lg:max-w-6xl"
-          : "max-w-xl sm:max-w-2xl"
+      <main className={`p-3 sm:p-5 lg:p-6 2xl:p-8 space-y-5 mx-auto ${
+        ["seragam", "product_knowledge"].includes(activeTab)
+          ? "w-full max-w-7xl"
+          : ["realisasi_potensi", "breakdown", "potensi_tembus", "ringkasan", "evaluasi"].includes(activeTab)
+          ? "w-full max-w-5xl lg:max-w-6xl 2xl:max-w-7xl"
+          : activeTab === "beranda"
+          ? "w-full max-w-xl sm:max-w-2xl md:max-w-3xl lg:max-w-6xl 2xl:max-w-7xl"
+          : "w-full max-w-xl sm:max-w-2xl md:max-w-3xl lg:max-w-6xl 2xl:max-w-7xl"
       }`}>
         {activeTab === "beranda" && (
-          <div className="space-y-3 animate-in fade-in zoom-in-95 duration-300">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-5 animate-in fade-in zoom-in-95 duration-300">
             
             {/* Hero Section: Profile Card (Left) + Bio Data (Right) */}
-            <div className="flex flex-row items-stretch gap-3 mt-2">
+            <div className="lg:col-span-5 flex flex-row items-stretch gap-3 mt-2 lg:mt-0">
               
               {/* Profile Photo Card (iPhone Clock Sizeish) */}
-              <div className="flex flex-col items-center justify-center bg-white dark:bg-slate-900 p-3 rounded-[24px] sm:rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-sm shrink-0 w-28 sm:w-36">
+              <div className={`${YL_CARD} flex flex-col items-center justify-center p-3 shrink-0 w-28 sm:w-36 md:w-44 lg:w-40 xl:w-44`}>
                 <div className="relative group w-full aspect-square mb-2">
                   {ylFoto ? (
                     <img
@@ -1205,15 +1274,15 @@ export function YLView({
                       className="w-full h-full rounded-[20px] sm:rounded-[24px] object-cover shadow-md transition-transform group-hover:scale-105"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-red-600 to-red-800 text-white font-black text-4xl sm:text-5xl rounded-[20px] sm:rounded-[24px] shadow-md flex items-center justify-center group-hover:from-red-500 group-hover:to-red-700 transition-all">
+                    <div className="w-full h-full bg-gradient-to-br from-brand-600 to-brand-800 text-white font-black text-4xl sm:text-5xl md:text-6xl rounded-[20px] sm:rounded-[24px] shadow-md flex items-center justify-center group-hover:from-brand-500 group-hover:to-brand-700 transition-all">
                       {cleanYlName(ylName).charAt(0).toUpperCase() || "Y"}
                     </div>
                   )}
                   <label
-                    className="absolute -bottom-2 -right-2 bg-slate-900 text-white p-2 rounded-full cursor-pointer hover:bg-slate-800 shadow-lg border-2 border-slate-50 dark:border-slate-800 transition-transform active:scale-90"
+                    className="absolute -bottom-2 -right-2 bg-brand-900 text-white p-2 rounded-full cursor-pointer hover:bg-brand-800 shadow-lg border-2 border-slate-50 dark:border-slate-800 transition-transform active:scale-90"
                     title="Ganti Foto Profil YL"
                   >
-                    <Camera className="w-4 h-4 text-red-300" />
+                    <Camera className="w-4 h-4 text-sky-300" />
                     <input
                       type="file"
                       accept="image/*"
@@ -1225,33 +1294,33 @@ export function YLView({
               </div>
 
               {/* Bio Data Board */}
-              <div className="flex-1 bg-white dark:bg-slate-900 rounded-[28px] sm:rounded-[32px] p-3.5 sm:p-4 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-center relative overflow-hidden">
+              <div className={`${YL_CARD} flex-1 p-3.5 sm:p-4 flex flex-col justify-center relative overflow-hidden`}>
                 <div className="flex flex-col gap-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight truncate">{cleanYlName(ylName)}</h2>
-                      <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-0.5">
+                      <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mt-0.5">
                         {displayAreaNumber ? `Area ${displayAreaNumber}` : "-"} • {currentYlInfo.kodeYl || (displayAreaNumber ? `YL-${displayAreaNumber}` : "-")}
                       </span>
                       {/* Gelar / Tier Badge dipindah ke card Bio */}
-                      <div className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50 px-2 py-0.5 rounded-lg text-[9.5px] sm:text-[10px] font-extrabold mt-1">
+                      <div className="inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50 px-2 py-0.5 rounded-lg text-[10.5px] sm:text-[11px] font-extrabold mt-1">
                         <span>🌟</span>
                         <span>{calculateMasaKerja(currentYlInfo.tanggalMasuk).title}</span>
                       </div>
                     </div>
-                    <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded-xl text-center shrink-0">
-                      <span className="text-[8px] uppercase tracking-wider block text-rose-500 font-extrabold">Masa Kerja</span>
+                    <div className="bg-sky-100 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-900/50 text-sky-700 dark:text-sky-300 text-[10px] sm:text-[11px] font-bold px-2 py-1 rounded-xl text-center shrink-0">
+                      <span className="text-[10px] uppercase tracking-wider block text-sky-600 dark:text-sky-400 font-extrabold">Masa Kerja</span>
                       <span className="text-xs font-black">{calculateMasaKerja(currentYlInfo.tanggalMasuk).text}</span>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-1.5 mt-0.5">
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-xl">
-                      <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider block">Tanggal Masuk</span>
+                    <div className="bd-subcard p-2">
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Tanggal Masuk</span>
                       <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200">{currentYlInfo.tanggalMasuk || "-"}</span>
                     </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-xl">
-                      <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider block">NIK</span>
+                    <div className="bd-subcard p-2">
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">NIK</span>
                       <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200">{currentYlInfo.nik || "-"}</span>
                     </div>
                   </div>
@@ -1260,10 +1329,10 @@ export function YLView({
             </div>
 
             {/* Card Rekapitulasi Mini Kinerja YL (Pengganti Card Tier) */}
-            <div className={`bg-white dark:bg-slate-900 p-3 rounded-2xl shadow-xs border ${
+            <div className={`lg:col-span-5 p-3 sm:p-4 ${
               mRata2 < 250 && mRata2 > 0
-                ? "border-rose-300 dark:border-rose-800 ring-2 ring-rose-500/20"
-                : "border-slate-200 dark:border-slate-800"
+                ? `${YL_CARD_BASE} !border-rose-300 dark:!border-rose-800 ring-2 ring-rose-500/20`
+                : YL_CARD
             } flex flex-col gap-2`}>
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
                 <div className="flex items-center gap-1.5">
@@ -1276,82 +1345,70 @@ export function YLView({
                   <span>Rata-rata:</span>
                   <span className={`font-black ${
                     mRata2 < 250
-                      ? "text-rose-600 dark:text-rose-400 text-sm sm:text-base font-black px-1.5 py-0.2 bg-rose-50 dark:bg-rose-950/60 rounded-md border border-rose-200 dark:border-rose-900"
-                      : "text-emerald-600 dark:text-emerald-400"
+                      ? `${rata2ColorClass(mRata2)} text-sm sm:text-base font-black px-1.5 py-0.2 bg-red-100 dark:bg-red-950/60 rounded-md border border-red-200 dark:border-red-900`
+                      : rata2ColorClass(mRata2)
                   }`}>
                     {Math.trunc(mRata2).toLocaleString("id-ID")}
                   </span>
-                  <span className="text-[9.5px] font-normal text-slate-400">btl/hr</span>
+                  <span className="text-[10.5px] font-normal text-slate-500 dark:text-slate-400">btl/hr</span>
                 </div>
               </div>
 
-              {mRata2 < 250 && (
-                <div className="bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 px-2.5 py-1 rounded-xl text-[9.5px] sm:text-[10px] font-bold flex items-center gap-1.5">
-                  <span className="text-xs">⚠️</span>
-                  <span>Rata-rata harian masih <strong className="text-rose-700 dark:text-rose-400 font-black">&lt; 250 btl</strong> (Di bawah standar YL Mandiri). Tingkatkan penjualan harian yuk Bu!</span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-3 gap-1.5 text-center">
-                {/* 1. vs Target */}
-                <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-2 border border-slate-200/70 dark:border-slate-700/60 flex flex-col justify-between">
-                  <div>
-                    <span className="text-[9px] font-extrabold uppercase text-slate-500 dark:text-slate-400 block tracking-wider">vs Target</span>
-                    <p className={`text-xs sm:text-sm font-black mt-0.5 ${
-                      targetVal > 0 && mRata2 >= targetVal ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
-                    }`}>
-                      {targetVal > 0 ? formatPercentTruncated((mRata2 / targetVal) * 100, 1) : "-"}
-                    </p>
-                  </div>
-                  <div className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/50 leading-tight">
-                    <span className="block font-medium">Tgt: {Math.trunc(targetVal)}</span>
-                    <span className={`font-bold ${mRata2 >= targetVal ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+              {/* Komparasi vs Target, Bulan Lalu, Tahun Lalu */}
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                {/* vs Target */}
+                <div className="bd-subcard p-2 sm:p-2.5 text-center flex flex-col justify-between">
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">vs Target</span>
+                  <p className={`text-sm sm:text-base font-black leading-tight my-0.5 ${targetVal > 0 && mRata2 >= targetVal ? "text-green-600 dark:text-green-400" : "text-[#e60000] dark:text-[#ff2a2a]"}`}>
+                    {targetVal > 0 ? `${formatPercentTruncated((mRata2 / targetVal) * 100, 1)}` : "-"}
+                  </p>
+                  <div className="border-t border-slate-200 dark:border-slate-700 pt-0.5">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 block">Tgt: {Math.trunc(targetVal)}</span>
+                    <span className={`text-[10px] sm:text-[11px] font-black block ${targetVal > 0 && mRata2 >= targetVal ? "text-green-600 dark:text-green-400" : "text-[#e60000] dark:text-[#ff2a2a]"}`}>
                       {targetVal > 0 ? `${mRata2 >= targetVal ? "+" : ""}${Math.trunc(mRata2 - targetVal)}` : "-"}
                     </span>
                   </div>
                 </div>
-
-                {/* 2. vs Bulan Lalu */}
-                <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-2 border border-slate-200/70 dark:border-slate-700/60 flex flex-col justify-between">
-                  <div>
-                    <span className="text-[9px] font-extrabold uppercase text-slate-500 dark:text-slate-400 block tracking-wider">vs Bln Lalu</span>
-                    <p className={`text-xs sm:text-sm font-black mt-0.5 ${
-                      blnLaluVal > 0 && mRata2 >= blnLaluVal ? "text-emerald-600 dark:text-emerald-400" : "text-slate-700 dark:text-slate-300"
-                    }`}>
-                      {blnLaluVal > 0 ? formatPercentTruncated((mRata2 / blnLaluVal) * 100, 1) : "-"}
-                    </p>
-                  </div>
-                  <div className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/50 leading-tight">
-                    <span className="block font-medium">Lalu: {Math.trunc(blnLaluVal)}</span>
-                    <span className={`font-bold ${mRata2 >= blnLaluVal ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                {/* vs Bln Lalu */}
+                <div className="bd-subcard p-2 sm:p-2.5 text-center flex flex-col justify-between">
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">vs Bln Lalu</span>
+                  <p className={`text-sm sm:text-base font-black leading-tight my-0.5 ${blnLaluVal > 0 && mRata2 >= blnLaluVal ? "text-green-600 dark:text-green-400" : "text-[#e60000] dark:text-[#ff2a2a]"}`}>
+                    {blnLaluVal > 0 ? `${formatPercentTruncated((mRata2 / blnLaluVal) * 100, 1)}` : "-"}
+                  </p>
+                  <div className="border-t border-slate-200 dark:border-slate-700 pt-0.5">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 block">Lalu: {Math.trunc(blnLaluVal)}</span>
+                    <span className={`text-[10px] sm:text-[11px] font-black block ${blnLaluVal > 0 && mRata2 >= blnLaluVal ? "text-green-600 dark:text-green-400" : "text-[#e60000] dark:text-[#ff2a2a]"}`}>
                       {blnLaluVal > 0 ? `${mRata2 >= blnLaluVal ? "+" : ""}${Math.trunc(mRata2 - blnLaluVal)}` : "-"}
                     </span>
                   </div>
                 </div>
-
-                {/* 3. vs Tahun Lalu */}
-                <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-2 border border-slate-200/70 dark:border-slate-700/60 flex flex-col justify-between">
-                  <div>
-                    <span className="text-[9px] font-extrabold uppercase text-slate-500 dark:text-slate-400 block tracking-wider">vs Thn Lalu</span>
-                    <p className={`text-xs sm:text-sm font-black mt-0.5 ${
-                      thnLaluVal > 0 && mRata2 >= thnLaluVal ? "text-emerald-600 dark:text-emerald-400" : "text-slate-700 dark:text-slate-300"
-                    }`}>
-                      {thnLaluVal > 0 ? formatPercentTruncated((mRata2 / thnLaluVal) * 100, 1) : "-"}
-                    </p>
-                  </div>
-                  <div className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/50 leading-tight">
-                    <span className="block font-medium">Th Lalu: {Math.trunc(thnLaluVal)}</span>
-                    <span className={`font-bold ${mRata2 >= thnLaluVal ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                {/* vs Thn Lalu */}
+                <div className="bd-subcard p-2 sm:p-2.5 text-center flex flex-col justify-between">
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">vs Thn Lalu</span>
+                  <p className={`text-sm sm:text-base font-black leading-tight my-0.5 ${thnLaluVal > 0 && mRata2 >= thnLaluVal ? "text-green-600 dark:text-green-400" : "text-[#e60000] dark:text-[#ff2a2a]"}`}>
+                    {thnLaluVal > 0 ? `${formatPercentTruncated((mRata2 / thnLaluVal) * 100, 1)}` : "-"}
+                  </p>
+                  <div className="border-t border-slate-200 dark:border-slate-700 pt-0.5">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 block">Th Lalu: {Math.trunc(thnLaluVal)}</span>
+                    <span className={`text-[10px] sm:text-[11px] font-black block ${thnLaluVal > 0 && mRata2 >= thnLaluVal ? "text-green-600 dark:text-green-400" : "text-[#e60000] dark:text-[#ff2a2a]"}`}>
                       {thnLaluVal > 0 ? `${mRata2 >= thnLaluVal ? "+" : ""}${Math.trunc(mRata2 - thnLaluVal)}` : "-"}
                     </span>
                   </div>
                 </div>
               </div>
+
+              {mRata2 < 250 && (
+                <div className="bg-rose-100 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 px-2.5 py-1 rounded-xl text-[10.5px] sm:text-[11px] font-bold flex items-center gap-1.5">
+                  <span className="text-xs">⚠️</span>
+                  <span>Rata-rata harian masih <strong className="text-rose-700 dark:text-rose-400 font-black">&lt; 250 btl</strong> (Di bawah standar YL Mandiri). Tingkatkan penjualan harian yuk Bu!</span>
+                </div>
+              )}
+
             </div>
 
             {/* Birthday Message */}
             {isBirthday && (
-              <div className="bg-gradient-to-r from-rose-400 via-pink-500 to-rose-500 p-4 rounded-2xl shadow-md flex items-center justify-center text-center animate-pulse border-2 border-rose-300 mt-1">
+              <div className="bg-gradient-to-r from-rose-400 via-pink-500 to-rose-500 p-4 rounded-2xl shadow-md flex items-center justify-center text-center animate-pulse border-2 border-rose-300 dark:border-rose-800 mt-1 lg:mt-0 lg:col-span-5">
                 <p className="text-white font-black text-sm sm:text-base leading-snug">
                   🎉 Selamat Ulang Tahun Ibu {cleanYlName(ylName)}! 🎂<br/>
                   <span className="text-[10px] sm:text-xs font-semibold opacity-90 block mt-1 leading-tight">Kami keluarga besar Yakult mengucapkan selamat ulang tahun. Semoga selalu diberikan kesehatan, kebahagiaan, dan makin sukses bersama Yakult. Amin.</span>
@@ -1360,18 +1417,18 @@ export function YLView({
             )}
 
             {/* Menu Grid - Compact 4 to 5 Columns Responsive */}
-            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-5 landscape:grid-cols-5 gap-2 sm:gap-2.5">
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-5 landscape:grid-cols-5 gap-2 sm:gap-2.5 md:gap-3 xl:gap-4 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:row-span-3 lg:content-start">
               {[
-                { id: "input", icon: "📝", label: "Entry Penjualan", color: "bg-red-50 dark:bg-red-950/30 text-red-600" },
-                { id: "ringkasan", icon: "✨", label: "Ringkasan", color: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600" },
-                { id: "breakdown", icon: "📊", label: "Breakdown dan Realisasi", color: "bg-amber-50 dark:bg-amber-950/30 text-amber-600" },
-                { id: "realisasi_potensi", icon: "🎯", label: "Realisasi Potensi", color: "bg-sky-50 dark:bg-sky-950/30 text-sky-600" },
-                { id: "evaluasi", icon: "📋", label: "Evaluasi", color: "bg-blue-50 dark:bg-blue-950/30 text-blue-600" },
-                { id: "potensi_tembus", icon: "🚀", label: "Potensi Tembus", color: "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600" },
-                { id: "seragam", icon: "👗", label: "Seragam", color: "bg-purple-50 dark:bg-purple-950/30 text-purple-600" },
-                { id: "product_knowledge", icon: "📚", label: "Product Knowledge", color: "bg-rose-50 dark:bg-rose-950/30 text-rose-600" },
-                { id: "tautan", icon: "🔗", label: "Link", color: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300" },
-                { id: "ai_chat", icon: "🤖", label: "Tanya AI", color: "bg-violet-50 dark:bg-violet-950/30 text-violet-600" },
+                { id: "input", icon: "📝", label: "Entry Penjualan", color: "bg-brand-600 text-white dark:bg-brand-500 dark:text-white" },
+                { id: "ringkasan", icon: "✨", label: "Ringkasan", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300" },
+                { id: "breakdown", icon: "📊", label: "Breakdown dan Realisasi", color: "bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300" },
+                { id: "realisasi_potensi", icon: "🎯", label: "Realisasi Potensi", color: "bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300" },
+                { id: "evaluasi", icon: "📋", label: "Evaluasi", color: "bg-brand-50 text-brand-600 dark:bg-brand-500/20 dark:text-brand-300" },
+                { id: "potensi_tembus", icon: "🚀", label: "Potensi Tembus", color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-300" },
+                { id: "seragam", icon: "👗", label: "Seragam", color: "bg-pink-100 text-pink-700 dark:bg-pink-400/15 dark:text-pink-300" },
+                { id: "product_knowledge", icon: "📚", label: "Product Knowledge", color: "bg-orange-100 text-orange-700 dark:bg-orange-400/15 dark:text-orange-300" },
+                { id: "tautan", icon: "🔗", label: "Link", color: "bg-slate-200 text-slate-700 dark:bg-slate-400/15 dark:text-slate-200" },
+                { id: "ai_chat", icon: "🤖", label: "Tanya AI", color: "bg-brand-100 text-brand-700 dark:bg-brand-400/20 dark:text-brand-200" },
               ].map((btn) => (
                 <button
                   key={btn.id}
@@ -1382,12 +1439,12 @@ export function YLView({
                       setActiveTab(btn.id as any);
                     }
                   }}
-                  className="bg-white dark:bg-slate-900 p-2 sm:p-2.5 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all active:scale-95 group text-center flex flex-col items-center justify-center gap-1.5 min-h-[76px] sm:min-h-[82px] cursor-pointer"
+                  className={`${YL_CARD} p-2 sm:p-2.5 md:p-3 xl:p-4 hover:shadow-md transition-all active:scale-95 group text-center flex flex-col items-center justify-center gap-1.5 md:gap-2 min-h-[76px] sm:min-h-[88px] md:min-h-[104px] lg:min-h-[112px] xl:min-h-[128px] cursor-pointer`}
                 >
-                  <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${btn.color} flex items-center justify-center text-lg sm:text-xl group-hover:scale-110 transition-transform`}>
+                  <div className={`w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 xl:w-14 xl:h-14 rounded-xl ${btn.color} flex items-center justify-center text-[1.2rem] sm:text-[1.3rem] md:text-[1.5rem] xl:text-[1.8rem] group-hover:scale-110 transition-transform`}>
                     {btn.icon}
                   </div>
-                  <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-[10px] sm:text-[11px] leading-tight text-center line-clamp-2 w-full px-0.5">
+                  <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-[10.5px] sm:text-[11px] lg:text-xs leading-tight text-center line-clamp-2 w-full px-0.5">
                     {btn.label}
                   </h3>
                 </button>
@@ -1395,14 +1452,14 @@ export function YLView({
             </div>
 
             {/* Papan Catatan Perhatian Manager */}
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl p-3 sm:p-4 border border-amber-300 dark:border-amber-700/50 shadow-xs flex flex-col justify-between">
+            <div className="bg-warn-soft rounded-2xl p-3 sm:p-4 md:p-5 border border-warn-line shadow-[0_2px_10px_-3px_rgba(0,0,0,0.14)] dark:shadow-none flex flex-col justify-between lg:col-span-12">
               <div className="flex items-center gap-1.5 border-b border-amber-200 dark:border-amber-800/60 pb-1.5 mb-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-500 animate-bounce shrink-0" />
                 <h2 className="text-[10px] sm:text-xs font-black text-amber-950 dark:text-amber-100 uppercase tracking-wider">
                   Perhatian
                 </h2>
               </div>
-              <div className="overflow-y-auto pr-1 flex-1 max-h-24">
+              <div className="overflow-y-auto pr-1 flex-1 max-h-24 lg:max-h-40">
                 {motYlLines.length > 0 ? (
                   <ul className="space-y-1.5">
                     {motYlLines.map((line, idx) => (
@@ -1426,63 +1483,63 @@ export function YLView({
 
         {/* TAB INPUT — Form harian YL, tampilan disederhanakan (khusus menu YL) */}
         {activeTab === "input" && (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-[auto_auto_auto_1fr] gap-3 lg:gap-5 items-start">
             {/* Tanggal */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1.5">Tanggal Transaksi</label>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-1.5">Tanggal Transaksi</label>
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-red-400"
+                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-400"
               />
             </div>
 
             {/* 1. Total Jual & Setoran Harian */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
-              <h2 className="text-sm font-black text-slate-800">1. Total Jual & Setoran Harian</h2>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+              <h2 className="text-sm font-black text-slate-800 dark:text-white">1. Total Jual & Setoran Harian</h2>
               <div className="space-y-2">
                 {[
-                  { label: "YO", val: totYo, set: setTotYo, rp: setYo },
-                  { label: "OM", val: totOm, set: setTotOm, rp: setOm },
-                  { label: "OS", val: totOs, set: setTotOs, rp: setOs },
-                  { label: "YT", val: totYt, set: setTotYt, rp: setYt },
+                  { label: "YO", val: totYo, set: setTotYo, rp: setYo, color: "text-red-600 dark:text-red-400" },
+                  { label: "OM", val: totOm, set: setTotOm, rp: setOm, color: "text-amber-500 dark:text-amber-400" },
+                  { label: "OS", val: totOs, set: setTotOs, rp: setOs, color: "text-pink-600 dark:text-pink-400" },
+                  { label: "YT", val: totYt, set: setTotYt, rp: setYt, color: "text-blue-600 dark:text-blue-400" },
                 ].map(row => (
                   <div key={row.label} className="grid grid-cols-[1.75rem_1fr_7rem] sm:grid-cols-[2rem_1fr_8rem] items-center gap-2 sm:gap-3">
-                    <span className="font-black text-xs sm:text-sm text-slate-600">{row.label}</span>
+                    <span className={`font-black text-xs sm:text-sm ${row.color}`}>{row.label}</span>
                     <NumberInput
                       min={0}
                       value={row.val}
                       onChange={(v) => row.set(Math.max(0, v))}
-                      className="w-full text-center font-bold text-sm text-slate-900 bg-slate-50 border border-slate-200 py-1.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400"
+                      className="w-full text-center font-bold text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-1.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400"
                     />
-                    <span className="text-right text-[11px] sm:text-xs font-bold text-slate-500 tabular-nums whitespace-nowrap">{formatRp(row.rp)}</span>
+                    <span className="text-right text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap">{formatRp(row.rp)}</span>
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-[1.75rem_1fr_7rem] sm:grid-cols-[2rem_1fr_8rem] items-center gap-2 sm:gap-3 pt-2 border-t border-slate-100">
-                <span className="col-span-2 text-[11px] sm:text-xs font-bold text-slate-500 uppercase">Total Setoran</span>
-                <span className="text-right text-sm sm:text-base font-black text-emerald-600 tabular-nums whitespace-nowrap">{formatRp(setYo + setOm + setOs + setYt)}</span>
+              <div className="grid grid-cols-[1.75rem_1fr_7rem] sm:grid-cols-[2rem_1fr_8rem] items-center gap-2 sm:gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <span className="col-span-2 text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Total Setoran</span>
+                <span className="text-right text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 tabular-nums whitespace-nowrap">{formatRp(setYo + setOm + setOs + setYt)}</span>
               </div>
             </div>
 
             {/* 2. Balik Botol (BB) */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
-              <h2 className="text-sm font-black text-slate-800">2. Balik Botol (BB)</h2>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+              <h2 className="text-sm font-black text-slate-800 dark:text-white">2. Balik Botol (BB)</h2>
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { label: "YO", val: bbYo, set: setBbYo },
-                  { label: "OM", val: bbOm, set: setBbOm },
-                  { label: "OS", val: bbOs, set: setBbOs },
-                  { label: "YT", val: bbYt, set: setBbYt },
+                  { label: "YO", val: bbYo, set: setBbYo, color: "text-red-600 dark:text-red-400" },
+                  { label: "OM", val: bbOm, set: setBbOm, color: "text-amber-500 dark:text-amber-400" },
+                  { label: "OS", val: bbOs, set: setBbOs, color: "text-pink-600 dark:text-pink-400" },
+                  { label: "YT", val: bbYt, set: setBbYt, color: "text-blue-600 dark:text-blue-400" },
                 ].map(row => (
                   <div key={row.label} className="space-y-1">
-                    <span className="text-xs font-bold text-slate-500 block text-center">{row.label}</span>
+                    <span className={`text-xs font-black block text-center ${row.color}`}>{row.label}</span>
                     <NumberInput
                       min={0}
                       value={row.val}
                       onChange={(v) => row.set(Math.max(0, v))}
-                      className="w-full text-center font-bold text-sm text-slate-900 bg-slate-50 border border-slate-200 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400"
+                      className="w-full text-center font-bold text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400"
                     />
                   </div>
                 ))}
@@ -1490,10 +1547,10 @@ export function YLView({
             </div>
 
             {/* 3. Realisasi Potensi */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 lg:col-start-2 lg:row-start-1 lg:row-span-4">
               <div>
-                <h2 className="text-sm font-black text-slate-800">3. Potensi</h2>
-                <p className="text-xs text-slate-500 font-semibold mt-0.5">Pecah total jual ke potensi di bawah ini. Total harus pas dengan Acuan Admin.</p>
+                <h2 className="text-sm font-black text-slate-800 dark:text-white">3. Potensi</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">Pecah total jual ke potensi di bawah ini. Total harus pas dengan Acuan Admin.</p>
               </div>
 
               {[
@@ -1504,17 +1561,22 @@ export function YLView({
                 { key: "tk", label: "Toko" },
                 { key: "ib", label: "IB" },
               ].map(sec => (
-                <div key={sec.key} className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-2">
-                  <span className="text-xs font-black text-slate-600 uppercase">{sec.label}</span>
+                <div key={sec.key} className="bg-slate-50/70 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200/60 dark:border-slate-700 space-y-2">
+                  <span className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase">{sec.label}</span>
                   <div className="grid grid-cols-4 gap-2">
-                    {(["yo", "om", "os", "yt"] as const).map(prod => (
+                    {([
+                      { p: "yo", c: "text-red-600 dark:text-red-400" },
+                      { p: "om", c: "text-amber-500 dark:text-amber-400" },
+                      { p: "os", c: "text-pink-600 dark:text-pink-400" },
+                      { p: "yt", c: "text-blue-600 dark:text-blue-400" },
+                    ] as const).map(({ p: prod, c: colorClass }) => (
                       <div key={prod} className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 block text-center uppercase">{prod}</span>
+                        <span className={`text-[10px] font-black block text-center uppercase ${colorClass}`}>{prod}</span>
                         <NumberInput
                           min={0}
                           value={sectors[sec.key][prod]}
                           onChange={(v) => setSectors(prev => ({ ...prev, [sec.key]: { ...prev[sec.key], [prod]: Math.max(0, v) } }))}
-                          className="w-full text-center font-bold text-xs text-slate-900 bg-white border border-slate-200 py-2 rounded-lg outline-none focus:ring-2 focus:ring-red-400"
+                          className="w-full text-center font-bold text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 py-2 rounded-lg outline-none focus:ring-2 focus:ring-red-400"
                         />
                       </div>
                     ))}
@@ -1523,32 +1585,32 @@ export function YLView({
               ))}
 
               {/* Pencocokan Potensi Jual — SATU acuan saja: Acuan Admin pertanggal */}
-              <div className={`rounded-xl p-4 border space-y-3 ${canSaveInputHarian ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200"}`}>
+              <div className={`rounded-xl p-4 border space-y-3 ${canSaveInputHarian ? "bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200/60 dark:border-emerald-900/40" : "bg-rose-50/70 dark:bg-rose-950/30 border-rose-200/60 dark:border-rose-900/40"}`}>
                 <div className="flex justify-between items-center">
-                  <span className="text-base font-black text-slate-800">Pencocokan Potensi Jual</span>
+                  <span className="text-base font-black text-slate-800 dark:text-white">Pencocokan Potensi Jual</span>
                   <span className={`text-sm font-black px-2.5 py-1 rounded-lg ${canSaveInputHarian ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>
                     {canSaveInputHarian ? "✓ COCOK" : "✗ BELUM PAS"}
                   </span>
                 </div>
                 {hasAdminAcuan ? (
                   <>
-                    <span className="text-xs font-bold text-slate-500 uppercase block">Acuan Admin (Tgl {inputHarianDay})</span>
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase block">Acuan Admin (Tgl {inputHarianDay})</span>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm font-bold">
-                      <span className={secSumYo === acuanHarianYo ? "text-emerald-700" : "text-rose-700"}>YO: {secSumYo}/{acuanHarianYo}</span>
-                      <span className={secSumOm === acuanHarianOm ? "text-emerald-700" : "text-rose-700"}>OM: {secSumOm}/{acuanHarianOm}</span>
-                      <span className={secSumOs === acuanHarianOs ? "text-emerald-700" : "text-rose-700"}>OS: {secSumOs}/{acuanHarianOs}</span>
-                      <span className={secSumYt === acuanHarianYt ? "text-emerald-700" : "text-rose-700"}>YT: {secSumYt}/{acuanHarianYt}</span>
+                      <span className={secSumYo === acuanHarianYo ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}>YO: {secSumYo}/{acuanHarianYo}</span>
+                      <span className={secSumOm === acuanHarianOm ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}>OM: {secSumOm}/{acuanHarianOm}</span>
+                      <span className={secSumOs === acuanHarianOs ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}>OS: {secSumOs}/{acuanHarianOs}</span>
+                      <span className={secSumYt === acuanHarianYt ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}>YT: {secSumYt}/{acuanHarianYt}</span>
                     </div>
                   </>
                 ) : (
-                  <p className="text-sm font-semibold text-slate-500">Acuan Admin untuk tanggal ini belum tersedia.</p>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Acuan Admin untuk tanggal ini belum tersedia.</p>
                 )}
               </div>
             </div>
 
             {/* 4. Kunjungan, PB, & Sampah Botol */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
-              <h2 className="text-sm font-black text-slate-800">4. Kunjungan, PB, & Sampah Botol</h2>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+              <h2 className="text-sm font-black text-slate-800 dark:text-white">4. Kunjungan, PB, & Sampah Botol</h2>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { label: "PLG (Pelanggan)", val: fPlg, set: setFPlg },
@@ -1557,27 +1619,27 @@ export function YLView({
                   { label: "RB (Rmh Beli)", val: fRb, set: setFRb },
                 ].map(row => (
                   <div key={row.label} className="space-y-1">
-                    <span className="text-xs font-bold text-slate-500 block">{row.label}</span>
-                    <NumberInput min={0} value={row.val} onChange={(v) => row.set(Math.max(0, v))} className="w-full text-center font-bold text-sm text-slate-900 bg-slate-50 border border-slate-200 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400" />
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block">{row.label}</span>
+                    <NumberInput min={0} value={row.val} onChange={(v) => row.set(Math.max(0, v))} className="w-full text-center font-bold text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400" />
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <div className="space-y-1">
-                  <span className="text-xs font-bold text-slate-500 block">PB Pagi</span>
-                  <NumberInput min={0} value={pbP} onChange={(v) => setPbP(Math.max(0, v))} className="w-full text-center font-bold text-sm text-slate-900 bg-slate-50 border border-slate-200 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400" />
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block">PB Pagi</span>
+                  <NumberInput min={0} value={pbP} onChange={(v) => setPbP(Math.max(0, v))} className="w-full text-center font-bold text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400" />
                 </div>
                 <div className="space-y-1">
-                  <span className="text-xs font-bold text-slate-500 block">PB Sore</span>
-                  <NumberInput min={0} value={pbS} onChange={(v) => setPbS(Math.max(0, v))} className="w-full text-center font-bold text-sm text-slate-900 bg-slate-50 border border-slate-200 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400" />
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block">PB Sore</span>
+                  <NumberInput min={0} value={pbS} onChange={(v) => setPbS(Math.max(0, v))} className="w-full text-center font-bold text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400" />
                 </div>
                 <div className="space-y-1">
-                  <span className="text-xs font-bold text-slate-500 block">PLG APK</span>
-                  <NumberInput min={0} value={apkPlg} onChange={(v) => setApkPlg(Math.max(0, v))} className="w-full text-center font-bold text-sm text-slate-900 bg-slate-50 border border-slate-200 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400" />
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block">PLG APK</span>
+                  <NumberInput min={0} value={apkPlg} onChange={(v) => setApkPlg(Math.max(0, v))} className="w-full text-center font-bold text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400" />
                 </div>
                 <div className="space-y-1">
-                  <span className="text-xs font-bold text-slate-500 block">Sampah Botol</span>
-                  <NumberInput min={0} value={apkBotol} onChange={(v) => setApkBotol(Math.max(0, v))} className="w-full text-center font-bold text-sm text-slate-900 bg-slate-50 border border-slate-200 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400" />
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block">Sampah Botol</span>
+                  <NumberInput min={0} value={apkBotol} onChange={(v) => setApkBotol(Math.max(0, v))} className="w-full text-center font-bold text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-red-400" />
                 </div>
               </div>
             </div>
@@ -1586,13 +1648,13 @@ export function YLView({
             <button
               onClick={handleSaveInputHarian}
               disabled={isSavingInputHarian}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black text-sm py-4 rounded-2xl shadow-sm transition-all active:scale-[0.99]"
+              className="w-full lg:col-span-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black text-sm py-4 rounded-2xl shadow-sm transition-all active:scale-[0.99] cursor-pointer"
             >
               {isSavingInputHarian ? "Menyimpan..." : "💾 Simpan Laporan Harian"}
             </button>
             
             {inputHarianMsg && (
-              <p className={`text-xs font-bold text-center -mt-2 ${inputHarianMsg.includes("❌") ? "text-rose-600" : "text-emerald-600"}`}>
+              <p className={`lg:col-span-2 text-xs font-bold text-center -mt-2 ${inputHarianMsg.includes("❌") ? "text-rose-600" : "text-emerald-600"}`}>
                 {inputHarianMsg}
               </p>
             )}
@@ -1601,79 +1663,79 @@ export function YLView({
 
         {/* RINGKASAN TAB */}
         {activeTab === "ringkasan" && (
-          <div className="space-y-3.5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 lg:gap-5 items-start">
             {/* Target, Bulan Lalu, & Tahun Lalu Per YL Display Card - Ringkas & Pas Isi */}
-            <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-slate-200 shadow-xs space-y-2.5">
-              <div className="flex items-center justify-between border-l-4 border-red-600 pl-2.5">
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-3.5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-2.5">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider">
+                  <h2 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
                     Target, Bulan Lalu & Tahun Lalu
                   </h2>
-                  <p className="text-[10px] sm:text-[11px] text-slate-500 font-semibold uppercase">
-                    Rata-Rata Saat Ini: <span className={`font-black ${mRata2 < 250 ? "text-rose-600 text-xs sm:text-sm font-black" : "text-slate-900"}`}>{Math.trunc(mRata2)} btl/hari {mRata2 < 250 && mRata2 > 0 ? "(<250 Standar Mandiri)" : ""}</span>
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold uppercase">
+                    Rata-Rata Saat Ini: <span className={`font-black font-mono tabular-nums ${rata2ColorClass(mRata2)} text-xs sm:text-sm font-black`}>{Math.trunc(mRata2)} btl/hari {mRata2 < 250 && mRata2 > 0 ? "(<250 Standar Mandiri)" : ""}</span>
                   </p>
                 </div>
-                <span className="text-[10px] sm:text-[11px] font-black bg-red-50 text-red-700 px-2.5 py-0.5 rounded-lg border border-red-200">
+                <span className="text-[10px] sm:text-[11px] font-black bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-2.5 py-0.5 rounded-lg border border-blue-200/60 dark:border-blue-900/40">
                   Area {displayAreaNumber || "-"}
                 </span>
               </div>
 
               <div className="grid grid-cols-3 gap-2 sm:gap-2.5 text-center pt-0.5">
                 {/* 1. Target Bulan Ini */}
-                <div className="p-2 sm:p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
+                <div className="p-2 sm:p-2.5 bg-slate-50/70 dark:bg-slate-800/40 rounded-xl border border-slate-200/70 dark:border-slate-700/50 flex flex-col justify-between">
                   <div>
-                    <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase text-slate-600 block tracking-wider">Target Bulan Ini</span>
-                    <p className="text-base sm:text-xl font-black text-slate-800 leading-tight mt-0.5">
+                    <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase text-slate-600 dark:text-slate-400 block tracking-wider">Target Bulan Ini</span>
+                    <p className="text-base sm:text-xl font-black text-neutral-900 dark:text-white leading-tight mt-0.5">
                       {Math.trunc(targetVal).toLocaleString("id-ID")}
                       <span className="text-[9px] sm:text-[9.5px] font-bold text-slate-400 block -mt-0.5">btl / hari</span>
                     </p>
                   </div>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-200 leading-tight">
-                    <span className="text-[9px] text-slate-500 font-extrabold uppercase block">vs Target</span>
-                    <p className={`text-xs sm:text-sm font-black ${targetVal > 0 && mRata2 >= targetVal ? "text-emerald-700" : "text-amber-700"}`}>
+                  <div className="mt-1.5 pt-1.5 border-t border-slate-200/70 dark:border-slate-700/50 leading-tight">
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 font-extrabold uppercase block">vs Target</span>
+                    <p className={`text-xs sm:text-sm font-black ${targetVal > 0 && mRata2 >= targetVal ? "text-green-600 dark:text-green-400" : "text-[#e60000] dark:text-[#ff2a2a]"}`}>
                       {getPctString(mRata2, targetVal)}
                     </p>
-                    <p className={`text-[10px] sm:text-[11px] font-black mt-0.5 ${targetVal > 0 && mRata2 >= targetVal ? "text-emerald-700" : "text-amber-700"}`}>
+                    <p className={`text-[10px] sm:text-[11px] font-black mt-0.5 ${targetVal > 0 && mRata2 >= targetVal ? "text-green-600 dark:text-green-400" : "text-[#e60000] dark:text-[#ff2a2a]"}`}>
                       {targetVal > 0 ? `${mRata2 >= targetVal ? "+" : ""}${Math.trunc(mRata2 - targetVal)} btl` : "-"}
                     </p>
                   </div>
                 </div>
 
                 {/* 2. Bulan Lalu */}
-                <div className="p-2 sm:p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
+                <div className="p-2 sm:p-2.5 bg-slate-50/70 dark:bg-slate-800/40 rounded-xl border border-slate-200/70 dark:border-slate-700/50 flex flex-col justify-between">
                   <div>
-                    <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase text-slate-600 block tracking-wider">Bulan Lalu</span>
-                    <p className="text-base sm:text-xl font-black text-slate-800 leading-tight mt-0.5">
+                    <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase text-slate-600 dark:text-slate-400 block tracking-wider">Bulan Lalu</span>
+                    <p className="text-base sm:text-xl font-black text-neutral-900 dark:text-white leading-tight mt-0.5">
                       {Math.trunc(blnLaluVal).toLocaleString("id-ID")}
                       <span className="text-[9px] sm:text-[9.5px] font-bold text-slate-400 block -mt-0.5">btl / hari</span>
                     </p>
                   </div>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-200 leading-tight">
-                    <span className="text-[9px] text-slate-500 font-extrabold uppercase block">vs Bln Lalu</span>
-                    <p className={`text-xs sm:text-sm font-black ${blnLaluVal > 0 && mRata2 >= blnLaluVal ? "text-emerald-700" : "text-rose-700"}`}>
+                  <div className="mt-1.5 pt-1.5 border-t border-slate-200/70 dark:border-slate-700/50 leading-tight">
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 font-extrabold uppercase block">vs Bln Lalu</span>
+                    <p className={`text-xs sm:text-sm font-black ${blnLaluVal > 0 && mRata2 >= blnLaluVal ? "text-green-600 dark:text-green-400" : "text-[#e60000] dark:text-[#ff2a2a]"}`}>
                       {getPctString(mRata2, blnLaluVal)}
                     </p>
-                    <p className={`text-[10px] sm:text-[11px] font-black mt-0.5 ${blnLaluVal > 0 && mRata2 >= blnLaluVal ? "text-emerald-700" : "text-rose-700"}`}>
+                    <p className={`text-[10px] sm:text-[11px] font-black mt-0.5 ${blnLaluVal > 0 && mRata2 >= blnLaluVal ? "text-green-600 dark:text-green-400" : "text-[#e60000] dark:text-[#ff2a2a]"}`}>
                       {blnLaluVal > 0 ? `${mRata2 >= blnLaluVal ? "+" : ""}${Math.trunc(mRata2 - blnLaluVal)} btl` : "-"}
                     </p>
                   </div>
                 </div>
 
                 {/* 3. Tahun Lalu */}
-                <div className="p-2 sm:p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
+                <div className="p-2 sm:p-2.5 bg-slate-50/70 dark:bg-slate-800/40 rounded-xl border border-slate-200/70 dark:border-slate-700/50 flex flex-col justify-between">
                   <div>
-                    <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase text-slate-600 block tracking-wider">Tahun Lalu</span>
-                    <p className="text-base sm:text-xl font-black text-slate-800 leading-tight mt-0.5">
+                    <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase text-slate-600 dark:text-slate-400 block tracking-wider">Tahun Lalu</span>
+                    <p className="text-base sm:text-xl font-black text-neutral-900 dark:text-white leading-tight mt-0.5">
                       {Math.trunc(thnLaluVal).toLocaleString("id-ID")}
                       <span className="text-[9px] sm:text-[9.5px] font-bold text-slate-400 block -mt-0.5">btl / hari</span>
                     </p>
                   </div>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-200 leading-tight">
-                    <span className="text-[9px] text-slate-500 font-extrabold uppercase block">vs Thn Lalu</span>
-                    <p className={`text-xs sm:text-sm font-black ${thnLaluVal > 0 && mRata2 >= thnLaluVal ? "text-emerald-700" : "text-rose-700"}`}>
+                  <div className="mt-1.5 pt-1.5 border-t border-slate-200/70 dark:border-slate-700/50 leading-tight">
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 font-extrabold uppercase block">vs Thn Lalu</span>
+                    <p className={`text-xs sm:text-sm font-black ${thnLaluVal > 0 && mRata2 >= thnLaluVal ? "text-green-600 dark:text-green-400" : "text-[#e60000] dark:text-[#ff2a2a]"}`}>
                       {getPctString(mRata2, thnLaluVal)}
                     </p>
-                    <p className={`text-[10px] sm:text-[11px] font-black mt-0.5 ${thnLaluVal > 0 && mRata2 >= thnLaluVal ? "text-emerald-700" : "text-rose-700"}`}>
+                    <p className={`text-[10px] sm:text-[11px] font-black mt-0.5 ${thnLaluVal > 0 && mRata2 >= thnLaluVal ? "text-green-600 dark:text-green-400" : "text-[#e60000] dark:text-[#ff2a2a]"}`}>
                       {thnLaluVal > 0 ? `${mRata2 >= thnLaluVal ? "+" : ""}${Math.trunc(mRata2 - thnLaluVal)} btl` : "-"}
                     </p>
                   </div>
@@ -1683,72 +1745,72 @@ export function YLView({
 
 
             {/* Akumulasi Penjualan */}
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm space-y-4">
-              <h2 className="text-sm sm:text-base font-black text-slate-800 uppercase tracking-wider border-l-4 border-red-600 pl-3">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
                 Akumulasi Penjualan (Bulan Ini)
               </h2>
               <div className="space-y-4">
                 {/* YO progress */}
                 <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs sm:text-sm font-black text-slate-800">
-                    <span className="text-red-600">YO Original</span>
-                    <span>{mYo} btl ({pctOfTotal(mYo)}%)</span>
+                  <div className="flex justify-between text-xs sm:text-sm font-black">
+                    <span className="text-red-600 dark:text-red-400 font-black">YO Original</span>
+                    <span className="font-mono tabular-nums text-neutral-900 dark:text-white">{mYo} btl ({pctOfTotal(mYo)}%)</span>
                   </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div className="h-full bg-red-600 rounded-full" style={{ width: `${pctOfTotal(mYo)}%` }} />
                   </div>
                 </div>
 
                 {/* OM progress */}
                 <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs sm:text-sm font-black text-slate-800">
-                    <span className="text-amber-500">OM Mango</span>
-                    <span>{mOm} btl ({pctOfTotal(mOm)}%)</span>
+                  <div className="flex justify-between text-xs sm:text-sm font-black">
+                    <span className="text-amber-500 dark:text-amber-400 font-black">OM Mango</span>
+                    <span className="font-mono tabular-nums text-neutral-900 dark:text-white">{mOm} btl ({pctOfTotal(mOm)}%)</span>
                   </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div className="h-full bg-amber-500 rounded-full" style={{ width: `${pctOfTotal(mOm)}%` }} />
                   </div>
                 </div>
 
                 {/* OS progress */}
                 <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs sm:text-sm font-black text-slate-800">
-                    <span className="text-pink-500">OS Stroberi</span>
-                    <span>{mOs} btl ({pctOfTotal(mOs)}%)</span>
+                  <div className="flex justify-between text-xs sm:text-sm font-black">
+                    <span className="text-pink-600 dark:text-pink-400 font-black">OS Stroberi</span>
+                    <span className="font-mono tabular-nums text-neutral-900 dark:text-white">{mOs} btl ({pctOfTotal(mOs)}%)</span>
                   </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div className="h-full bg-pink-500 rounded-full" style={{ width: `${pctOfTotal(mOs)}%` }} />
                   </div>
                 </div>
 
                 {/* YT progress */}
                 <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs sm:text-sm font-black text-slate-800">
-                    <span className="text-blue-600">YT Light</span>
-                    <span>{mYt} btl ({pctOfTotal(mYt)}%)</span>
+                  <div className="flex justify-between text-xs sm:text-sm font-black">
+                    <span className="text-blue-600 dark:text-blue-400 font-black">YT Light</span>
+                    <span className="font-mono tabular-nums text-neutral-900 dark:text-white">{mYt} btl ({pctOfTotal(mYt)}%)</span>
                   </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div className="h-full bg-blue-600 rounded-full" style={{ width: `${pctOfTotal(mYt)}%` }} />
                   </div>
                 </div>
 
-                <hr className="border-slate-200 my-2" />
-                <div className="bg-red-50/90 p-4 rounded-2xl border border-red-200 text-center space-y-1">
-                  <span className="text-xs font-black text-red-950 uppercase tracking-wider block">Grand Total Jual</span>
-                  <span className="text-2xl sm:text-4xl font-black text-rose-600 block">{mTotalSales} btl</span>
-                  <span className="text-xs text-slate-600 font-extrabold block">Rata-Rata harian: {Math.trunc(mRata2)} btl/hari</span>
+                <hr className="border-slate-200 dark:border-slate-800 my-2" />
+                <div className="bg-blue-50/70 dark:bg-blue-950/30 p-4 rounded-2xl border border-blue-200/60 dark:border-blue-900/40 text-center space-y-1">
+                  <span className="text-xs font-black text-blue-900 dark:text-blue-300 uppercase tracking-wider block">Grand Total Jual</span>
+                  <span className="text-2xl sm:text-4xl font-black text-neutral-900 dark:text-white font-mono tabular-nums block">{mTotalSales} btl</span>
+                  <span className="text-xs text-slate-600 dark:text-slate-400 font-extrabold font-mono tabular-nums block">Rata-Rata harian: <span className={`${rata2ColorClass(mRata2)} font-black`}>{Math.trunc(mRata2)}</span> btl/hari</span>
                 </div>
               </div>
             </div>
 
             {/* Akumulasi Realisasi Per Potensi & Persentase Matrix */}
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-l-4 border-indigo-600 pl-3">
-                <h2 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wider">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
                   📊 Ringkasan Akumulasi Per Potensi
                 </h2>
-                <span className="text-xs font-mono bg-indigo-50 text-indigo-700 font-black px-2.5 py-1 rounded-lg border border-indigo-100">
-                  Total: {mRmh + mPsr + mSkh + mKtr + mTk + mIb} btl
+                <span className="text-xs font-mono bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-black px-2.5 py-1 rounded-lg border border-indigo-200/60 dark:border-indigo-900/40">
+                  Total: <span className="text-neutral-900 dark:text-white">{mRmh + mPsr + mSkh + mKtr + mTk + mIb}</span> btl
                 </span>
               </div>
 
@@ -1757,25 +1819,25 @@ export function YLView({
                 const getPct = (val: number) => totalPot > 0 ? String(Math.round((val / totalPot) * 100)) : "0";
 
                 const sectorList = [
-                  { key: "rmh", label: "Rumah", val: mRmh, pct: getPct(mRmh), bg: "bg-emerald-50 border-emerald-200 text-emerald-950", bar: "bg-emerald-500" },
-                  { key: "psr", label: "Pasar", val: mPsr, pct: getPct(mPsr), bg: "bg-amber-50 border-amber-200 text-amber-950", bar: "bg-amber-500" },
-                  { key: "skh", label: "Sekolah", val: mSkh, pct: getPct(mSkh), bg: "bg-pink-50 border-pink-200 text-pink-950", bar: "bg-pink-500" },
-                  { key: "ktr", label: "Kantor", val: mKtr, pct: getPct(mKtr), bg: "bg-purple-50 border-purple-200 text-purple-950", bar: "bg-purple-500" },
-                  { key: "tk", label: "Toko", val: mTk, pct: getPct(mTk), bg: "bg-teal-50 border-teal-200 text-teal-950", bar: "bg-teal-500" },
-                  { key: "ib", label: "IB (Instan Buyer)", val: mIb, pct: getPct(mIb), bg: "bg-indigo-50 border-indigo-200 text-indigo-950", bar: "bg-indigo-500" }
+                  { key: "rmh", label: "Rumah", val: mRmh, pct: getPct(mRmh), bg: "bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200/60 dark:border-emerald-900/40 text-emerald-900 dark:text-emerald-200", bar: "bg-emerald-500" },
+                  { key: "psr", label: "Pasar", val: mPsr, pct: getPct(mPsr), bg: "bg-amber-50/70 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-900/40 text-amber-900 dark:text-amber-200", bar: "bg-amber-500" },
+                  { key: "skh", label: "Sekolah", val: mSkh, pct: getPct(mSkh), bg: "bg-pink-50/70 dark:bg-pink-950/30 border-pink-200/60 dark:border-pink-900/40 text-pink-900 dark:text-pink-200", bar: "bg-pink-500" },
+                  { key: "ktr", label: "Kantor", val: mKtr, pct: getPct(mKtr), bg: "bg-purple-50/70 dark:bg-purple-950/30 border-purple-200/60 dark:border-purple-900/40 text-purple-900 dark:text-purple-200", bar: "bg-purple-500" },
+                  { key: "tk", label: "Toko", val: mTk, pct: getPct(mTk), bg: "bg-teal-50/70 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-900/40 text-teal-900 dark:text-teal-200", bar: "bg-teal-500" },
+                  { key: "ib", label: "IB (Instan Buyer)", val: mIb, pct: getPct(mIb), bg: "bg-indigo-50/70 dark:bg-indigo-950/30 border-indigo-200/60 dark:border-indigo-900/40 text-indigo-900 dark:text-indigo-200", bar: "bg-indigo-500" }
                 ];
 
                 return (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       {sectorList.map(s => (
-                        <div key={s.key} className={`p-3 rounded-2xl border ${s.bg} space-y-1.5 shadow-sm`}>
+                        <div key={s.key} className={`p-3 rounded-2xl border ${s.bg} space-y-1.5 shadow-xs`}>
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-black uppercase">{s.label}</span>
                             <span className="text-xs font-black font-mono">{s.pct}%</span>
                           </div>
-                          <span className="text-base sm:text-lg font-black font-mono block">{s.val} <span className="text-xs font-normal">btl</span></span>
-                          <div className="w-full bg-black/10 rounded-full h-2 overflow-hidden">
+                          <span className="text-base sm:text-lg font-black font-mono block text-neutral-900 dark:text-white">{s.val} <span className="text-xs font-normal opacity-70">btl</span></span>
+                          <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-2 overflow-hidden">
                             <div className={`${s.bar} h-full rounded-full transition-all duration-500`} style={{ width: `${Math.min(100, Number(s.pct))}%` }}></div>
                           </div>
                         </div>
@@ -1787,162 +1849,162 @@ export function YLView({
             </div>
 
             {/* Ratios & Comparisons */}
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-l-4 border-slate-500 pl-3">
-                <h2 className="text-sm sm:text-base font-black text-slate-800 uppercase tracking-wider">
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
                   Performa & Rasio Kunjungan
                 </h2>
-                <span className="text-[11px] font-bold text-slate-500 uppercase">PLG, RK, RA, & RB</span>
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">PLG, RK, RA, & RB</span>
               </div>
 
               {/* Stat Card Jumlah PLG, RK, RA, dan RB */}
               <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
-                <div className="bg-slate-50 p-2 sm:p-2.5 rounded-xl border border-slate-200 text-center flex flex-col justify-between">
+                <div className="bg-slate-50/70 dark:bg-slate-800/40 p-2 sm:p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-700/50 text-center flex flex-col justify-between">
                   <div className="h-4 sm:h-5 flex items-center justify-center">
-                    <span className="text-[8.5px] xs:text-[9.5px] sm:text-[10px] text-slate-500 font-extrabold uppercase whitespace-nowrap tracking-tighter sm:tracking-normal">Jumlah PLG</span>
+                    <span className="text-[8.5px] xs:text-[9.5px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-extrabold uppercase whitespace-nowrap tracking-tighter sm:tracking-normal">Jumlah PLG</span>
                   </div>
-                  <span className="text-sm sm:text-xl font-black text-slate-800 my-0.5">{mPlg.toLocaleString("id-ID")}</span>
-                  <span className="text-[8px] sm:text-[9px] text-slate-400 font-semibold block truncate">Pelanggan</span>
+                  <span className="text-sm sm:text-xl font-black text-neutral-900 dark:text-white my-0.5">{mPlg.toLocaleString("id-ID")}</span>
+                  <span className="text-[8px] sm:text-[9px] text-slate-400 block truncate">Pelanggan</span>
                 </div>
-                <div className="bg-sky-50 p-2 sm:p-2.5 rounded-xl border border-sky-200 text-center flex flex-col justify-between">
+                <div className="bg-sky-50/70 dark:bg-sky-950/30 p-2 sm:p-2.5 rounded-xl border border-sky-200/60 dark:border-sky-900/40 text-center flex flex-col justify-between">
                   <div className="h-4 sm:h-5 flex items-center justify-center">
-                    <span className="text-[8.5px] xs:text-[9.5px] sm:text-[10px] text-sky-700 font-extrabold uppercase whitespace-nowrap tracking-tighter sm:tracking-normal">Jumlah RK</span>
+                    <span className="text-[8.5px] xs:text-[9.5px] sm:text-[10px] text-sky-700 dark:text-sky-300 font-extrabold uppercase whitespace-nowrap tracking-tighter sm:tracking-normal">Jumlah RK</span>
                   </div>
-                  <span className="text-sm sm:text-xl font-black text-sky-800 my-0.5">{mRk.toLocaleString("id-ID")}</span>
-                  <span className="text-[8px] sm:text-[9px] text-sky-600/80 font-semibold block truncate">Rumah Kunjung</span>
+                  <span className="text-sm sm:text-xl font-black text-neutral-900 dark:text-white my-0.5">{mRk.toLocaleString("id-ID")}</span>
+                  <span className="text-[8px] sm:text-[9px] text-sky-600/80 dark:text-sky-400/80 font-semibold block truncate">Rumah Kunjung</span>
                 </div>
-                <div className="bg-indigo-50 p-2 sm:p-2.5 rounded-xl border border-indigo-200 text-center flex flex-col justify-between">
+                <div className="bg-indigo-50/70 dark:bg-indigo-950/30 p-2 sm:p-2.5 rounded-xl border border-indigo-200/60 dark:border-indigo-900/40 text-center flex flex-col justify-between">
                   <div className="h-4 sm:h-5 flex items-center justify-center">
-                    <span className="text-[8.5px] xs:text-[9.5px] sm:text-[10px] text-indigo-700 font-extrabold uppercase whitespace-nowrap tracking-tighter sm:tracking-normal">Jumlah RA</span>
+                    <span className="text-[8.5px] xs:text-[9.5px] sm:text-[10px] text-indigo-700 dark:text-indigo-300 font-extrabold uppercase whitespace-nowrap tracking-tighter sm:tracking-normal">Jumlah RA</span>
                   </div>
-                  <span className="text-sm sm:text-xl font-black text-indigo-800 my-0.5">{mRa.toLocaleString("id-ID")}</span>
-                  <span className="text-[8px] sm:text-[9px] text-indigo-600/80 font-semibold block truncate">Rumah Ada</span>
+                  <span className="text-sm sm:text-xl font-black text-neutral-900 dark:text-white my-0.5">{mRa.toLocaleString("id-ID")}</span>
+                  <span className="text-[8px] sm:text-[9px] text-indigo-600/80 dark:text-indigo-400/80 font-semibold block truncate">Rumah Ada</span>
                 </div>
-                <div className="bg-emerald-50 p-2 sm:p-2.5 rounded-xl border border-emerald-200 text-center flex flex-col justify-between">
+                <div className="bg-emerald-50/70 dark:bg-emerald-950/30 p-2 sm:p-2.5 rounded-xl border border-emerald-200/60 dark:border-emerald-900/40 text-center flex flex-col justify-between">
                   <div className="h-4 sm:h-5 flex items-center justify-center">
-                    <span className="text-[8.5px] xs:text-[9.5px] sm:text-[10px] text-emerald-700 font-extrabold uppercase whitespace-nowrap tracking-tighter sm:tracking-normal">Jumlah RB</span>
+                    <span className="text-[8.5px] xs:text-[9.5px] sm:text-[10px] text-emerald-700 dark:text-emerald-300 font-extrabold uppercase whitespace-nowrap tracking-tighter sm:tracking-normal">Jumlah RB</span>
                   </div>
-                  <span className="text-sm sm:text-xl font-black text-emerald-800 my-0.5">{mRb.toLocaleString("id-ID")}</span>
-                  <span className="text-[8px] sm:text-[9px] text-emerald-600/80 font-semibold block truncate">Rumah Beli</span>
+                  <span className="text-sm sm:text-xl font-black text-neutral-900 dark:text-white my-0.5">{mRb.toLocaleString("id-ID")}</span>
+                  <span className="text-[8px] sm:text-[9px] text-emerald-600/80 dark:text-emerald-400/80 font-semibold block truncate">Rumah Beli</span>
                 </div>
               </div>
 
               {/* Grid Rasio Persentase & Detail Jumlah */}
               <div className="grid grid-cols-2 gap-2.5 text-center text-xs font-bold">
-                <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-slate-800 flex flex-col justify-between">
+                <div className="bg-slate-50/70 dark:bg-slate-800/40 p-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-700/50 text-slate-800 dark:text-slate-200 flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] sm:text-xs text-slate-500 font-bold block mb-0.5">RK vs PELANGGAN</span>
-                    <span className="text-base sm:text-xl font-black text-indigo-700">{getPctString(mRk, mPlg)}</span>
+                    <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold block mb-0.5">RK vs PELANGGAN</span>
+                    <span className="text-base sm:text-xl font-black text-indigo-600 dark:text-indigo-400">{getPctString(mRk, mPlg)}</span>
                   </div>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-200 text-[10px] sm:text-[11px] text-slate-600 font-bold">
-                    RK: <span className="font-black text-slate-900">{mRk}</span> / PLG: <span className="font-black text-slate-900">{mPlg}</span>
+                  <div className="mt-1.5 pt-1.5 border-t border-slate-200/70 dark:border-slate-700/50 text-[10px] sm:text-[11px] text-slate-600 dark:text-slate-400 font-bold">
+                    RK: <span className="font-black text-neutral-900 dark:text-white">{mRk}</span> / PLG: <span className="font-black text-neutral-900 dark:text-white">{mPlg}</span>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-slate-800 flex flex-col justify-between">
+                <div className="bg-slate-50/70 dark:bg-slate-800/40 p-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-700/50 text-slate-800 dark:text-slate-200 flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] sm:text-xs text-slate-500 font-bold block mb-0.5">RA vs RK</span>
-                    <span className="text-base sm:text-xl font-black text-sky-700">{getPctString(mRa, mRk)}</span>
+                    <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold block mb-0.5">RA vs RK</span>
+                    <span className="text-base sm:text-xl font-black text-sky-600 dark:text-sky-400">{getPctString(mRa, mRk)}</span>
                   </div>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-200 text-[10px] sm:text-[11px] text-slate-600 font-bold">
-                    RA: <span className="font-black text-slate-900">{mRa}</span> / RK: <span className="font-black text-slate-900">{mRk}</span>
+                  <div className="mt-1.5 pt-1.5 border-t border-slate-200/70 dark:border-slate-700/50 text-[10px] sm:text-[11px] text-slate-600 dark:text-slate-400 font-bold">
+                    RA: <span className="font-black text-neutral-900 dark:text-white">{mRa}</span> / RK: <span className="font-black text-neutral-900 dark:text-white">{mRk}</span>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-slate-800 flex flex-col justify-between">
+                <div className="bg-slate-50/70 dark:bg-slate-800/40 p-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-700/50 text-slate-800 dark:text-slate-200 flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] sm:text-xs text-slate-500 font-bold block mb-0.5">RB vs RA</span>
-                    <span className="text-base sm:text-xl font-black text-emerald-700">{getPctString(mRb, mRa)}</span>
+                    <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold block mb-0.5">RB vs RA</span>
+                    <span className="text-base sm:text-xl font-black text-emerald-600 dark:text-emerald-400">{getPctString(mRb, mRa)}</span>
                   </div>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-200 text-[10px] sm:text-[11px] text-slate-600 font-bold">
-                    RB: <span className="font-black text-slate-900">{mRb}</span> / RA: <span className="font-black text-slate-900">{mRa}</span>
+                  <div className="mt-1.5 pt-1.5 border-t border-slate-200/70 dark:border-slate-700/50 text-[10px] sm:text-[11px] text-slate-600 dark:text-slate-400 font-bold">
+                    RB: <span className="font-black text-neutral-900 dark:text-white">{mRb}</span> / RA: <span className="font-black text-neutral-900 dark:text-white">{mRa}</span>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-slate-800 flex flex-col justify-between">
+                <div className="bg-slate-50/70 dark:bg-slate-800/40 p-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-700/50 text-slate-800 dark:text-slate-200 flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] sm:text-xs text-slate-500 font-bold block mb-0.5">RB vs PELANGGAN</span>
-                    <span className="text-base sm:text-xl font-black text-teal-700">{getPctString(mRb, mPlg)}</span>
+                    <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold block mb-0.5">RB vs PELANGGAN</span>
+                    <span className="text-base sm:text-xl font-black text-teal-600 dark:text-teal-400">{getPctString(mRb, mPlg)}</span>
                   </div>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-200 text-[10px] sm:text-[11px] text-slate-600 font-bold">
-                    RB: <span className="font-black text-slate-900">{mRb}</span> / PLG: <span className="font-black text-slate-900">{mPlg}</span>
+                  <div className="mt-1.5 pt-1.5 border-t border-slate-200/70 dark:border-slate-700/50 text-[10px] sm:text-[11px] text-slate-600 dark:text-slate-400 font-bold">
+                    RB: <span className="font-black text-neutral-900 dark:text-white">{mRb}</span> / PLG: <span className="font-black text-neutral-900 dark:text-white">{mPlg}</span>
                   </div>
                 </div>
 
                 {/* Total PB */}
-                <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-slate-800">
-                  <span className="text-[10px] sm:text-xs text-slate-500 font-bold block mb-0.5">TOTAL PB</span>
-                  <span className="text-base sm:text-lg font-black text-rose-600">{mPb} btl</span>
+                <div className="bg-slate-50/70 dark:bg-slate-800/40 p-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-700/50 text-slate-800 dark:text-slate-200">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold block mb-0.5">TOTAL PB</span>
+                  <span className="text-base sm:text-lg font-black text-neutral-900 dark:text-white">{mPb} btl</span>
                 </div>
                 {/* Total BB & % */}
-                <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-slate-800">
-                  <span className="text-[10px] sm:text-xs text-slate-500 font-bold block mb-0.5">TOTAL BB & %</span>
-                  <span className="text-base sm:text-lg font-black text-rose-600">{mBb} btl ({getPctString(mBb, mTotalSales)})</span>
+                <div className="bg-slate-50/70 dark:bg-slate-800/40 p-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-700/50 text-slate-800 dark:text-slate-200">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold block mb-0.5">TOTAL BB & %</span>
+                  <span className="text-base sm:text-lg font-black text-neutral-900 dark:text-white">{mBb} btl <span className={`${bbColorClass(mTotalSales > 0 ? (mBb / mTotalSales) * 100 : 0)} text-xs font-bold`}>({getPctString(mBb, mTotalSales)})</span></span>
                 </div>
                 {/* Total Sampah Botol */}
-                <div className="col-span-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-slate-800">
-                  <span className="text-[10px] sm:text-xs text-slate-500 font-bold block mb-0.5">TOTAL SAMPAH BOTOL</span>
-                  <span className="text-base sm:text-lg font-black text-emerald-600">{mSampahBotol} btl</span>
+                <div className="col-span-2 bg-slate-50/70 dark:bg-slate-800/40 p-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-700/50 text-slate-800 dark:text-slate-200">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold block mb-0.5">TOTAL SAMPAH BOTOL</span>
+                  <span className="text-base sm:text-lg font-black text-neutral-900 dark:text-white">{mSampahBotol} btl</span>
                 </div>
               </div>
             </div>
 
             {/* Estimasi Kompensasi (Dipindah ke bawah di atas Analisa) */}
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm space-y-4">
-              <h2 className="text-sm sm:text-base font-black text-slate-800 uppercase tracking-wider border-l-4 border-emerald-500 pl-3">
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
                 Rincian Estimasi Kompensasi
               </h2>
               <div className="space-y-3">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex justify-between items-center text-xs sm:text-sm text-slate-800">
-                  <span className="font-bold text-slate-600">1. Laba Harian</span>
-                  <span className="font-black text-slate-900">{formatRp(mKompensasiHarian)}</span>
+                <div className="bg-slate-50/70 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/50 flex justify-between items-center text-xs sm:text-sm text-slate-800 dark:text-slate-200">
+                  <span className="font-bold text-slate-600 dark:text-slate-400">1. Laba Harian</span>
+                  <span className="font-black text-neutral-900 dark:text-white">{formatRp(mKompensasiHarian)}</span>
                 </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex justify-between items-center text-xs sm:text-sm text-slate-800">
-                  <span className="font-bold text-slate-600">2. Estimasi Kompensasi Bulanan (Kotor)</span>
-                  <span className="font-black text-slate-900">{formatRp(mKompensasiBulanan)}</span>
+                <div className="bg-slate-50/70 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/50 flex justify-between items-center text-xs sm:text-sm text-slate-800 dark:text-slate-200">
+                  <span className="font-bold text-slate-600 dark:text-slate-400">2. Estimasi Kompensasi Bulanan (Kotor)</span>
+                  <span className="font-black text-neutral-900 dark:text-white">{formatRp(mKompensasiBulanan)}</span>
                 </div>
 
                 {/* Potongan Pajak & Iuran */}
-                <div className="p-3 bg-rose-50/80 border border-rose-200 rounded-xl space-y-2 text-xs">
-                  <div className="text-[11px] font-black uppercase text-rose-800 tracking-wider border-b border-rose-200/80 pb-1.5 flex justify-between items-center">
+                <div className="p-3 bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-900/40 rounded-xl space-y-2 text-xs">
+                  <div className="text-[11px] font-black uppercase text-rose-800 dark:text-rose-300 tracking-wider border-b border-rose-200/60 dark:border-rose-900/40 pb-1.5 flex justify-between items-center">
                     <span>✂️ Potongan (Dari Kompensasi Bulanan)</span>
-                    <span className="text-[10px] font-bold text-rose-600">PPh & JHT</span>
+                    <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400">PPh & JHT</span>
                   </div>
-                  <div className="flex justify-between items-center text-rose-900 font-medium">
+                  <div className="flex justify-between items-center text-rose-900 dark:text-rose-200 font-medium">
                     <span>• Pajak PPh ({mPphRateStr}%)</span>
-                    <span className="font-bold text-rose-700">- {formatRp(mPph)}</span>
+                    <span className="font-bold text-rose-700 dark:text-rose-300">- {formatRp(mPph)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-rose-900 font-medium">
+                  <div className="flex justify-between items-center text-rose-900 dark:text-rose-200 font-medium">
                     <div className="flex items-center gap-1.5">
                       <span>• Iuran JHT (Jaminan Hari Tua)</span>
                       {!mIkutJht && (
-                        <span className="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">
+                        <span className="text-[9px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded font-bold">
                           Tidak Ikut
                         </span>
                       )}
                     </div>
-                    <span className="font-bold text-rose-700">{mIkutJht ? `- ${formatRp(mJht)}` : "Rp 0"}</span>
+                    <span className="font-bold text-rose-700 dark:text-rose-300">{mIkutJht ? `- ${formatRp(mJht)}` : "Rp 0"}</span>
                   </div>
                   {mJkk > 0 && (
-                    <div className="flex justify-between items-center text-rose-900 font-medium">
+                    <div className="flex justify-between items-center text-rose-900 dark:text-rose-200 font-medium">
                       <span>• Iuran JKK / JKM</span>
-                      <span className="font-bold text-rose-700">- {formatRp(mJkk)}</span>
+                      <span className="font-bold text-rose-700 dark:text-rose-300">- {formatRp(mJkk)}</span>
                     </div>
                   )}
-                  <div className="pt-1.5 border-t border-rose-200 flex justify-between items-center text-xs font-black text-rose-950">
+                  <div className="pt-1.5 border-t border-rose-200/60 dark:border-rose-900/40 flex justify-between items-center text-xs font-black text-rose-950 dark:text-rose-100">
                     <span>Total Potongan</span>
-                    <span className="text-rose-700">- {formatRp(mTotalPotongan)}</span>
+                    <span className="text-rose-700 dark:text-rose-300">- {formatRp(mTotalPotongan)}</span>
                   </div>
                 </div>
 
-                <div className="bg-emerald-50/90 p-4 rounded-2xl border-2 border-emerald-300 text-center space-y-1.5 shadow-sm">
-                  <span className="text-xs font-black text-emerald-950 uppercase block">Kompensasi Bersih Bulanan</span>
-                  <span className="text-2xl sm:text-4xl font-black text-emerald-600 block">{formatRp(mKompensasiBersihBulanan)}</span>
-                  <span className="text-[10px] text-slate-500 font-semibold block">*Dihitung dari Kompensasi Bulanan Kotor ({formatRp(mKompensasiBulanan)}) dipotong PPh ({mPphRateStr}%), JHT ({formatRp(mJht)}), dan JKK/JKM ({formatRp(mJkk)}).</span>
+                <div className="bg-emerald-50/70 dark:bg-emerald-950/30 p-4 rounded-2xl border-2 border-emerald-300/60 dark:border-emerald-800/50 text-center space-y-1.5 shadow-sm">
+                  <span className="text-xs font-black text-emerald-900 dark:text-emerald-300 uppercase block">Kompensasi Bersih Bulanan</span>
+                  <span className="text-2xl sm:text-4xl font-black text-neutral-900 dark:text-white block">{formatRp(mKompensasiBersihBulanan)}</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block">*Dihitung dari Kompensasi Bulanan Kotor ({formatRp(mKompensasiBulanan)}) dipotong PPh ({mPphRateStr}%), JHT ({formatRp(mJht)}), dan JKK/JKM ({formatRp(mJkk)}).</span>
                   {mKompensasiHarian > 0 && (
-                    <div className="pt-2 border-t border-emerald-200/80 text-xs font-black text-slate-800 flex justify-between items-center px-2">
+                    <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-900/40 text-xs font-black text-slate-800 dark:text-slate-200 flex justify-between items-center px-2">
                       <span>Total Terima (Harian + Bersih Bulanan):</span>
-                      <span className="text-emerald-700 font-black text-sm">{formatRp(mTotalTakeHome)}</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-black text-sm">{formatRp(mTotalTakeHome)}</span>
                     </div>
                   )}
                 </div>
@@ -1950,15 +2012,15 @@ export function YLView({
             </div>
 
             {/* AI Analysis Block */}
-            <div className="col-span-2 bg-gradient-to-br from-rose-50 via-pink-50 to-amber-50 rounded-2xl p-5 border-2 border-rose-200 shadow-md space-y-4">
-              <div className="flex items-center justify-between border-b border-rose-200/80 pb-2">
-                <div className="flex items-center gap-2.5 text-rose-700">
-                  <Sparkles className="w-6 h-6 animate-pulse text-rose-600" />
+            <div className="lg:col-span-2 bg-gradient-to-br from-sky-50 via-brand-50 to-indigo-50 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 rounded-2xl p-5 border-2 border-brand-200 dark:border-neutral-700 shadow-md space-y-4">
+              <div className="flex items-center justify-between border-b border-brand-200/80 dark:border-neutral-700 pb-2">
+                <div className="flex items-center gap-2.5 text-brand-700 dark:text-brand-200">
+                  <Sparkles className="w-6 h-6 animate-pulse text-brand-600 dark:text-brand-300" />
                   <div>
-                    <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-rose-900">
+                    <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-brand-900 dark:text-brand-200">
                       Analisa Ibu {motivasiConfig?.chatbotName || "AI Jember 1 Pro"}
                     </h2>
-                    <p className="text-xs sm:text-sm font-bold text-rose-600">
+                    <p className="text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-300">
                       Pesan Motivasi & Evaluasi Keibuan Unik
                     </p>
                   </div>
@@ -1966,36 +2028,36 @@ export function YLView({
               </div>
 
               {isYlAiLoading ? (
-                <div className="flex flex-col items-center py-8 space-y-3 bg-white/70 rounded-xl p-4 border border-rose-100">
-                  <div className="w-10 h-10 border-4 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
-                  <p className="text-base sm:text-lg font-black text-rose-800 animate-pulse text-center">
+                <div className="flex flex-col items-center py-8 space-y-3 bg-white/70 dark:bg-neutral-800 rounded-xl p-4 border border-brand-100 dark:border-neutral-700">
+                  <div className="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-base sm:text-lg font-black text-brand-800 dark:text-brand-200 animate-pulse text-center">
                     Sebentar nggih Bu... Ibu {motivasiConfig?.chatbotName || "AI Jember 1 Pro"} sedang membaca data & menyiapkan pesan untuk Ibu... 🌸
                   </p>
                 </div>
               ) : ylAiInsight ? (
                 <div className="space-y-4">
                   <div 
-                    className="text-base sm:text-lg leading-relaxed text-slate-900 font-semibold space-y-3 bg-white/95 p-4 sm:p-5 rounded-xl border border-rose-200 shadow-sm"
+                    className="yl-ai-insight text-base sm:text-lg leading-relaxed text-slate-900 dark:text-neutral-100 font-semibold space-y-3 bg-white/95 dark:bg-neutral-800 p-4 sm:p-5 rounded-xl border border-brand-200 dark:border-neutral-700 shadow-sm"
                     dangerouslySetInnerHTML={{ __html: ylAiInsight }}
                   />
                   <div className="flex justify-end pt-1">
                     <button
                       onClick={handleGenerateYlAi}
-                      className="px-5 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-900 font-extrabold text-sm sm:text-base rounded-xl transition-all flex items-center gap-2 shadow-sm border border-rose-300 active:scale-95"
+                      className="px-5 py-2.5 bg-brand-100 dark:bg-brand-950/60 hover:bg-brand-200 dark:hover:bg-brand-900/60 text-brand-900 dark:text-brand-100 font-extrabold text-sm sm:text-base rounded-xl transition-all flex items-center gap-2 shadow-sm border border-brand-300 dark:border-brand-800 active:scale-95"
                     >
-                      <Sparkles className="w-5 h-5 text-rose-600" />
+                      <Sparkles className="w-5 h-5 text-brand-600 dark:text-brand-300" />
                       <span>🔄 Klik di Sini untuk Analisa Ulang</span>
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="py-4 space-y-3 text-center bg-white/80 p-5 rounded-xl border border-rose-200 shadow-sm">
-                  <p className="text-base sm:text-lg font-bold text-slate-800 leading-snug">
+                <div className="py-4 space-y-3 text-center bg-white/80 dark:bg-neutral-800 p-5 rounded-xl border border-brand-200 dark:border-neutral-700 shadow-sm">
+                  <p className="text-base sm:text-lg font-bold text-slate-800 dark:text-neutral-100 leading-snug">
                     Klik tombol di bawah ini untuk melihat pesan motivasi & analisa harian dari Ibu {motivasiConfig?.chatbotName || "AI Jember 1 Pro"}:
                   </p>
                   <button
                     onClick={handleGenerateYlAi}
-                    className="w-full sm:w-auto mx-auto px-6 py-4 bg-gradient-to-r from-rose-600 via-pink-600 to-rose-700 hover:from-rose-700 hover:to-pink-700 text-white font-black text-base sm:text-xl rounded-xl shadow-lg hover:shadow-rose-300/50 transition-all flex items-center justify-center gap-2.5 active:scale-95"
+                    className="w-full sm:w-auto mx-auto px-6 py-4 bg-gradient-to-r from-brand-600 via-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 text-white font-black text-base sm:text-xl rounded-xl shadow-lg hover:shadow-brand-300/50 transition-all flex items-center justify-center gap-2.5 active:scale-95"
                   >
                     <Sparkles className="w-6 h-6 text-yellow-300 animate-bounce" />
                     <span>✨ Klik di Sini untuk Analisa Ibu {motivasiConfig?.chatbotName || "AI Jember 1 Pro"}</span>
@@ -2010,19 +2072,106 @@ export function YLView({
         {/* TAB BREAKDOWN RENCANA & REALISASI (READ-ONLY FOR YL - VERTIKAL PERTANGGAL) */}
         {activeTab === "breakdown" && (
           <div className="space-y-4">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4 overflow-hidden">
-              <div className="border-l-4 border-red-600 pl-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 sm:p-5 space-y-4 overflow-hidden">
+              <div className=" flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div className="flex-1 min-w-0 pr-1">
-                  <h2 className="text-sm sm:text-base font-black text-red-950 uppercase tracking-wider flex items-center gap-2">
+                  <h2 className="text-sm sm:text-base font-black text-red-950 dark:text-red-300 uppercase tracking-wider flex items-center gap-2">
                     <span>📊 Breakdown Rencana & Realisasi Harian</span>
                   </h2>
-                  <p className="text-xs text-slate-500 font-bold leading-relaxed mt-0.5">
-                    Diambil dari menu Breakdown & Realisasi Admin. Bersifat <span className="text-red-600 font-extrabold">Read-Only (Hanya Lihat - Vertikal Pertanggal)</span>.
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-bold leading-relaxed mt-0.5">
+                    Diambil dari menu Breakdown & Realisasi Admin. Bersifat <span className="text-red-600 dark:text-red-400 font-extrabold">Read-Only (Hanya Lihat - Vertikal Pertanggal)</span>.
                   </p>
                 </div>
-                <span className="text-xs font-mono bg-red-100 text-red-800 font-black px-3 py-1.5 rounded-lg shrink-0">
+                <span className="text-xs font-mono bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 font-black px-3 py-1.5 rounded-lg shrink-0">
                   🔒 Mode Read-Only YL
                 </span>
+              </div>
+
+              {/* Card Komparasi vs Target, Bulan Lalu, Tahun Lalu (Kecil, Kompak & Rapi) */}
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                {/* 1. vs Target */}
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-3 border-l-indigo-600 dark:border-l-indigo-500 rounded-xl p-1.5 sm:p-2 shadow-2xs flex flex-col justify-between">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 truncate flex items-center gap-1">
+                      <span>🎯</span> vs Target
+                    </span>
+                    <span className={`text-[8px] sm:text-[8.5px] font-black px-1 py-0.2 rounded shrink-0 border ${
+                      targetVal > 0 && mRata2 >= targetVal
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800"
+                        : "bg-red-50 text-[#e60000] border-red-200 dark:bg-red-950/70 dark:text-[#ff2a2a] dark:border-red-800"
+                    }`}>
+                      {targetVal > 0 ? `${mRata2 >= targetVal ? "+" : ""}${Math.trunc(mRata2 - targetVal)}` : "-"}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 sm:mt-1 flex items-baseline justify-between gap-1">
+                    <span className={`text-xs sm:text-sm font-black ${
+                      targetVal > 0 && mRata2 >= targetVal
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-[#e60000] dark:text-[#ff2a2a]"
+                    }`}>
+                      {targetVal > 0 ? `${formatPercentTruncated((mRata2 / targetVal) * 100, 1)}` : "-"}
+                    </span>
+                    <span className="text-[8.5px] sm:text-[9px] font-bold text-slate-500 dark:text-slate-400 truncate text-right">
+                      Tgt: {Math.trunc(targetVal)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. vs Bulan Lalu */}
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-3 border-l-sky-500 dark:border-l-sky-400 rounded-xl p-1.5 sm:p-2 shadow-2xs flex flex-col justify-between">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 truncate flex items-center gap-1">
+                      <span>📅</span> vs Bln Lalu
+                    </span>
+                    <span className={`text-[8px] sm:text-[8.5px] font-black px-1 py-0.2 rounded shrink-0 border ${
+                      blnLaluVal > 0 && mRata2 >= blnLaluVal
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800"
+                        : "bg-red-50 text-[#e60000] border-red-200 dark:bg-red-950/70 dark:text-[#ff2a2a] dark:border-red-800"
+                    }`}>
+                      {blnLaluVal > 0 ? `${mRata2 >= blnLaluVal ? "+" : ""}${Math.trunc(mRata2 - blnLaluVal)}` : "-"}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 sm:mt-1 flex items-baseline justify-between gap-1">
+                    <span className={`text-xs sm:text-sm font-black ${
+                      blnLaluVal > 0 && mRata2 >= blnLaluVal
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-[#e60000] dark:text-[#ff2a2a]"
+                    }`}>
+                      {blnLaluVal > 0 ? `${formatPercentTruncated((mRata2 / blnLaluVal) * 100, 1)}` : "-"}
+                    </span>
+                    <span className="text-[8.5px] sm:text-[9px] font-bold text-slate-500 dark:text-slate-400 truncate text-right">
+                      BL: {Math.trunc(blnLaluVal)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. vs Tahun Lalu */}
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-3 border-l-amber-500 dark:border-l-amber-400 rounded-xl p-1.5 sm:p-2 shadow-2xs flex flex-col justify-between">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 truncate flex items-center gap-1">
+                      <span>📈</span> vs Thn Lalu
+                    </span>
+                    <span className={`text-[8px] sm:text-[8.5px] font-black px-1 py-0.2 rounded shrink-0 border ${
+                      thnLaluVal > 0 && mRata2 >= thnLaluVal
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800"
+                        : "bg-red-50 text-[#e60000] border-red-200 dark:bg-red-950/70 dark:text-[#ff2a2a] dark:border-red-800"
+                    }`}>
+                      {thnLaluVal > 0 ? `${mRata2 >= thnLaluVal ? "+" : ""}${Math.trunc(mRata2 - thnLaluVal)}` : "-"}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 sm:mt-1 flex items-baseline justify-between gap-1">
+                    <span className={`text-xs sm:text-sm font-black ${
+                      thnLaluVal > 0 && mRata2 >= thnLaluVal
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-[#e60000] dark:text-[#ff2a2a]"
+                    }`}>
+                      {thnLaluVal > 0 ? `${formatPercentTruncated((mRata2 / thnLaluVal) * 100, 1)}` : "-"}
+                    </span>
+                    <span className="text-[8.5px] sm:text-[9px] font-bold text-slate-500 dark:text-slate-400 truncate text-right">
+                      TL: {Math.trunc(thnLaluVal)}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* Summary Metrics for YL Breakdown */}
@@ -2037,7 +2186,7 @@ export function YLView({
 
                 return (
                   <div className="space-y-3">
-                    <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                    <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
                       <table className="w-full text-left text-xs sm:text-sm border-collapse font-mono">
                         <thead>
                           <tr className="bg-slate-900 text-slate-200 font-black uppercase text-xs border-b border-slate-800">
@@ -2047,19 +2196,19 @@ export function YLView({
                           </tr>
                           <tr className="bg-slate-800 text-slate-300 text-xs font-black uppercase border-b border-slate-700">
                             <th className="p-2 border-r border-slate-700 sticky left-0 bg-slate-800 text-slate-300">Tgl</th>
-                            <th className="p-2 text-center text-red-300">YO</th>
-                            <th className="p-2 text-center text-amber-300">OM</th>
-                            <th className="p-2 text-center text-pink-300">OS</th>
-                            <th className="p-2 text-center text-blue-300">YT</th>
-                            <th className="p-2 text-right text-amber-400 border-r border-slate-700 bg-amber-950/30">Tot Rcn</th>
-                            <th className="p-2 text-center text-red-300">YO</th>
-                            <th className="p-2 text-center text-amber-300">OM</th>
-                            <th className="p-2 text-center text-pink-300">OS</th>
-                            <th className="p-2 text-center text-blue-300">YT</th>
-                            <th className="p-2 text-right text-emerald-400 bg-emerald-950/30">Tot Rls</th>
+                            <th className="p-2 text-center text-red-400 font-black">YO</th>
+                            <th className="p-2 text-center text-amber-300 font-black">OM</th>
+                            <th className="p-2 text-center text-pink-400 font-black">OS</th>
+                            <th className="p-2 text-center text-blue-400 font-black">YT</th>
+                            <th className="p-2 text-right text-amber-300 font-black border-r border-slate-700 bg-amber-950/30">Tot Rcn</th>
+                            <th className="p-2 text-center text-red-400 font-black">YO</th>
+                            <th className="p-2 text-center text-amber-300 font-black">OM</th>
+                            <th className="p-2 text-center text-pink-400 font-black">OS</th>
+                            <th className="p-2 text-center text-blue-400 font-black">YT</th>
+                            <th className="p-2 text-right text-emerald-300 font-black bg-emerald-950/30">Tot Rls</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 font-bold text-slate-800 text-xs sm:text-sm">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-bold text-neutral-900 dark:text-white text-xs sm:text-sm">
                           {daysList.map(d => {
                             const dayPlan = daysObj[String(d)] || daysObj[d] || { yo: 0, om: 0, os: 0, yt: 0 };
                             const pYo = Number(dayPlan.yo) || 0;
@@ -2081,37 +2230,37 @@ export function YLView({
                             sumRealYo += rYo; sumRealOm += rOm; sumRealOs += rOs; sumRealYt += rYt;
 
                             return (
-                              <tr key={d} className="hover:bg-slate-50 transition-colors">
-                                <td className="p-2 border-r border-slate-200 font-black text-slate-900 sticky left-0 bg-white">Tgl {d}</td>
+                              <tr key={d} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+                                <td className="p-2 border-r border-slate-200 dark:border-slate-800 font-black text-neutral-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900">Tgl {d}</td>
                                 {/* Plan */}
-                                <td className="p-2 text-center text-slate-700">{pYo || "-"}</td>
-                                <td className="p-2 text-center text-slate-700">{pOm || "-"}</td>
-                                <td className="p-2 text-center text-slate-700">{pOs || "-"}</td>
-                                <td className="p-2 text-center text-slate-700">{pYt || "-"}</td>
-                                <td className="p-2 text-right font-black text-amber-800 border-r border-slate-200 bg-amber-50/50">{pTot}</td>
+                                <td className="p-2 text-center text-neutral-900 dark:text-white">{pYo || "-"}</td>
+                                <td className="p-2 text-center text-neutral-900 dark:text-white">{pOm || "-"}</td>
+                                <td className="p-2 text-center text-neutral-900 dark:text-white">{pOs || "-"}</td>
+                                <td className="p-2 text-center text-neutral-900 dark:text-white">{pYt || "-"}</td>
+                                <td className="p-2 text-right font-black text-neutral-900 dark:text-white border-r border-slate-200 dark:border-slate-800 bg-amber-50/70 dark:bg-amber-950/30">{pTot}</td>
                                 {/* Realisasi */}
-                                <td className="p-2 text-center text-slate-700">{rYo || "-"}</td>
-                                <td className="p-2 text-center text-slate-700">{rOm || "-"}</td>
-                                <td className="p-2 text-center text-slate-700">{rOs || "-"}</td>
-                                <td className="p-2 text-center text-slate-700">{rYt || "-"}</td>
-                                <td className="p-2 text-right font-black text-emerald-800 bg-emerald-50/50">{rTot}</td>
+                                <td className="p-2 text-center text-neutral-900 dark:text-white">{rYo || "-"}</td>
+                                <td className="p-2 text-center text-neutral-900 dark:text-white">{rOm || "-"}</td>
+                                <td className="p-2 text-center text-neutral-900 dark:text-white">{rOs || "-"}</td>
+                                <td className="p-2 text-center text-neutral-900 dark:text-white">{rYt || "-"}</td>
+                                <td className="p-2 text-right font-black text-neutral-900 dark:text-white bg-emerald-50/70 dark:bg-emerald-950/30">{rTot}</td>
                               </tr>
                             );
                           })}
                         </tbody>
-                        <tfoot className="bg-slate-900 text-white font-black text-xs sm:text-sm border-t-2 border-slate-800">
+                        <tfoot className="bg-slate-900 dark:bg-slate-950 text-white font-black text-xs sm:text-sm border-t-2 border-slate-800">
                           <tr>
-                            <td className="p-2.5 uppercase border-r border-slate-800 sticky left-0 bg-slate-900">TOTAL</td>
-                            <td className="p-2.5 text-center text-red-300">{sumPlanYo}</td>
-                            <td className="p-2.5 text-center text-amber-300">{sumPlanOm}</td>
-                            <td className="p-2.5 text-center text-pink-300">{sumPlanOs}</td>
-                            <td className="p-2.5 text-center text-blue-300">{sumPlanYt}</td>
-                            <td className="p-2.5 text-right text-amber-300 border-r border-slate-800 bg-amber-950/60 font-mono">{sumPlanYo + sumPlanOm + sumPlanOs + sumPlanYt}</td>
-                            <td className="p-2.5 text-center text-red-300">{sumRealYo}</td>
-                            <td className="p-2.5 text-center text-amber-300">{sumRealOm}</td>
-                            <td className="p-2.5 text-center text-pink-300">{sumRealOs}</td>
-                            <td className="p-2.5 text-center text-blue-300">{sumRealYt}</td>
-                            <td className="p-2.5 text-right text-emerald-300 bg-emerald-950/60 font-mono">{sumRealYo + sumRealOm + sumRealOs + sumRealYt}</td>
+                            <td className="p-2.5 uppercase border-r border-slate-800 sticky left-0 bg-slate-900 dark:bg-slate-950">TOTAL</td>
+                            <td className="p-2.5 text-center text-red-400 font-black">{sumPlanYo}</td>
+                            <td className="p-2.5 text-center text-amber-300 font-black">{sumPlanOm}</td>
+                            <td className="p-2.5 text-center text-pink-400 font-black">{sumPlanOs}</td>
+                            <td className="p-2.5 text-center text-blue-400 font-black">{sumPlanYt}</td>
+                            <td className="p-2.5 text-right text-neutral-900 dark:text-white border-r border-slate-800 bg-amber-950/60 font-mono font-black">{sumPlanYo + sumPlanOm + sumPlanOs + sumPlanYt}</td>
+                            <td className="p-2.5 text-center text-red-400 font-black">{sumRealYo}</td>
+                            <td className="p-2.5 text-center text-amber-300 font-black">{sumRealOm}</td>
+                            <td className="p-2.5 text-center text-pink-400 font-black">{sumRealOs}</td>
+                            <td className="p-2.5 text-center text-blue-400 font-black">{sumRealYt}</td>
+                            <td className="p-2.5 text-right text-neutral-900 dark:text-white bg-emerald-950/60 font-mono font-black">{sumRealYo + sumRealOm + sumRealOs + sumRealYt}</td>
                           </tr>
                         </tfoot>
                       </table>
@@ -2126,7 +2275,7 @@ export function YLView({
 
         {/* TAB REALISASI POTENSI (PERTANGGAL) */}
         {activeTab === "realisasi_potensi" && (
-          <>
+          <Suspense fallback={<TabLoadingFallback />}>
             <YlRealisasiPotensiTab
               currentMonth={currentMonth}
               isEditRealisasi={isEditRealisasi}
@@ -2165,74 +2314,88 @@ export function YLView({
                 onClose={closeClipboardModal}
               />
             )}
-          </>
+          </Suspense>
         )}
       
         {/* TAB POTENSI VS TEMBUS */}
-        {activeTab === "seragam" && <YLSeragamView />}
+        {activeTab === "seragam" && (
+          <Suspense fallback={<TabLoadingFallback />}>
+            <YLSeragamView />
+          </Suspense>
+        )}
 
         {/* PRODUCT KNOWLEDGE TAB */}
-        {activeTab === "product_knowledge" && <ProductKnowledgeView />}
-        {activeTab === "tautan" && <OfficialLinksViewer onBack={() => setActiveTab("beranda")} />}
+        {activeTab === "product_knowledge" && (
+          <Suspense fallback={<TabLoadingFallback />}>
+            <ProductKnowledgeView />
+          </Suspense>
+        )}
+        {activeTab === "tautan" && (
+          <Suspense fallback={<TabLoadingFallback />}>
+            <OfficialLinksViewer onBack={() => setActiveTab("beranda")} />
+          </Suspense>
+        )}
 
         {/* TAB EVALUASI */}
         {activeTab === "evaluasi" && (
           <div className="space-y-4">
-            <EvaluasiView
-              evaluasiData={evaluasiData}
-              globalMonth={globalMonth}
-              currentYlName={ylName}
-              currentYlArea={ylAreaCode || currentYlInfo.area || ylName.substring(0, 3).trim()}
-              role="yl"
-              transactions={transactions}
-              ylBreakdownRealisasi={ylBreakdownRealisasi}
-              selectedDate={selectedDate}
-              onBack={() => setActiveTab("beranda")}
-            />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <EvaluasiView
+                evaluasiData={evaluasiData}
+                globalMonth={globalMonth}
+                currentYlName={ylName}
+                currentYlArea={ylAreaCode || currentYlInfo.area || ylName.substring(0, 3).trim()}
+                role="yl"
+                transactions={transactions}
+                ylBreakdownRealisasi={ylBreakdownRealisasi}
+                selectedDate={selectedDate}
+                onBack={() => setActiveTab("beranda")}
+              />
+            </Suspense>
           </div>
         )}
 
         {activeTab === "potensi_tembus" && (
           <div className="space-y-4">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4">
-              <h2 className="text-sm sm:text-base font-black text-slate-900 border-l-4 border-indigo-600 pl-3">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 sm:p-5 space-y-4">
+              <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100">
                 Potensi vs Tembus (Bulan Ini)
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Sekolah */}
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                  <h3 className="text-xs sm:text-sm font-black text-slate-800 border-b border-slate-200 pb-2">Sekolah</h3>
+                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                  <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 pb-2">Sekolah</h3>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-600">Total Kunjungan</label>
-                    <NumberInput min={0} value={potensiTembus.skhTotal} onChange={(val) => setPotensiTembus(prev => ({...prev, skhTotal: val}))} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-800" />
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Total Kunjungan</label>
+                    <NumberInput min={0} value={potensiTembus.skhTotal} onChange={(val) => setPotensiTembus(prev => ({...prev, skhTotal: val}))} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-800 dark:text-slate-100" />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-emerald-700">Total Tembus</label>
-                    <NumberInput min={0} value={potensiTembus.skhTembus} onChange={(val) => setPotensiTembus(prev => ({...prev, skhTembus: val}))} className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-sm font-bold text-emerald-800" />
+                    <label className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Total Tembus</label>
+                    <NumberInput min={0} value={potensiTembus.skhTembus} onChange={(val) => setPotensiTembus(prev => ({...prev, skhTembus: val}))} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg text-sm font-bold text-emerald-800 dark:text-emerald-300" />
                   </div>
                 </div>
                 {/* Kantor */}
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                  <h3 className="text-xs sm:text-sm font-black text-slate-800 border-b border-slate-200 pb-2">Kantor</h3>
+                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                  <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 pb-2">Kantor</h3>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-600">Total Kunjungan</label>
-                    <NumberInput min={0} value={potensiTembus.kntrTotal} onChange={(val) => setPotensiTembus(prev => ({...prev, kntrTotal: val}))} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-800" />
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Total Kunjungan</label>
+                    <NumberInput min={0} value={potensiTembus.kntrTotal} onChange={(val) => setPotensiTembus(prev => ({...prev, kntrTotal: val}))} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-800 dark:text-slate-100" />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-emerald-700">Total Tembus</label>
-                    <NumberInput min={0} value={potensiTembus.kntrTembus} onChange={(val) => setPotensiTembus(prev => ({...prev, kntrTembus: val}))} className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-sm font-bold text-emerald-800" />
+                    <label className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Total Tembus</label>
+                    <NumberInput min={0} value={potensiTembus.kntrTembus} onChange={(val) => setPotensiTembus(prev => ({...prev, kntrTembus: val}))} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg text-sm font-bold text-emerald-800 dark:text-emerald-300" />
                   </div>
                 </div>
                 {/* Toko */}
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                  <h3 className="text-xs sm:text-sm font-black text-slate-800 border-b border-slate-200 pb-2">Toko</h3>
+                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                  <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 pb-2">Toko</h3>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-600">Total Kunjungan</label>
-                    <NumberInput min={0} value={potensiTembus.tkoTotal} onChange={(val) => setPotensiTembus(prev => ({...prev, tkoTotal: val}))} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm font-bold text-slate-800" />
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Total Kunjungan</label>
+                    <NumberInput min={0} value={potensiTembus.tkoTotal} onChange={(val) => setPotensiTembus(prev => ({...prev, tkoTotal: val}))} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100" />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-emerald-700">Total Tembus</label>
-                    <NumberInput min={0} value={potensiTembus.tkoTembus} onChange={(val) => setPotensiTembus(prev => ({...prev, tkoTembus: val}))} className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-sm font-bold text-emerald-800" />
+                    <label className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Total Tembus</label>
+                    <NumberInput min={0} value={potensiTembus.tkoTembus} onChange={(val) => setPotensiTembus(prev => ({...prev, tkoTembus: val}))} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-lg text-sm font-bold text-emerald-800 dark:text-emerald-300" />
                   </div>
                 </div>
               </div>
@@ -2258,28 +2421,28 @@ export function YLView({
       {/* Modal Konfirmasi Mismatch Acuan */}
       {mismatchConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-slide-up border border-slate-200">
-            <div className="p-4 bg-amber-50 border-b border-amber-100 flex items-start gap-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-slide-up border border-slate-200 dark:border-slate-700">
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-100 dark:border-amber-800 flex items-start gap-3">
               <span className="text-2xl">⚠️</span>
               <div>
-                <h3 className="font-black text-slate-800">Peringatan: Data Tidak Cocok</h3>
-                <p className="text-[10px] sm:text-xs text-slate-600 font-medium mt-1">
+                <h3 className="font-black text-slate-800 dark:text-slate-100">Peringatan: Data Tidak Cocok</h3>
+                <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-300 font-medium mt-1">
                   Data realisasi tidak sama dengan acuan.
                 </p>
               </div>
             </div>
             <div className="p-4">
-              <p className="text-xs text-slate-700 whitespace-pre-wrap font-mono bg-slate-50 p-2 rounded-lg border border-slate-200 max-h-32 overflow-y-auto">
+              <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono bg-slate-50 dark:bg-slate-800/60 p-2 rounded-lg border border-slate-200 dark:border-slate-700 max-h-32 overflow-y-auto">
                 {mismatchConfirm.detail}
               </p>
-              <p className="text-xs text-slate-700 font-bold mt-4 text-center">
+              <p className="text-xs text-slate-700 dark:text-slate-300 font-bold mt-4 text-center">
                 Apakah Anda ingin tetap menyimpan data ini?
               </p>
             </div>
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex gap-2">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-700 flex gap-2">
               <button 
                 onClick={() => setMismatchConfirm(null)} 
-                className="flex-1 py-2 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-50"
+                className="flex-1 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50"
               >
                 Batal
               </button>
@@ -2299,6 +2462,8 @@ export function YLView({
       )}
 
       </main>
+        </div>
+      </div>
     </div>
   );
 }

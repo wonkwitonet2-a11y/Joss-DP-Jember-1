@@ -74,9 +74,50 @@ export function getSupabaseClient(): SupabaseClient | null {
   return supabaseInstance;
 }
 
+// ---------------------------------------------------------------------------
+// CACHE BACA (hemat egress Supabase utama)
+// Browser membaca beberapa key langsung ke Supabase (arsip bulanan, rata-rata
+// bulanan, Sales Record, target tahunan). Dulu setiap kali layar dibuka = unduh
+// ulang isi baris yang sama. Sekarang hasil bacaan disimpan di memori tab:
+//  - arsip bulan lalu (monthly_archive_*, rata2_bulanan_*, annual_target_*) = 1 jam
+//  - key lain (mis. sales_record_tku_*)                                      = 2 menit
+// Permintaan yang sama dan berbarengan digabung jadi satu. Setelah simpan/hapus
+// dari aplikasi ini, cache key itu langsung diperbarui, jadi tidak basi.
+// ---------------------------------------------------------------------------
+const READ_TTL_ARCHIVE_MS = 60 * 60 * 1000;
+const READ_TTL_DEFAULT_MS = 2 * 60 * 1000;
+const READ_TTL_MISSING_MS = 30 * 1000;
+const readCache = new Map<string, { at: number; ttl: number; value: any }>();
+const readInflight = new Map<string, Promise<any>>();
+
+function readTtlFor(key: string): number {
+  return /^(monthly_archive_|rata2_bulanan_\d|annual_target_)/.test(key) ? READ_TTL_ARCHIVE_MS : READ_TTL_DEFAULT_MS;
+}
+
+function cloneValue<V>(v: V): V {
+  if (v === null || v === undefined || typeof v !== "object") return v;
+  try {
+    return typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v));
+  } catch {
+    return v;
+  }
+}
+
+/** Buang cache baca untuk 1 key (atau semua key kalau tanpa argumen). */
+export function invalidateSupabaseCache(key?: string) {
+  if (key) {
+    readCache.delete(key);
+    readInflight.delete(key);
+  } else {
+    readCache.clear();
+    readInflight.clear();
+  }
+}
+
 // Reset instance if user updates settings in UI
 export function resetSupabaseClient() {
   supabaseInstance = null;
+  invalidateSupabaseCache();
 }
 
 /**
@@ -143,6 +184,7 @@ export async function saveToSupabase(key: string, data: any): Promise<{ success:
       console.error(`[Supabase] Error saving ${key}:`, error);
       return { success: false, error: error.message };
     }
+    readCache.set(key, { at: Date.now(), ttl: readTtlFor(key), value: cloneValue(data) });
     return { success: true };
   } catch (e: any) {
     console.error(`[Supabase] Exception saving ${key}:`, e);
@@ -154,21 +196,36 @@ export async function loadFromSupabase<T>(key: string): Promise<T | null> {
   const client = getSupabaseClient();
   if (!client) return null;
 
-  try {
-    const { data, error } = await client
-      .from('app_store')
-      .select('data')
-      .eq('key', key)
-      .maybeSingle();
+  const hit = readCache.get(key);
+  if (hit && Date.now() - hit.at < hit.ttl) return cloneValue(hit.value) as T | null;
 
-    if (error || !data) {
+  const pending = readInflight.get(key);
+  if (pending) return cloneValue(await pending) as T | null;
+
+  const task = (async (): Promise<T | null> => {
+    try {
+      const { data, error } = await client
+        .from('app_store')
+        .select('data')
+        .eq('key', key)
+        .maybeSingle();
+
+      if (error) return null; // gagal baca: jangan di-cache, coba lagi lain kali
+      if (!data) {
+        readCache.set(key, { at: Date.now(), ttl: READ_TTL_MISSING_MS, value: null });
+        return null;
+      }
+      readCache.set(key, { at: Date.now(), ttl: readTtlFor(key), value: data.data });
+      return data.data as T;
+    } catch (e) {
+      console.error(`[Supabase] Exception loading ${key}:`, e);
       return null;
+    } finally {
+      readInflight.delete(key);
     }
-    return data.data as T;
-  } catch (e) {
-    console.error(`[Supabase] Exception loading ${key}:`, e);
-    return null;
-  }
+  })();
+  readInflight.set(key, task);
+  return cloneValue(await task) as T | null;
 }
 
 export async function deleteFromSupabase(key: string): Promise<{ success: boolean; error?: string }> {
@@ -185,6 +242,7 @@ export async function deleteFromSupabase(key: string): Promise<{ success: boolea
       console.error(`[Supabase] Error deleting ${key}:`, error);
       return { success: false, error: error.message };
     }
+    readCache.set(key, { at: Date.now(), ttl: READ_TTL_MISSING_MS, value: null });
     return { success: true };
   } catch (e: any) {
     console.error(`[Supabase] Exception deleting ${key}:`, e);

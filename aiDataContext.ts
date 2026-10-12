@@ -1,3 +1,4 @@
+import { normArea, areaPrefix, sameArea } from "./areaUtils.ts";
 // aiDataContext.ts
 // Modul murni (tanpa import dari server.ts) yang menyusun konteks data untuk Chatbot AI
 // dan Analisa AI Presentasi. Semua angka dihitung dengan rumus yang SAMA dengan layar
@@ -52,18 +53,18 @@ export function resolveActiveMonth(db: any): string {
 export function resolveArea(db: any, userName: string, cleanYlName: (s: string) => string): string | null {
   const s = String(userName || "").trim();
   if (!s) return null;
-  const m = s.match(/^(?:Area\s*)?(\d{3})/i);
-  if (m) return m[1];
+  const m = areaPrefix(s);
+  if (m) return m;
   const clean = cleanYlName(s).toLowerCase();
   const list: any[] = db?.ylList || [];
   const hit = list.find((y) => cleanYlName(String(y.nama || "")).toLowerCase() === clean);
-  if (hit?.area) return String(hit.area).substring(0, 3);
+  if (hit?.area) return String(hit.area);
   return null;
 }
 
 function areaName(db: any, area: string, cleanYlName: (s: string) => string): string {
   const list: any[] = db?.ylList || [];
-  const hit = list.find((y) => String(y.area || "").substring(0, 3) === area || String(y.nama || "").startsWith(area));
+  const hit = list.find((y) => sameArea(y.area, area) || sameArea(areaPrefix(y.nama), area));
   return hit ? cleanYlName(String(hit.nama)) : area;
 }
 
@@ -77,8 +78,9 @@ export function detectFocusAreas(message: string, db: any, cleanYlName: (s: stri
   const list: any[] = db?.ylList || [];
   list.forEach((y) => {
     const nm = cleanYlName(String(y.nama || "")).toLowerCase();
-    const area = String(y.area || "").substring(0, 3);
-    if (nm.length >= 4 && msg.includes(nm) && AREAS.includes(area)) found.add(area);
+    const area = String(y.area || "");
+    const hitArea = AREAS.find((a) => sameArea(a, area));
+    if (nm.length >= 4 && msg.includes(nm) && hitArea) found.add(hitArea);
   });
   return Array.from(found);
 }
@@ -88,8 +90,8 @@ function txsOfArea(db: any, month: string, area: string, cleanYlName: (s: string
   return (db?.transactions || []).filter((t: any) => {
     if (!t?.tanggal || !String(t.tanggal).startsWith(month)) return false;
     return (
-      (t.area && String(t.area).substring(0, 3) === area) ||
-      (t.nama && String(t.nama).startsWith(area)) ||
+      (t.area && sameArea(t.area, area)) ||
+      (t.nama && sameArea(areaPrefix(t.nama), area)) ||
       (nm && cleanYlName(String(t.nama || "")).toLowerCase() === nm)
     );
   });
@@ -128,6 +130,42 @@ export interface AreaMonthFigures {
   harian: { tgl: number; sales: number; yo: number; om: number; os: number; yt: number; bb: number; rk: number; ra: number; rb: number; plg: number; sampah: number }[];
   hariTanpaPenjualan: number[];
   status: string[];
+  comp: { factor: number; kotor: number; pph: number; jkk: number; jht: number; bersih: number };
+}
+
+export function computeCompensation(db: any, area: string, totalSales: number, avgSales: number) {
+  const compCfg = db?.compensationConfig || {
+    tiers: [
+      { threshold: 0, rate: 338 },
+      { threshold: 200, rate: 374 },
+      { threshold: 250, rate: 409 },
+      { threshold: 280, rate: 417 },
+      { threshold: 300, rate: 424 },
+      { threshold: 330, rate: 428 },
+      { threshold: 350, rate: 432 },
+    ],
+    pphRate: 2.5,
+    jkkJkm: 18800,
+    jht: 24000,
+  };
+  let factor = compCfg.tiers[0].rate;
+  const sortedTiers = [...compCfg.tiers].sort((a: any, b: any) => b.threshold - a.threshold);
+  for (const t of sortedTiers) {
+    if (avgSales >= t.threshold) {
+      factor = t.rate;
+      break;
+    }
+  }
+  const isZero = totalSales <= 0;
+  const kotor = isZero ? 0 : Math.floor(totalSales * factor);
+  const pph = isZero ? 0 : Math.floor(kotor * ((compCfg.pphRate || 2.5) / 100));
+  const jkk = isZero ? 0 : (compCfg.jkkJkm || 18800);
+  const ylItem = (db?.ylList || []).find((y: any) => sameArea(y.area, area));
+  const ikutJht = ylItem ? ylItem.ikutJht !== false : true;
+  const jhtNominal = ylItem && typeof ylItem.iuranJht === "number" ? ylItem.iuranJht : (compCfg.jht || 24000);
+  const jht = (isZero || !ikutJht) ? 0 : jhtNominal;
+  const bersih = Math.max(0, kotor - pph - jkk - jht);
+  return { factor, kotor, pph, jkk, jht, bersih };
 }
 
 /** Angka bulan berjalan satu area. Akumulasi/target/BB diambil dari dashboard (rumus layar), bukan dihitung ulang. */
@@ -228,6 +266,7 @@ export function buildAreaMonth(deps: AiContextDeps, month: string, area: string)
     harian,
     hariTanpaPenjualan,
     status,
+    comp: computeCompensation(db, area, akumulasi, rata2),
   };
 }
 
@@ -238,6 +277,7 @@ function areaBlock(f: AreaMonthFigures, withDaily: boolean): string {
   L.push(`- Akumulasi penjualan: ${f.akumulasi} btl (YO ${f.item.yo}, OM ${f.item.om}, OS ${f.item.os}, YT ${f.item.yt})`);
   L.push(`- Rata-rata/hari: ${f.rata2} (= ${f.akumulasi} / ${f.pembagi})`);
   L.push(`- Target: ${f.target} -> capaian ${pctStr(f.pctTarget)} | Bulan lalu: ${f.bulanLalu} -> ${pctStr(f.pctBulanLalu)} | Tahun lalu: ${f.tahunLalu} -> ${pctStr(f.pctTahunLalu)}`);
+  L.push(`- Estimasi Kompensasi: Rata-rata ${f.rata2} btl/hari (Tier Rp ${f.comp.factor}/btl) | Kotor: Rp ${f.comp.kotor.toLocaleString("id-ID")} | Potongan PPh 2.5%: Rp ${f.comp.pph.toLocaleString("id-ID")} | Iuran JKK/JKM: Rp ${f.comp.jkk.toLocaleString("id-ID")} | Iuran JHT: Rp ${f.comp.jht.toLocaleString("id-ID")} | Estimasi Kompensasi Bersih: Rp ${f.comp.bersih.toLocaleString("id-ID")}`);
   L.push(`- BB: ${f.bb} btl, %BB ${pctStr(f.pctBB)} (= BB / (akumulasi + BB))`);
   L.push(`- Sektor: Rumah ${f.sektor.rumah}, Pasar ${f.sektor.pasar}, Sekolah ${f.sektor.sekolah}, Kantor ${f.sektor.kantor}, Toko ${f.sektor.toko}, IB ${f.sektor.ib} | %Rumah ${pctStr(f.pctRumah)}, %Toko ${pctStr(f.pctToko)}`);
   L.push(`- Kunjungan: RK ${f.rk}, RA ${f.ra}, RB ${f.rb}, PLG ${f.plg} | %RB vs PLG ${pctStr(pct(f.rb, f.plg))} | PLG APK ${f.plgApk}`);
@@ -252,11 +292,12 @@ function areaBlock(f: AreaMonthFigures, withDaily: boolean): string {
 }
 
 /** Ringkasan satu area pada satu arsip bulan (dari getAllMonthlyArchivesSummary). */
-function archiveAreaLine(arc: any, area: string): string {
+function archiveAreaLine(arc: any, area: string, db?: any): string {
   const y = arc?.perYL?.[area];
   if (!y) return `  ${monthLabel(arc.monthKey)}: tidak ada data area ${area} di arsip`;
   const cap = y.targetYL > 0 ? `${r1((y.rata2 / y.targetYL) * 100)}%` : "-";
-  return `  ${monthLabel(arc.monthKey)}: rata2 ${y.rata2}, target ${y.targetYL} (capaian ${cap}), akumulasi ${y.akumulasi}, BB ${y.bb}, sampah botol ${y.sampahBotol}, %Rumah ${y.persenRumah}%, %RB vs PLG ${y.persenRbVsPlg}%, PB ${y.propaganda}, hari kerja ${arc.hariKerja}`;
+  const comp = computeCompensation(db, area, num(y.akumulasi), num(y.rata2));
+  return `  ${monthLabel(arc.monthKey)}: rata2 ${y.rata2}, target ${y.targetYL} (capaian ${cap}), akumulasi ${y.akumulasi}, kompensasi bersih Rp ${comp.bersih.toLocaleString("id-ID")} (kotor Rp ${comp.kotor.toLocaleString("id-ID")}, tarif Rp ${comp.factor}/btl, PPh Rp ${comp.pph.toLocaleString("id-ID")}, JKK Rp ${comp.jkk.toLocaleString("id-ID")}, JHT Rp ${comp.jht.toLocaleString("id-ID")}), BB ${y.bb}, sampah botol ${y.sampahBotol}, %Rumah ${y.persenRumah}%, %RB vs PLG ${y.persenRbVsPlg}%, PB ${y.propaganda}, hari kerja ${arc.hariKerja}`;
 }
 
 /** Total harian satu area dari data harian arsip (breakdownRealisasiMap). */
@@ -310,7 +351,7 @@ export async function buildAiDataContext(
     const own = (archives || []).filter((a) => a.monthKey !== month);
     if (own.length === 0) L.push("Belum ada arsip tersimpan.");
     for (const arc of own) {
-      L.push(archiveAreaLine(arc, area));
+      L.push(archiveAreaLine(arc, area, db));
       try {
         const line = dailyFromMap(await deps.getMonthMap(arc.monthKey), area);
         if (line) L.push(`    harian (tgl:total): ${line}`);
@@ -344,7 +385,7 @@ export async function buildAiDataContext(
   if (past.length === 0) L.push("Belum ada arsip tersimpan.");
   for (const arc of past) {
     L.push(`[${monthLabel(arc.monthKey)}] total penjualan tim ${num(arc.totalPenjualan)}, rata2 tim ${r1(num(arc.rataHarian))}, target tim ${num(arc.targetTKU?.target)}, hari kerja ${num(arc.hariKerja)}, sampah botol terbanyak: ${arc.topSampah ? `${arc.topSampah.nama} (${arc.topSampah.area}) ${arc.topSampah.jumlah}` : "belum tercatat"}`);
-    AREAS.forEach((a) => L.push(archiveAreaLine(arc, a)));
+    AREAS.forEach((a) => L.push(archiveAreaLine(arc, a, db)));
     for (const a of focus) {
       try {
         const line = dailyFromMap(await deps.getMonthMap(arc.monthKey), a);

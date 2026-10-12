@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Save, Search, Plus, Trash2, ArrowLeft, ArrowRight, ChevronDown, ChevronRight, ClipboardCheck, Download, X, RefreshCw } from 'lucide-react';
+import { bbColorClass } from "../utils/numberFormat";
+import React, { useState, useEffect, useMemo } from 'react';
+import { Save, Plus, ChevronDown, ChevronRight, ClipboardCheck, Download, X } from 'lucide-react';
 import { saveToSupabase, loadFromSupabase } from '../lib/supabaseClient';
-import { lookupPreviousYearData, getPreviousYearDataSync } from '../lib/historicalArchiveLookup';
+import { lookupPreviousYearData } from '../lib/historicalArchiveLookup';
 import { cleanYlName } from '../types';
 
 export const SEED_DATA_2026 = {
@@ -1203,16 +1204,16 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
   }, [currentDisplayData]);
 
   if (isLoading) {
-    return <div className="p-8 text-center text-slate-500 font-bold">Memuat Data Sales Record TKU...</div>;
+    return <div className="p-8 text-center text-neutral-500 dark:text-neutral-400 font-bold">Memuat Data Sales Record TKU...</div>;
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 sm:p-6 border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <div>
-          <h2 className="text-xl md:text-2xl font-black text-slate-800">Sales Record & Evaluasi TKU</h2>
-          <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest">
+          <h2 className="text-xl md:text-2xl font-bold text-neutral-800 dark:text-neutral-200">Sales Record & Evaluasi TKU</h2>
+          <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 mt-1 uppercase tracking-widest">
             {currentDisplayData?.tku || "DP JEMBER 1"} - {selectedYear}
           </p>
         </div>
@@ -1221,7 +1222,7 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
             disabled={isEditing}
-            className="p-2 bg-slate-100 border border-slate-300 rounded-xl font-bold text-sm outline-none text-slate-900"
+            className="p-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-xl font-bold text-sm outline-none text-neutral-900 dark:text-neutral-100"
           >
             <option value="2026">2026</option>
             <option value="2027">2027</option>
@@ -1231,7 +1232,7 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
             value={selectedMonthIndex}
             onChange={(e) => setSelectedMonthIndex(Number(e.target.value))}
             disabled={isEditing}
-            className="p-2 bg-slate-100 border border-slate-300 rounded-xl font-bold text-sm outline-none text-slate-900"
+            className="p-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-xl font-bold text-sm outline-none text-neutral-900 dark:text-neutral-100"
           >
             {MONTH_LABELS.map((m, i) => (
               <option key={i} value={i}>{m}</option>
@@ -1241,24 +1242,24 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
       </div>
 
       {saveStatus && (
-        <div className={`p-4 rounded-xl font-bold text-sm ${saveStatus.includes('✅') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+        <div className={`p-4 rounded-xl font-bold text-sm ${saveStatus.includes('✅') ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-red-50 text-red-700 border border-red-200'}`}>
           {saveStatus}
         </div>
       )}
 
       {/* Main Content Area */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
         {/* Toolbar */}
-        <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-          <div className="text-sm font-bold text-slate-700">
-            Data Bulan: <span className="text-blue-600">{activeMonthLabel} {selectedYear}</span>
-            {!currentMonthData && !isEditing && <span className="ml-2 px-2 py-1 bg-slate-200 text-slate-500 rounded text-xs">Kosong</span>}
+        <div className="p-3.5 sm:p-4 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+          <div className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
+            Data Bulan: <span className="text-brand-600 dark:text-brand-400">{activeMonthLabel} {selectedYear}</span>
+            {!currentMonthData && !isEditing && <span className="ml-2 px-2 py-1 bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 rounded text-xs">Kosong</span>}
           </div>
           <div>
             {!isEditing ? (
               <button
                 onClick={handleEditModeToggle}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-sm cursor-pointer"
+                className="bg-brand-600 hover:bg-brand-700 text-white px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-sm cursor-pointer"
               >
                 <Plus className="w-4 h-4" /> Edit / Isi Bulan {activeMonthLabel}
               </button>
@@ -1275,14 +1276,14 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                 </button>
                 <button
                   onClick={handleSyncFromRata2}
-                  className="bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
+                  className="bg-purple-100 dark:bg-purple-900/50 hover:bg-purple-200 text-purple-700 dark:text-purple-300 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
                   title="Tarik data dari menu Rata-Rata Bulanan"
                 >
                   <Download className="w-4 h-4" /> Tarik Data Rata2
                 </button>
                 <button
                   onClick={handleEditModeToggle}
-                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  className="bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
                 >
                   Batal
                 </button>
@@ -1300,15 +1301,15 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
 
         {/* Rekap 1 Tahun Modal */}
         {showRekapRataModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-7xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-              <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                <h2 className="text-sm sm:text-base font-black text-slate-800 uppercase">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-neutral-900/60 backdrop-blur-sm">
+            <div className="bg-white dark:bg-neutral-900 w-full max-w-7xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+              <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center bg-neutral-50 dark:bg-neutral-800/40">
+                <h2 className="text-sm sm:text-base font-bold text-neutral-800 dark:text-neutral-200 uppercase">
                   Tabel Rata-Rata Penjualan YL - Tahun {selectedYear}
                 </h2>
                 <button 
                   onClick={() => setShowRekapRataModal(false)}
-                  className="p-2 bg-slate-200 hover:bg-rose-100 hover:text-rose-600 rounded-full text-slate-500 transition-colors"
+                  className="p-2 bg-neutral-200 dark:bg-neutral-700 hover:bg-rose-100 hover:text-rose-600 rounded-full text-neutral-500 dark:text-neutral-400 transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1316,49 +1317,49 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
               <div className="flex-1 overflow-auto p-4">
                 <div className="min-w-[1000px] sm:w-full">
                   <table className="w-full text-xs text-left border-collapse">
-                    <thead className="bg-blue-900 text-white font-bold uppercase text-[9px] sm:text-[10px] sticky top-0 z-10">
+                    <thead className="bg-brand-900 text-white font-bold uppercase text-[9px] sm:text-[10px] sticky top-0 z-10">
                       <tr>
-                        <th className="p-2 sm:p-3 border border-blue-800">No</th>
-                        <th className="p-2 sm:p-3 border border-blue-800">Nama YL</th>
+                        <th className="p-2 sm:p-3 border border-brand-800">No</th>
+                        <th className="p-2 sm:p-3 border border-brand-800">Nama YL</th>
                         {MONTHS.map(m => (
-                          <th key={m} className="p-2 sm:p-3 border border-blue-800 text-center">{m}</th>
+                          <th key={m} className="p-2 sm:p-3 border border-brand-800 text-center">{m}</th>
                         ))}
-                        <th className="p-2 sm:p-3 border border-blue-800 text-right bg-blue-950">Rata² Smt 1</th>
-                        <th className="p-2 sm:p-3 border border-blue-800 text-right bg-blue-950">Rata² Smt 2</th>
-                        <th className="p-2 sm:p-3 border border-blue-800 text-right bg-emerald-700">Rata² YTD</th>
+                        <th className="p-2 sm:p-3 border border-brand-800 text-right bg-brand-950">Rata² Smt 1</th>
+                        <th className="p-2 sm:p-3 border border-brand-800 text-right bg-brand-950">Rata² Smt 2</th>
+                        <th className="p-2 sm:p-3 border border-brand-800 text-right bg-emerald-700">Rata² YTD</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 bg-white">
+                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800 bg-white dark:bg-neutral-900">
                       {currentDisplayData?.perYL?.map((yl: any, idx: number) => {
                         const totals = computeTotals?.ylTotals[idx] || { sem1: 0, sem2: 0, total: 0 };
                         return (
-                          <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                            <td className="p-2 sm:p-3 border border-slate-200 text-center">{idx + 1}</td>
-                            <td className="p-2 sm:p-3 border border-slate-200 font-bold text-slate-800 whitespace-nowrap">{yl.nama}</td>
+                          <tr key={idx} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                            <td className="p-2 sm:p-3 border border-neutral-200 dark:border-neutral-800 text-center">{idx + 1}</td>
+                            <td className="p-2 sm:p-3 border border-neutral-200 dark:border-neutral-800 font-bold text-neutral-800 dark:text-neutral-200 whitespace-nowrap">{yl.nama}</td>
                             {MONTHS.map(m => (
-                              <td key={m} className="p-2 sm:p-3 border border-slate-200 text-center text-slate-600 font-medium">
+                              <td key={m} className="p-2 sm:p-3 border border-neutral-200 dark:border-neutral-800 text-center text-neutral-600 dark:text-neutral-400 font-medium">
                                 {formatNumberDisplay(yl.penjualan?.[m])}
                               </td>
                             ))}
-                            <td className="p-2 sm:p-3 border border-slate-200 text-right font-bold text-blue-900 bg-blue-50/50">{formatNumberDisplay(totals.sem1)}</td>
-                            <td className="p-2 sm:p-3 border border-slate-200 text-right font-bold text-blue-900 bg-blue-50/50">{formatNumberDisplay(totals.sem2)}</td>
-                            <td className="p-2 sm:p-3 border border-slate-200 text-right font-black text-emerald-700 bg-emerald-50/50">{formatNumberDisplay(totals.total)}</td>
+                            <td className="p-2 sm:p-3 border border-neutral-200 dark:border-neutral-800 text-right font-bold text-brand-900 dark:text-brand-300 bg-brand-50/50 dark:bg-brand-950/40">{formatNumberDisplay(totals.sem1)}</td>
+                            <td className="p-2 sm:p-3 border border-neutral-200 dark:border-neutral-800 text-right font-bold text-brand-900 dark:text-brand-300 bg-brand-50/50 dark:bg-brand-950/40">{formatNumberDisplay(totals.sem2)}</td>
+                            <td className="p-2 sm:p-3 border border-neutral-200 dark:border-neutral-800 text-right font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/40">{formatNumberDisplay(totals.total)}</td>
                           </tr>
                         );
                       })}
                     </tbody>
-                    <tfoot className="bg-slate-100 font-black sticky bottom-0 z-10 text-[9px] sm:text-[10px] uppercase">
+                    <tfoot className="bg-neutral-100 dark:bg-neutral-800 font-bold sticky bottom-0 z-10 text-[9px] sm:text-[10px] uppercase">
                       <tr>
-                        <td colSpan={2} className="p-2 sm:p-3 border border-slate-300 text-right text-slate-700">Total Keseluruhan</td>
+                        <td colSpan={2} className="p-2 sm:p-3 border border-neutral-300 dark:border-neutral-700 text-right text-neutral-700 dark:text-neutral-300">Total Keseluruhan</td>
                         {MONTHS.map(m => {
                           const monthSum = currentDisplayData?.perYL?.reduce((sum: number, yl: any) => sum + (Number(yl.penjualan?.[m]) || 0), 0) || 0;
                           return (
-                            <td key={m} className="p-2 sm:p-3 border border-slate-300 text-center text-slate-700">{monthSum > 0 ? formatNumberDisplay(monthSum) : "-"}</td>
+                            <td key={m} className="p-2 sm:p-3 border border-neutral-300 dark:border-neutral-700 text-center text-neutral-700 dark:text-neutral-300">{monthSum > 0 ? formatNumberDisplay(monthSum) : "-"}</td>
                           );
                         })}
-                        <td className="p-2 sm:p-3 border border-slate-300 text-right text-blue-900">{formatNumberDisplay(computeTotals?.sm1Total)}</td>
-                        <td className="p-2 sm:p-3 border border-slate-300 text-right text-blue-900">{formatNumberDisplay(computeTotals?.sm2Total)}</td>
-                        <td className="p-2 sm:p-3 border border-slate-300 text-right text-emerald-800">{formatNumberDisplay(computeTotals?.overallTotal)}</td>
+                        <td className="p-2 sm:p-3 border border-neutral-300 dark:border-neutral-700 text-right text-brand-900 dark:text-brand-300">{formatNumberDisplay(computeTotals?.sm1Total)}</td>
+                        <td className="p-2 sm:p-3 border border-neutral-300 dark:border-neutral-700 text-right text-brand-900 dark:text-brand-300">{formatNumberDisplay(computeTotals?.sm2Total)}</td>
+                        <td className="p-2 sm:p-3 border border-neutral-300 dark:border-neutral-700 text-right text-emerald-800 dark:text-emerald-300">{formatNumberDisplay(computeTotals?.overallTotal)}</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -1371,12 +1372,12 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
         {/* Form / View Content */}
         <div className="p-4 sm:p-6 overflow-x-auto">
           {!currentMonthData && !isEditing ? (
-            <div className="text-center p-12 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
-              <ClipboardCheck className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-bold">Data bulan {activeMonthLabel} belum diisi.</p>
+            <div className="text-center p-12 bg-neutral-50 dark:bg-neutral-800/40 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700">
+              <ClipboardCheck className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
+              <p className="text-neutral-500 dark:text-neutral-400 font-bold">Data bulan {activeMonthLabel} belum diisi.</p>
               <button
                 onClick={handleEditModeToggle}
-                className="mt-4 text-blue-600 font-bold text-sm hover:underline cursor-pointer"
+                className="mt-4 text-brand-600 dark:text-brand-400 font-bold text-sm hover:underline cursor-pointer"
               >
                 Isi Data Sekarang
               </button>
@@ -1384,12 +1385,12 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
           ) : (
             <div className="space-y-8">
               {/* Pembagi Section */}
-              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl">
+              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-4 rounded-xl">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="w-full sm:w-1/3">
-                    <InputBox label="KOLOM PEMBAGI" val={currentMonthData?.kolomPembagi} isEditing={isEditing} onChange={(v) => handleFieldChange('kolomPembagi', v)} className="bg-white border-emerald-300 shadow-sm font-black text-emerald-700" />
+                    <InputBox label="KOLOM PEMBAGI" val={currentMonthData?.kolomPembagi} isEditing={isEditing} onChange={(v) => handleFieldChange('kolomPembagi', v)} className="bg-white dark:bg-neutral-900 border-emerald-300 dark:border-emerald-700 shadow-sm font-bold text-emerald-700 dark:text-emerald-300" />
                   </div>
-                  <div className="text-xs text-emerald-800 flex-1">
+                  <div className="text-xs text-emerald-800 dark:text-emerald-300 flex-1">
                     <span className="font-bold">Info:</span> Angka pada Kolom Pembagi ini digunakan sebagai dasar untuk menghitung Rata-rata, Akm Target, JWP secara otomatis.
                   </div>
                 </div>
@@ -1397,30 +1398,30 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
 
               {/* Rata-Rata Section */}
               <section>
-                <h3 className="text-sm font-black text-slate-800 uppercase border-b pb-2 mb-4 border-slate-200">1. Data Rata-Rata Penjualan</h3>
+                <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 uppercase border-b pb-2 mb-4 border-neutral-200 dark:border-neutral-800">1. Data Rata-Rata Penjualan</h3>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <InputBox label="Rata-rata YO" val={currentMonthData?.ratarataYO} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataYO', v)} step="0.01" />
                     <InputBox label="Rata-rata OM" val={currentMonthData?.ratarataOM} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataOM', v)} step="0.01" />
                     <InputBox label="Rata-rata OS" val={currentMonthData?.ratarataOS} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataOS', v)} step="0.01" />
                     <InputBox label="Rata-rata YT" val={currentMonthData?.ratarataYT} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataYT', v)} step="0.01" />
-                    <InputBox label="Rata2 Penjualan YL" val={currentMonthData?.ratarataPenjualanYL} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataPenjualanYL', v)} className="bg-blue-50 border-blue-200 font-black text-blue-900" step="0.01" />
+                    <InputBox label="Rata2 Penjualan YL" val={currentMonthData?.ratarataPenjualanYL} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataPenjualanYL', v)} className="bg-brand-50 dark:bg-brand-950/40 border-brand-200 dark:border-brand-800 font-bold text-brand-900 dark:text-brand-300" step="0.01" />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                    <InputBox label="Target YO" val={currentMonthData?.targetYO} isEditing={isEditing} onChange={(v) => handleFieldChange('targetYO', v)} className="bg-orange-50 border-orange-200" step="0.01" />
-                    <InputBox label="Target OM" val={currentMonthData?.targetOM} isEditing={isEditing} onChange={(v) => handleFieldChange('targetOM', v)} className="bg-orange-50 border-orange-200" step="0.01" />
-                    <InputBox label="Target OS" val={currentMonthData?.targetOS} isEditing={isEditing} onChange={(v) => handleFieldChange('targetOS', v)} className="bg-orange-50 border-orange-200" step="0.01" />
-                    <InputBox label="Target YT" val={currentMonthData?.targetYT} isEditing={isEditing} onChange={(v) => handleFieldChange('targetYT', v)} className="bg-orange-50 border-orange-200" step="0.01" />
-                    <InputBox label="Target Rata2 Pjl" val={currentMonthData?.targetRataRataPenjualan} isEditing={isEditing} onChange={(v) => handleFieldChange('targetRataRataPenjualan', v)} className="bg-orange-50 border-orange-200 font-black text-orange-950" step="0.01" />
+                    <InputBox label="Target YO" val={currentMonthData?.targetYO} isEditing={isEditing} onChange={(v) => handleFieldChange('targetYO', v)} className="bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800" step="0.01" />
+                    <InputBox label="Target OM" val={currentMonthData?.targetOM} isEditing={isEditing} onChange={(v) => handleFieldChange('targetOM', v)} className="bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800" step="0.01" />
+                    <InputBox label="Target OS" val={currentMonthData?.targetOS} isEditing={isEditing} onChange={(v) => handleFieldChange('targetOS', v)} className="bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800" step="0.01" />
+                    <InputBox label="Target YT" val={currentMonthData?.targetYT} isEditing={isEditing} onChange={(v) => handleFieldChange('targetYT', v)} className="bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800" step="0.01" />
+                    <InputBox label="Target Rata2 Pjl" val={currentMonthData?.targetRataRataPenjualan} isEditing={isEditing} onChange={(v) => handleFieldChange('targetRataRataPenjualan', v)} className="bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800 font-bold text-orange-950" step="0.01" />
                     <InputBox label="% Capaian" val={currentMonthData?.persenCapaian} isEditing={isEditing} onChange={(v) => handleFieldChange('persenCapaian', v)} step="0.01" suffix="%" />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                    <InputBox label="Rata2 YO Thn Lalu" val={currentMonthData?.ratarataYOTahunLalu} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataYOTahunLalu', v)} className="bg-slate-100" step="0.01" />
-                    <InputBox label="Rata2 OM Thn Lalu" val={currentMonthData?.ratarataOMTahunLalu} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataOMTahunLalu', v)} className="bg-slate-100" step="0.01" />
-                    <InputBox label="Rata2 OS Thn Lalu" val={currentMonthData?.ratarataOSTahunLalu} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataOSTahunLalu', v)} className="bg-slate-100" step="0.01" />
-                    <InputBox label="Rata2 YT Thn Lalu" val={currentMonthData?.ratarataYTTahunLalu} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataYTTahunLalu', v)} className="bg-slate-100" step="0.01" />
+                    <InputBox label="Rata2 YO Thn Lalu" val={currentMonthData?.ratarataYOTahunLalu} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataYOTahunLalu', v)} className="bg-neutral-100 dark:bg-neutral-800" step="0.01" />
+                    <InputBox label="Rata2 OM Thn Lalu" val={currentMonthData?.ratarataOMTahunLalu} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataOMTahunLalu', v)} className="bg-neutral-100 dark:bg-neutral-800" step="0.01" />
+                    <InputBox label="Rata2 OS Thn Lalu" val={currentMonthData?.ratarataOSTahunLalu} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataOSTahunLalu', v)} className="bg-neutral-100 dark:bg-neutral-800" step="0.01" />
+                    <InputBox label="Rata2 YT Thn Lalu" val={currentMonthData?.ratarataYTTahunLalu} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataYTTahunLalu', v)} className="bg-neutral-100 dark:bg-neutral-800" step="0.01" />
                     <div className="relative">
-                      <InputBox label="Rata2 Pjl Thn Lalu" val={currentMonthData?.ratarataPenjualanTahunLalu} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataPenjualanTahunLalu', v)} className="bg-slate-100" step="0.01" />
+                      <InputBox label="Rata2 Pjl Thn Lalu" val={currentMonthData?.ratarataPenjualanTahunLalu} isEditing={isEditing} onChange={(v) => handleFieldChange('ratarataPenjualanTahunLalu', v)} className="bg-neutral-100 dark:bg-neutral-800" step="0.01" />
                       {isEditing && (
                         <div className="absolute -top-2.5 -right-1 flex gap-1 z-10">
                           <button
@@ -1435,7 +1436,7 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                           <button
                             type="button"
                             onClick={handleFetchRata2TahunLalu}
-                            className="bg-blue-500 hover:bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded shadow cursor-pointer transition-colors"
+                            className="bg-brand-500 hover:bg-brand-600 text-white text-[9px] font-bold px-2 py-0.5 rounded shadow cursor-pointer transition-colors"
                             title="Tarik dari Data Rata2 Bulan Sama Tahun Lalu"
                           >
                             Tarik Thn Lalu
@@ -1450,7 +1451,7 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
 
               {/* Akumulasi & Sales */}
               <section>
-                <h3 className="text-sm font-black text-slate-800 uppercase border-b pb-2 mb-4 border-slate-200">2. Akumulasi & Sales/YL</h3>
+                <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 uppercase border-b pb-2 mb-4 border-neutral-200 dark:border-neutral-800">2. Akumulasi & Sales/YL</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-3">
                   <InputBox label="AKM Penjualan" val={currentMonthData?.akmPenjualan} isEditing={isEditing} onChange={(v) => handleFieldChange('akmPenjualan', v)} />
                   <InputBox label="AKM Target" val={currentMonthData?.akmTarget} isEditing={isEditing} onChange={(v) => handleFieldChange('akmTarget', v)} />
@@ -1464,10 +1465,10 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
 
               {/* Kondisi YL & Rekrutmen */}
               <section>
-                <h3 className="text-sm font-black text-slate-800 uppercase border-b pb-2 mb-4 border-slate-200">3. Kondisi YL, Rekrutmen & Absensi</h3>
+                <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 uppercase border-b pb-2 mb-4 border-neutral-200 dark:border-neutral-800">3. Kondisi YL, Rekrutmen & Absensi</h3>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <InputBox label="Jumlah YL" val={currentMonthData?.jumlahYL} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahYL', v)} className="bg-emerald-50 border-emerald-200" />
+                    <InputBox label="Jumlah YL" val={currentMonthData?.jumlahYL} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahYL', v)} className="bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800" />
                     <InputBox label="Target Jml YL" val={currentMonthData?.targetJumlahYL} isEditing={isEditing} onChange={(v) => handleFieldChange('targetJumlahYL', v)} />
                     <InputBox label="Selisih YL" val={currentMonthData?.jumlahYLSelisih} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahYLSelisih', v)} />
                     <InputBox label="Jml YL Thn Lalu" val={currentMonthData?.jumlahYLTahunLalu} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahYLTahunLalu', v)} />
@@ -1476,9 +1477,9 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
                     <InputBox label="YL Delivery" val={currentMonthData?.jumlahYLDelivery} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahYLDelivery', v)} />
                     <InputBox label="Target Rekrut" val={currentMonthData?.targetRekrut} isEditing={isEditing} onChange={(v) => handleFieldChange('targetRekrut', v)} />
-                    <InputBox label="YL Baru" val={currentMonthData?.jumlahYLBaru} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahYLBaru', v)} className="bg-blue-50 border-blue-200" />
+                    <InputBox label="YL Baru" val={currentMonthData?.jumlahYLBaru} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahYLBaru', v)} className="bg-brand-50 dark:bg-brand-950/40 border-brand-200 dark:border-brand-800" />
                     <InputBox label="Selisih YL Baru" val={currentMonthData?.jumlahYLBaruSelisih} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahYLBaruSelisih', v)} />
-                    <InputBox label="YL Resign" val={currentMonthData?.jumlahYLResign} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahYLResign', v)} className="bg-rose-50 border-rose-200" />
+                    <InputBox label="YL Resign" val={currentMonthData?.jumlahYLResign} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahYLResign', v)} className="bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800" />
                     <InputBox label="Selisih Resign" val={currentMonthData?.jumlahYLResignSelisih} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahYLResignSelisih', v)} />
                     <InputBox label="Resign <1 Thn" val={currentMonthData?.jumlahYLResignKurang1Tahun} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahYLResignKurang1Tahun', v)} />
                     <InputBox label="% Resign <1 Thn" val={currentMonthData?.persenResignKurang1Tahun} isEditing={isEditing} onChange={(v) => handleFieldChange('persenResignKurang1Tahun', v)} step="0.1" suffix="%" />
@@ -1493,7 +1494,7 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
 
               {/* Kondisi YL Breakdown */}
               <section>
-                <h3 className="text-sm font-black text-slate-800 uppercase border-b pb-2 mb-4 border-slate-200">4. Rincian Kondisi YL</h3>
+                <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 uppercase border-b pb-2 mb-4 border-neutral-200 dark:border-neutral-800">4. Rincian Kondisi YL</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
                   <InputBox label="Propaganda" val={currentMonthData?.kondisiYL?.propaganda} isEditing={isEditing} onChange={(v) => handleFieldChange('kondisiYL', v, 'propaganda')} />
                   <InputBox label="< 250" val={currentMonthData?.kondisiYL?.kurang250} isEditing={isEditing} onChange={(v) => handleFieldChange('kondisiYL', v, 'kurang250')} />
@@ -1502,17 +1503,17 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                   <InputBox label="300 - 329" val={currentMonthData?.kondisiYL?.r300_329} isEditing={isEditing} onChange={(v) => handleFieldChange('kondisiYL', v, 'r300_329')} />
                   <InputBox label="330 - 349" val={currentMonthData?.kondisiYL?.r330_349} isEditing={isEditing} onChange={(v) => handleFieldChange('kondisiYL', v, 'r330_349')} />
                   <InputBox label="> 350" val={currentMonthData?.kondisiYL?.lebih350} isEditing={isEditing} onChange={(v) => handleFieldChange('kondisiYL', v, 'lebih350')} />
-                  <InputBox label="% YL < 250" val={currentMonthData?.kondisiYL?.persenYLKurang250} isEditing={isEditing} onChange={(v) => handleFieldChange('kondisiYL', v, 'persenYLKurang250')} step="0.1" suffix="%" className="bg-rose-50" />
+                  <InputBox label="% YL < 250" val={currentMonthData?.kondisiYL?.persenYLKurang250} isEditing={isEditing} onChange={(v) => handleFieldChange('kondisiYL', v, 'persenYLKurang250')} step="0.1" suffix="%" className="bg-rose-50 dark:bg-rose-950/40" />
                 </div>
               </section>
 
               {/* Potensi & Area */}
               <section>
-                <h3 className="text-sm font-black text-slate-800 uppercase border-b pb-2 mb-4 border-slate-200">5. Potensi & Penetrasi Area</h3>
+                <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 uppercase border-b pb-2 mb-4 border-neutral-200 dark:border-neutral-800">5. Potensi & Penetrasi Area</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
                   <InputBox label="AKM PDM" val={currentMonthData?.akmPDM} isEditing={isEditing} onChange={(v) => handleFieldChange('akmPDM', v)} />
                   <InputBox label="AKM Kembali Botol" val={currentMonthData?.akmKembaliBotol} isEditing={isEditing} onChange={(v) => handleFieldChange('akmKembaliBotol', v)} />
-                  <InputBox label="% Kembali Botol" val={currentMonthData?.persenKembaliBotol} isEditing={isEditing} onChange={(v) => handleFieldChange('persenKembaliBotol', v)} step="0.1" suffix="%" />
+                  <InputBox label="% Kembali Botol" val={currentMonthData?.persenKembaliBotol} isEditing={isEditing} onChange={(v) => handleFieldChange('persenKembaliBotol', v)} step="0.1" suffix="%" valueClass={bbColorClass(currentMonthData?.persenKembaliBotol)} />
                   <InputBox label="% PJL Rumah" val={currentMonthData?.kondisiPotensi?.persenPJLRumah} isEditing={isEditing} onChange={(v) => handleFieldChange('kondisiPotensi', v, 'persenPJLRumah')} step="0.1" suffix="%" />
                   <InputBox label="% PJL Toko" val={currentMonthData?.kondisiPotensi?.persenPJLToko} isEditing={isEditing} onChange={(v) => handleFieldChange('kondisiPotensi', v, 'persenPJLToko')} step="0.1" suffix="%" />
                   <InputBox label="Jumlah Area" val={currentMonthData?.jumlahArea} isEditing={isEditing} onChange={(v) => handleFieldChange('jumlahArea', v)} />
@@ -1522,30 +1523,30 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
 
               {/* Tabel Penjualan per YL */}
               <section>
-                <div className="flex justify-between items-center border-b pb-2 mb-4 border-slate-200">
-                  <h3 className="text-sm font-black text-slate-800 uppercase">6. Penjualan Per YL (Bulan {activeMonthLabel})</h3>
+                <div className="flex justify-between items-center border-b pb-2 mb-4 border-neutral-200 dark:border-neutral-800">
+                  <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 uppercase">6. Penjualan Per YL (Bulan {activeMonthLabel})</h3>
                   <button 
                     onClick={() => setShowRekapRataModal(true)}
-                    className="bg-blue-600 text-white text-[10px] sm:text-xs px-3 py-1.5 rounded-lg shadow font-bold hover:bg-blue-700"
+                    className="bg-brand-600 text-white text-[10px] sm:text-xs px-3 py-1.5 rounded-lg shadow font-bold hover:bg-brand-700"
                   >
                     Rekap 1 Tahun
                   </button>
                 </div>
-                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
                   <table className="w-full text-xs text-left">
-                    <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px]">
+                    <thead className="bg-neutral-50 dark:bg-neutral-800/40 text-neutral-600 dark:text-neutral-400 font-bold uppercase text-[10px]">
                       <tr>
-                        <th className="w-8 p-3 border-b border-slate-200 text-center"></th>
-                        <th className="p-3 border-b border-slate-200">No</th>
-                        <th className="p-3 border-b border-slate-200">Area</th>
-                        <th className="p-3 border-b border-slate-200">Nama YL</th>
-                        <th className="p-3 border-b border-slate-200 text-right">Penjualan ({activeMonthLabel})</th>
-                        <th className="p-3 border-b border-slate-200 text-right">Rata² Smt 1</th>
-                        <th className="p-3 border-b border-slate-200 text-right">Rata² Smt 2</th>
-                        <th className="p-3 border-b border-slate-200 text-right">Rata² YTD</th>
+                        <th className="w-8 p-3 border-b border-neutral-200 dark:border-neutral-800 text-center"></th>
+                        <th className="p-3 border-b border-neutral-200 dark:border-neutral-800">No</th>
+                        <th className="p-3 border-b border-neutral-200 dark:border-neutral-800">Area</th>
+                        <th className="p-3 border-b border-neutral-200 dark:border-neutral-800">Nama YL</th>
+                        <th className="p-3 border-b border-neutral-200 dark:border-neutral-800 text-right">Penjualan ({activeMonthLabel})</th>
+                        <th className="p-3 border-b border-neutral-200 dark:border-neutral-800 text-right">Rata² Smt 1</th>
+                        <th className="p-3 border-b border-neutral-200 dark:border-neutral-800 text-right">Rata² Smt 2</th>
+                        <th className="p-3 border-b border-neutral-200 dark:border-neutral-800 text-right">Rata² YTD</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                       {currentDisplayData?.perYL?.map((yl: any, idx: number) => {
                         const val = yl.penjualan?.[activeMonthKey];
                         const totals = computeTotals?.ylTotals[idx] || { sem1: 0, sem2: 0, total: 0 };
@@ -1554,14 +1555,14 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                         
                         return (
                           <React.Fragment key={idx}>
-                            <tr className="hover:bg-slate-50">
+                            <tr className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
                               <td className="p-3 text-center">
-                                <button onClick={() => toggleExpandYL(idx)} className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+                                <button onClick={() => toggleExpandYL(idx)} className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors cursor-pointer">
                                   {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                 </button>
                               </td>
-                              <td className="p-3 font-medium text-slate-500">{yl.no}</td>
-                              <td className="p-3 font-bold text-slate-700">
+                              <td className="p-3 font-medium text-neutral-500 dark:text-neutral-400">{yl.no}</td>
+                              <td className="p-3 font-bold text-neutral-700 dark:text-neutral-300">
                                 {isEditing ? (
                                   <input
                                     type="text"
@@ -1573,13 +1574,13 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                                         return nd;
                                       });
                                     }}
-                                    className="w-16 p-1 text-xs border border-slate-300 rounded focus:border-blue-500 outline-none text-slate-900"
+                                    className="w-16 p-1 text-xs border border-neutral-300 dark:border-neutral-700 rounded focus:border-brand-500 outline-none text-neutral-900 dark:text-neutral-100"
                                   />
                                 ) : (
-                                  <span className="text-slate-900">{yl.area}</span>
+                                  <span className="text-neutral-900 dark:text-neutral-100">{yl.area}</span>
                                 )}
                               </td>
-                              <td className="p-3 font-bold text-slate-900">
+                              <td className="p-3 font-bold text-neutral-900 dark:text-neutral-100">
                                 {isEditing ? (
                                   <input
                                     type="text"
@@ -1591,10 +1592,10 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                                         return nd;
                                       });
                                     }}
-                                    className="w-32 md:w-full p-1 text-xs border border-slate-300 rounded focus:border-blue-500 outline-none text-slate-900"
+                                    className="w-32 md:w-full p-1 text-xs border border-neutral-300 dark:border-neutral-700 rounded focus:border-brand-500 outline-none text-neutral-900 dark:text-neutral-100"
                                   />
                                 ) : (
-                                  <span className="text-slate-900">{yl.nama}</span>
+                                  <span className="text-neutral-900 dark:text-neutral-100">{yl.nama}</span>
                                 )}
                               </td>
                               <td className="p-3 text-right">
@@ -1634,27 +1635,27 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                                         return nd;
                                       });
                                     }}
-                                    className="w-20 p-1.5 text-right border border-slate-300 rounded focus:border-blue-500 outline-none text-slate-900"
+                                    className="w-20 p-1.5 text-right border border-neutral-300 dark:border-neutral-700 rounded focus:border-brand-500 outline-none text-neutral-900 dark:text-neutral-100"
                                   />
                                 ) : (
-                                  <span className="font-black text-slate-900">{typeof val === "number" && !Number.isInteger(val) ? val.toFixed(2) : (val ?? "-")}</span>
+                                  <span className="font-bold text-neutral-900 dark:text-neutral-100">{typeof val === "number" && !Number.isInteger(val) ? val.toFixed(2) : (val ?? "-")}</span>
                                 )}
                               </td>
-                              <td className="p-3 text-right text-slate-900 font-black">{typeof totals.sem1 === "number" && !Number.isInteger(totals.sem1) ? totals.sem1.toFixed(2) : totals.sem1}</td>
-                              <td className="p-3 text-right text-slate-900 font-black">{typeof totals.sem2 === "number" && !Number.isInteger(totals.sem2) ? totals.sem2.toFixed(2) : totals.sem2}</td>
-                              <td className="p-3 text-right font-black text-slate-800">{typeof totals.total === "number" && !Number.isInteger(totals.total) ? totals.total.toFixed(2) : totals.total}</td>
+                              <td className="p-3 text-right text-neutral-900 dark:text-neutral-100 font-bold">{typeof totals.sem1 === "number" && !Number.isInteger(totals.sem1) ? totals.sem1.toFixed(2) : totals.sem1}</td>
+                              <td className="p-3 text-right text-neutral-900 dark:text-neutral-100 font-bold">{typeof totals.sem2 === "number" && !Number.isInteger(totals.sem2) ? totals.sem2.toFixed(2) : totals.sem2}</td>
+                              <td className="p-3 text-right font-bold text-neutral-800 dark:text-neutral-200">{typeof totals.total === "number" && !Number.isInteger(totals.total) ? totals.total.toFixed(2) : totals.total}</td>
                             </tr>
                             {isExpanded && (
-                              <tr className="bg-slate-50/50">
-                                <td colSpan={8} className="p-4 border-b border-slate-100">
-                                  <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center text-xs ml-10 border-l-2 border-blue-200 pl-4 py-1">
+                              <tr className="bg-neutral-50/50 dark:bg-neutral-800/50">
+                                <td colSpan={8} className="p-4 border-b border-neutral-100 dark:border-neutral-800">
+                                  <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center text-xs ml-10 border-l-2 border-brand-200 dark:border-brand-800 pl-4 py-1">
                                     <div className="flex gap-4">
                                       <div className="space-y-1.5">
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rincian Varian (Bulan {activeMonthLabel})</p>
+                                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Rincian Varian (Bulan {activeMonthLabel})</p>
                                         <div className="flex gap-2">
                                           {['yo', 'om', 'os', 'yt'].map(vKey => (
-                                            <div key={vKey} className="flex flex-col items-center bg-white p-2 rounded-lg border border-slate-200 min-w-[60px] shadow-sm">
-                                              <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{vKey}</span>
+                                            <div key={vKey} className="flex flex-col items-center bg-white dark:bg-neutral-900 p-2 rounded-lg border border-neutral-200 dark:border-neutral-800 min-w-[60px] shadow-sm">
+                                              <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase mb-1">{vKey}</span>
                                               {isEditing ? (
                                                 <input
                                                   type="number"
@@ -1705,10 +1706,10 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                                                       return nd;
                                                     });
                                                   }}
-                                                  className="w-14 p-1 text-center text-xs font-bold border border-slate-300 rounded focus:border-blue-500 outline-none bg-slate-50 text-slate-900"
+                                                  className="w-14 p-1 text-center text-xs font-bold border border-neutral-300 dark:border-neutral-700 rounded focus:border-brand-500 outline-none bg-neutral-50 dark:bg-neutral-800/40 text-neutral-900 dark:text-neutral-100"
                                                 />
                                               ) : (
-                                                <span className="font-black text-slate-700 text-sm">{typeof rincian[vKey] === "number" && !Number.isInteger(rincian[vKey]) ? Number(rincian[vKey]).toFixed(2) : (rincian[vKey] ?? 0)}</span>
+                                                <span className="font-bold text-neutral-700 dark:text-neutral-300 text-sm">{typeof rincian[vKey] === "number" && !Number.isInteger(rincian[vKey]) ? Number(rincian[vKey]).toFixed(2) : (rincian[vKey] ?? 0)}</span>
                                               )}
                                             </div>
                                           ))}
@@ -1716,9 +1717,9 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                                       </div>
                                     </div>
                                     <div className="space-y-1.5 hidden md:block">
-                                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Informasi YL</p>
-                                      <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-[11px] space-y-1 min-w-[200px] shadow-sm">
-                                        <div className="flex justify-between items-center"><span className="text-slate-400">Tgl Lulus:</span> 
+                                      <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Informasi YL</p>
+                                      <div className="bg-white dark:bg-neutral-900 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 text-[11px] space-y-1 min-w-[200px] shadow-sm">
+                                        <div className="flex justify-between items-center"><span className="text-neutral-400">Tgl Lulus:</span> 
                                           {isEditing ? (
                                             <input type="date" value={editData?.perYL?.[idx]?.tglLulus || ""} onChange={(e) => {
                                               setEditData((prev: any) => {
@@ -1726,12 +1727,12 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                                                 nd.perYL[idx].tglLulus = e.target.value;
                                                 return nd;
                                               });
-                                            }} className="border p-0.5 rounded text-[10px] text-slate-900 w-24" />
+                                            }} className="border p-0.5 rounded text-[10px] text-neutral-900 dark:text-neutral-100 w-24" />
                                           ) : (
-                                            <span className="font-bold text-slate-900">{yl.tglLulus || "-"}</span>
+                                            <span className="font-bold text-neutral-900 dark:text-neutral-100">{yl.tglLulus || "-"}</span>
                                           )}
                                         </div>
-                                        <div className="flex justify-between items-center"><span className="text-slate-400">Tgl Delivery:</span> 
+                                        <div className="flex justify-between items-center"><span className="text-neutral-400">Tgl Delivery:</span> 
                                           {isEditing ? (
                                             <input type="date" value={editData?.perYL?.[idx]?.tglDelivery || ""} onChange={(e) => {
                                               setEditData((prev: any) => {
@@ -1739,12 +1740,12 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                                                 nd.perYL[idx].tglDelivery = e.target.value;
                                                 return nd;
                                               });
-                                            }} className="border p-0.5 rounded text-[10px] text-slate-900 w-24" />
+                                            }} className="border p-0.5 rounded text-[10px] text-neutral-900 dark:text-neutral-100 w-24" />
                                           ) : (
-                                            <span className="font-bold text-slate-900">{yl.tglDelivery || "-"}</span>
+                                            <span className="font-bold text-neutral-900 dark:text-neutral-100">{yl.tglDelivery || "-"}</span>
                                           )}
                                         </div>
-                                        <div className="flex justify-between items-center"><span className="text-slate-400">Tgl Resign:</span> 
+                                        <div className="flex justify-between items-center"><span className="text-neutral-400">Tgl Resign:</span> 
                                           {isEditing ? (
                                             <input type="date" value={editData?.perYL?.[idx]?.tglResign || ""} onChange={(e) => {
                                               setEditData((prev: any) => {
@@ -1752,9 +1753,9 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                                                 nd.perYL[idx].tglResign = e.target.value;
                                                 return nd;
                                               });
-                                            }} className="border p-0.5 rounded text-[10px] text-slate-900 w-24" />
+                                            }} className="border p-0.5 rounded text-[10px] text-neutral-900 dark:text-neutral-100 w-24" />
                                           ) : (
-                                            <span className="font-bold text-slate-900">{yl.tglResign || "-"}</span>
+                                            <span className="font-bold text-neutral-900 dark:text-neutral-100">{yl.tglResign || "-"}</span>
                                           )}
                                         </div>
                                       </div>
@@ -1773,10 +1774,10 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
 
               {/* Evaluasi Section */}
               <section>
-                <h3 className="text-sm font-black text-slate-800 uppercase border-b pb-2 mb-4 border-slate-200">7. Evaluasi Kondisi TKU (Bulan {activeMonthLabel})</h3>
+                <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 uppercase border-b pb-2 mb-4 border-neutral-200 dark:border-neutral-800">7. Evaluasi Kondisi TKU (Bulan {activeMonthLabel})</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
-                    <p className="text-xs font-bold text-emerald-800 uppercase mb-2">Hal Positif (+)</p>
+                  <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-4">
+                    <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase mb-2">Hal Positif (+)</p>
                     {isEditing ? (
                       <textarea
                         value={(editData?.bulanan?.[activeMonthKey]?.evaluasiPlus || []).join('\n')}
@@ -1784,22 +1785,22 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                           const lines = e.target.value.split('\n');
                           handleFieldChange('evaluasiPlus', lines);
                         }}
-                        className="w-full h-24 p-2 text-xs border border-emerald-300 rounded-xl outline-none focus:border-emerald-500 bg-white text-slate-900"
+                        className="w-full h-24 p-2 text-xs border border-emerald-300 dark:border-emerald-700 rounded-xl outline-none focus:border-emerald-500 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
                         placeholder="Tulis poin-poin positif di sini (satu poin per baris)..."
                       />
                     ) : (
-                      <ul className="list-disc pl-4 text-xs font-medium text-emerald-900 space-y-1">
+                      <ul className="list-disc pl-4 text-xs font-medium text-emerald-900 dark:text-emerald-300 space-y-1">
                         {(currentMonthData?.evaluasiPlus || []).filter((s: string) => s.trim() !== "").map((pt: string, i: number) => (
                           <li key={i}>{pt}</li>
                         ))}
                         {!(currentMonthData?.evaluasiPlus || []).some((s: string) => s.trim() !== "") && (
-                          <li className="text-emerald-600/50 italic list-none -ml-4">Belum ada catatan evaluasi positif.</li>
+                          <li className="text-emerald-600/50 dark:text-emerald-400 italic list-none -ml-4">Belum ada catatan evaluasi positif.</li>
                         )}
                       </ul>
                     )}
                   </div>
-                  <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4">
-                    <p className="text-xs font-bold text-rose-800 uppercase mb-2">Hal Negatif / Kendala (-)</p>
+                  <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl p-4">
+                    <p className="text-xs font-bold text-rose-800 dark:text-rose-300 uppercase mb-2">Hal Negatif / Kendala (-)</p>
                     {isEditing ? (
                       <textarea
                         value={(editData?.bulanan?.[activeMonthKey]?.evaluasiMinus || []).join('\n')}
@@ -1807,16 +1808,16 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
                           const lines = e.target.value.split('\n');
                           handleFieldChange('evaluasiMinus', lines);
                         }}
-                        className="w-full h-24 p-2 text-xs border border-rose-300 rounded-xl outline-none focus:border-rose-500 bg-white text-slate-900"
+                        className="w-full h-24 p-2 text-xs border border-rose-300 dark:border-rose-700 rounded-xl outline-none focus:border-rose-500 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
                         placeholder="Tulis poin-poin kendala di sini (satu poin per baris)..."
                       />
                     ) : (
-                      <ul className="list-disc pl-4 text-xs font-medium text-rose-900 space-y-1">
+                      <ul className="list-disc pl-4 text-xs font-medium text-rose-900 dark:text-rose-300 space-y-1">
                         {(currentMonthData?.evaluasiMinus || []).filter((s: string) => s.trim() !== "").map((pt: string, i: number) => (
                           <li key={i}>{pt}</li>
                         ))}
                         {!(currentMonthData?.evaluasiMinus || []).some((s: string) => s.trim() !== "") && (
-                          <li className="text-rose-600/50 italic list-none -ml-4">Belum ada catatan kendala.</li>
+                          <li className="text-rose-600/50 dark:text-rose-400 italic list-none -ml-4">Belum ada catatan kendala.</li>
                         )}
                       </ul>
                     )}
@@ -1826,27 +1827,27 @@ export default function SalesRecordTKU({ defaultYear, defaultMonthIndex }: { def
 
               {/* Summary Bottom */}
               <section>
-                <div className="bg-slate-800 text-white rounded-2xl p-4 sm:p-6 flex flex-col md:flex-row gap-6 justify-between items-center shadow-lg">
+                <div className="bg-neutral-800 text-white rounded-2xl p-4 sm:p-6 flex flex-col md:flex-row gap-6 justify-between items-center shadow-lg">
                   <div className="text-center md:text-left">
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Sales {selectedYear}</p>
-                    <p className="text-2xl font-black text-emerald-400">{computeTotals?.summary.totalSales.toLocaleString()}</p>
-                    <p className="text-[10px] text-slate-500 mt-1">
+                    <p className="text-xs text-neutral-400 font-bold uppercase tracking-wider">Total Sales {selectedYear}</p>
+                    <p className="text-2xl font-bold text-emerald-400">{computeTotals?.summary.totalSales.toLocaleString()}</p>
+                    <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
                       Target: {computeTotals?.summary.totalTarget.toLocaleString()} | 
                       Capaian: {computeTotals?.summary.totalTarget ? ((computeTotals.summary.totalSales / computeTotals.summary.totalTarget) * 100).toFixed(1) : 0}%
                     </p>
                   </div>
                   <div className="flex gap-4 md:gap-8">
                     <div className="text-center">
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">YL Aktif Rata2</p>
-                      <p className="text-lg font-black">{computeTotals?.summary.monthsCount ? Math.round(computeTotals.summary.totalYL / computeTotals.summary.monthsCount) : 0}</p>
+                      <p className="text-[10px] text-neutral-400 font-bold uppercase">YL Aktif Rata2</p>
+                      <p className="text-lg font-bold">{computeTotals?.summary.monthsCount ? Math.round(computeTotals.summary.totalYL / computeTotals.summary.monthsCount) : 0}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Total Baru</p>
-                      <p className="text-lg font-black text-blue-400">{computeTotals?.summary.totalBaru}</p>
+                      <p className="text-[10px] text-neutral-400 font-bold uppercase">Total Baru</p>
+                      <p className="text-lg font-bold text-brand-400">{computeTotals?.summary.totalBaru}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Total Resign</p>
-                      <p className="text-lg font-black text-rose-400">{computeTotals?.summary.totalResign}</p>
+                      <p className="text-[10px] text-neutral-400 font-bold uppercase">Total Resign</p>
+                      <p className="text-lg font-bold text-rose-400">{computeTotals?.summary.totalResign}</p>
                     </div>
                   </div>
                 </div>
@@ -1884,6 +1885,7 @@ function InputBox({
   step = "0.01",
   suffix,
   className,
+  valueClass,
 }: {
   label: string;
   val: any;
@@ -1892,10 +1894,11 @@ function InputBox({
   step?: string;
   suffix?: string;
   className?: string;
+  valueClass?: string;
 }) {
   return (
-    <div className={`p-2 sm:p-3 rounded-xl border border-slate-100 bg-slate-50 ${className || ""}`}>
-      <label className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight block mb-1">
+    <div className={`p-2 sm:p-3 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40 ${className || ""}`}>
+      <label className="text-[9px] sm:text-[10px] font-bold text-neutral-400 uppercase tracking-tight block mb-1">
         {label}
       </label>
       {isEditing ? (
@@ -1926,14 +1929,14 @@ function InputBox({
                 onChange(isNaN(n) ? null : n);
               }
             }}
-            className="w-full p-1.5 text-xs sm:text-sm font-bold bg-white border border-slate-300 rounded focus:border-blue-500 outline-none text-slate-900"
+            className="w-full p-1.5 text-xs sm:text-sm font-bold bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded focus:border-brand-500 outline-none text-neutral-900 dark:text-neutral-100"
           />
-          {suffix && <span className="text-xs font-bold text-slate-400 ml-1">{suffix}</span>}
+          {suffix && <span className="text-xs font-bold text-neutral-400 ml-1">{suffix}</span>}
         </div>
       ) : (
-        <p className="text-sm sm:text-base font-black text-slate-900">
+        <p className={`text-sm sm:text-base font-bold ${valueClass || "text-neutral-900 dark:text-neutral-100"}`}>
           {formatNumberDisplay(val)}{" "}
-          {suffix && val != null && <span className="text-xs font-bold text-slate-400">{suffix}</span>}
+          {suffix && val != null && <span className="text-xs font-bold text-neutral-400">{suffix}</span>}
         </p>
       )}
     </div>

@@ -19,9 +19,9 @@ export class ErrorBoundary extends React.Component<{children: React.ReactNode}, 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-8 text-red-500 bg-red-50 border border-red-200 rounded-xl m-4">
+        <div className="p-8 text-red-500 bg-red-50 border border-red-200 rounded-xl m-4 dark:text-red-300 dark:bg-red-950/40 dark:border-red-800">
           <h2 className="font-bold text-lg mb-2">Terjadi Kesalahan (Crash)</h2>
-          <pre className="text-xs overflow-auto p-4 bg-white rounded border border-red-100">{this.state.error?.toString()}</pre>
+          <pre className="text-xs overflow-auto p-4 bg-white dark:bg-neutral-900 rounded border border-red-100 dark:border-red-800 text-neutral-900 dark:text-neutral-100">{this.state.error?.toString()}</pre>
         </div>
       );
     }

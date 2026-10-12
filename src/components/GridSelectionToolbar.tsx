@@ -65,12 +65,12 @@ export function GridSelectionToolbar({
     <div
       data-grid-toolbar="true"
       style={style}
-      className="bg-slate-900/95 text-white p-2 px-3 flex items-center justify-between gap-2 shadow-2xl rounded-xl border border-slate-700/80 backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 select-none"
+      className="bg-neutral-900/95 text-white p-2 px-3 flex items-center justify-between gap-2 shadow-2xl rounded-xl border border-neutral-700/80 backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 select-none"
     >
       <div className="flex items-center gap-1.5 shrink-0">
-        <span className="text-xs font-bold bg-blue-600/30 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-md flex items-center gap-1 font-mono">
+        <span className="text-xs font-bold bg-brand-600/30 text-brand-300 border border-brand-500/40 px-2 py-0.5 rounded-md flex items-center gap-1 font-mono">
           <span>{rows}x{cols}</span>
-          <span className="text-[10px] text-slate-300 font-normal">({totalCells})</span>
+          <span className="text-[10px] text-neutral-300 font-normal">({totalCells})</span>
         </span>
       </div>
 
@@ -78,7 +78,7 @@ export function GridSelectionToolbar({
         {onSelectAll && (
           <button
             onClick={onSelectAll}
-            className="px-2 py-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition-colors text-xs flex items-center gap-1 font-medium cursor-pointer"
+            className="px-2 py-1 hover:bg-neutral-800 rounded text-neutral-300 hover:text-white transition-colors text-xs flex items-center gap-1 font-medium cursor-pointer"
             title="Pilih Semua Sel Tabel (Ctrl+A)"
           >
             <CheckSquare size={14} className="text-indigo-400" />
@@ -88,7 +88,7 @@ export function GridSelectionToolbar({
 
         <button
           onClick={onCopy}
-          className="px-2 py-1 hover:bg-slate-800 rounded text-blue-400 hover:text-blue-300 transition-colors text-xs flex items-center gap-1 font-semibold cursor-pointer"
+          className="px-2 py-1 hover:bg-neutral-800 rounded text-brand-400 hover:text-brand-300 transition-colors text-xs flex items-center gap-1 font-semibold cursor-pointer"
           title="Salin ke Clipboard (Ctrl+C)"
         >
           <Copy size={14} />
@@ -97,7 +97,7 @@ export function GridSelectionToolbar({
 
         <button
           onClick={onCut}
-          className="px-2 py-1 hover:bg-slate-800 rounded text-amber-400 hover:text-amber-300 transition-colors text-xs flex items-center gap-1 font-semibold cursor-pointer"
+          className="px-2 py-1 hover:bg-neutral-800 rounded text-amber-400 hover:text-amber-300 transition-colors text-xs flex items-center gap-1 font-semibold cursor-pointer"
           title="Potong (Ctrl+X)"
         >
           <Scissors size={14} />
@@ -106,7 +106,7 @@ export function GridSelectionToolbar({
 
         <button
           onClick={onPaste}
-          className="px-2 py-1 hover:bg-slate-800 rounded text-emerald-400 hover:text-emerald-300 transition-colors text-xs flex items-center gap-1 font-semibold cursor-pointer"
+          className="px-2 py-1 hover:bg-neutral-800 rounded text-emerald-400 hover:text-emerald-300 transition-colors text-xs flex items-center gap-1 font-semibold cursor-pointer"
           title="Tempel Teks/Tabel (Ctrl+V)"
         >
           <ClipboardPaste size={14} />
@@ -115,18 +115,18 @@ export function GridSelectionToolbar({
 
         <button
           onClick={onClear}
-          className="px-2 py-1 hover:bg-slate-800 rounded text-rose-400 hover:text-rose-300 transition-colors text-xs flex items-center gap-1 font-semibold cursor-pointer"
+          className="px-2 py-1 hover:bg-neutral-800 rounded text-rose-400 hover:text-rose-300 transition-colors text-xs flex items-center gap-1 font-semibold cursor-pointer"
           title="Kosongkan Nilai Sel (Delete / Backspace)"
         >
           <Trash2 size={14} />
           <span className="hidden sm:inline">Hapus</span>
         </button>
 
-        <div className="w-px h-5 bg-slate-700 mx-1"></div>
+        <div className="w-px h-5 bg-neutral-700 mx-1"></div>
 
         <button
           onClick={onClose}
-          className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors cursor-pointer"
+          className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-white transition-colors cursor-pointer"
           title="Tutup Menu"
         >
           <X size={16} />

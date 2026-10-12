@@ -1,44 +1,22 @@
 import { ClipboardFallbackModal } from "./ClipboardFallbackModal";
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import JossLogo from "./JossLogo";
 import { useTabHistory } from "../hooks/useTabHistory";
+import { NotificationBell } from "./NotificationBell";
 import { GridSelectionToolbar } from "./GridSelectionToolbar";
 import { SpreadsheetInputBar } from "./SpreadsheetInputBar";
 import { useSimpleGrid } from "./useSimpleGrid";
 import { downloadBlob } from "../utils/fileDownloader";
-import {
-  Users,
-  Settings,
-  Archive,
-  Sparkles,
-  CheckCircle,
-  Home,
-  Target,
-  ChevronDown,
-  X,
-  Calendar,
-  RefreshCw,
-  Pin,
-  ArrowLeft
-} from "lucide-react";
-import { PlgPjlView } from "./PlgPjlView";
-import { LhppRealisasiView } from "./LhppRealisasiView";
+import { Sparkles, CheckCircle, Pin, ArrowLeft } from "lucide-react";
 import { NumberInput } from "./NumberInput";
 import { BreakdownGridRow } from "./BreakdownGridRow";
 import { TargetManagerRow } from "./TargetManagerRow";
-import { ManagerDashboardTab } from "./ManagerDashboardTab";
-import { AdminBentoMenu } from "./AdminBentoMenu";
-import ProductKnowledgeView from "./ProductKnowledgeView";
-import { ManagerLadyTab } from "./ManagerLadyTab";
-import ManagerSeragamView from "./ManagerSeragamView";
-import { NotificationBell } from "./NotificationBell";
-import { EvaluasiView } from "./EvaluasiView";
+import { AppNavbar } from "./AppNavbar";
+import { AppSidebar, MenuTitleIcon } from "./AppSidebar";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { safeFetchJson, parseJsonResponse } from "../lib/safeFetch";
 import { getFallbackEvaluasiData } from "../lib/fallbackData";
-import { getSupabaseCredentials, resetSupabaseClient, saveToSupabase, loadFromSupabase, deleteFromSupabase, testSupabaseConnection } from "../lib/supabaseClient";
+import { getSupabaseCredentials, resetSupabaseClient, saveToSupabase, loadFromSupabase, testSupabaseConnection } from "../lib/supabaseClient";
 import { DashboardData, EvaluasiData, MotivasiConfig, KontesRow, cleanYlName } from "../types";
-import { APPS_SCRIPT_CODE } from "../lib/googleAppsScriptCode";
 import {
   getStoredYlList,
   getStoredYlPins,
@@ -46,12 +24,31 @@ import {
   saveStoredYlData,
   resetToDefaultData
 } from "../lib/storage";
-import { formatTruncated, formatPercentTruncated, truncateDecimal } from "../utils/numberFormat";
+import { formatTruncated } from "../utils/numberFormat";
 
 const names = [
   "201 Gusrina", "202 Dewi Ati Ani", "203 Gusrini", "204 Umi Maisaroh", "205 Suyik Rahmawati",
   "206 Ria Resti W", "207 Endang Setiowati", "208 Wakiah", "209 Titis", "210 Eni"
 ];
+
+const TAB_LABELS: Record<string, string> = {
+  dashboard: "Dasbor Utama",
+  input_realisasi: "Penjualan (LHPP & Realisasi)",
+  lhpp_realisasi: "Tabel LHPP & Realisasi",
+  breakdown: "Breakdown Plan & Realisasi",
+  target_kompensasi: "Target & Kompensasi",
+  evaluasi: "Evaluasi & Analisa",
+  plg_pjl: "PLG & PJL (Pelanggan)",
+  lady: "Daftar & Profil Lady",
+  seragam: "Inventaris Seragam",
+  product_knowledge: "Product Knowledge",
+  presentasi: "Slide Presentasi",
+  setting: "Pengaturan & Cloud Supabase",
+  tautan: "Tautan Resmi Yakult",
+  archive: "Arsip Tahunan",
+  attention: "Atensi Khusus Lady",
+  grafik: "Grafik Tren Penjualan"
+};
 
 
 interface ManagerViewProps {
@@ -75,12 +72,26 @@ interface ManagerViewProps {
 
 type BreakdownGridMap = Record<string, { pembagiTanggal: number; days: Record<string, { yo: number; om: number; os: number; yt: number }> }>;
 
-import { ArchiveEditor } from "./archive/ArchiveEditor";
-import { TargetArsipTahunanModal } from "./archive/TargetArsipTahunanModal";
-import { OfficialLinksViewer } from "./OfficialLinksViewer";
 import { lookupHistoricalTargetRealization, computeMonthlyRata2DataFromSnapshot } from "../lib/targetArchiveLookup";
 
 const PresentasiView = React.lazy(() => import("./PresentasiView"));
+const ManagerDashboardTab = React.lazy(() => import("./ManagerDashboardTab").then(m => ({ default: m.ManagerDashboardTab })));
+const EvaluasiView = React.lazy(() => import("./EvaluasiView").then(m => ({ default: m.EvaluasiView })));
+const LhppRealisasiView = React.lazy(() => import("./LhppRealisasiView").then(m => ({ default: m.LhppRealisasiView })));
+const PlgPjlView = React.lazy(() => import("./PlgPjlView").then(m => ({ default: m.PlgPjlView })));
+const ManagerLadyTab = React.lazy(() => import("./ManagerLadyTab").then(m => ({ default: m.ManagerLadyTab })));
+const ManagerSeragamView = React.lazy(() => import("./ManagerSeragamView"));
+const ProductKnowledgeView = React.lazy(() => import("./ProductKnowledgeView"));
+const OfficialLinksViewer = React.lazy(() => import("./OfficialLinksViewer").then(m => ({ default: m.OfficialLinksViewer })));
+const ArchiveEditor = React.lazy(() => import("./archive/ArchiveEditor").then(m => ({ default: m.ArchiveEditor })));
+const TargetArsipTahunanModal = React.lazy(() => import("./archive/TargetArsipTahunanModal").then(m => ({ default: m.TargetArsipTahunanModal })));
+
+const TabLoadingFallback: React.FC = () => (
+  <div className="bd-card p-12 flex flex-col items-center justify-center gap-3 text-center my-6">
+    <div className="w-8 h-8 rounded-full border-3 border-red-500 border-t-transparent animate-spin" />
+    <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400">Memuat modul halaman...</span>
+  </div>
+);
 
 export const parseIndonesianDecimal = (val: string | number, decimalPlaces = 2): number => {
   if (val === "" || val === null || val === undefined) return 0;
@@ -121,6 +132,83 @@ export const parseIndonesianNumber = (val: string | number): number => {
   return Math.max(0, cleanNum || 0);
 };
 
+// Pembagi efektif = nilai pertama yang valid (>0). Entri YL baru dari server bisa bernilai 0 atau ''
+// (mis. dibuat saat YL input LHPP) — itu jangan sampai ikut tampil/menimpa nilai pembagi.
+function getEffectivePembagi(map: BreakdownGridMap | null | undefined, fallback?: BreakdownGridMap | null): number {
+  const read = (m: BreakdownGridMap | null | undefined) => {
+    if (!m) return 0;
+    for (const k of Object.keys(m)) {
+      const n = Number(m[k]?.pembagiTanggal);
+      if (Number.isFinite(n) && n > 0) return Math.min(31, Math.trunc(n));
+    }
+    return 0;
+  };
+  return read(map) || read(fallback) || 25;
+}
+
+// Input pembagi dengan draft lokal: ketikan tidak langsung ditimpa data dari server / simpan-otomatis,
+// kolom tidak pernah dikosongkan di state/DB, dan nilai hanya dikirim bila valid (1-31).
+function PembagiInput({ value, onCommit }: { value: number; onCommit: (n: number) => void }) {
+  const [draft, setDraft] = useState<string>(String(value));
+  const [isFocus, setIsFocus] = useState(false);
+
+  useEffect(() => {
+    if (!isFocus) setDraft(String(value));
+  }, [value, isFocus]);
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      autoComplete="off"
+      value={draft}
+      onFocus={(e) => { setIsFocus(true); e.target.select(); }}
+      onChange={(e) => {
+        let raw = e.target.value.replace(/\D/g, "").slice(0, 2);
+        if (raw !== "" && parseInt(raw, 10) > 31) raw = "31";
+        setDraft(raw);
+        const n = parseInt(raw, 10);
+        if (Number.isFinite(n) && n >= 1 && n <= 31) onCommit(n);
+      }}
+      onBlur={() => {
+        setIsFocus(false);
+        const n = parseInt(draft, 10);
+        if (Number.isFinite(n) && n >= 1 && n <= 31) {
+          setDraft(String(n));
+        } else {
+          setDraft(String(value));
+        }
+      }}
+      className="bd-input w-9 text-center"
+    />
+  );
+}
+
+const nf = (n: number) => Number(n).toLocaleString("id-ID");
+
+// Kartu komparasi Breakdown (seragam: label, chip selisih, persen, meta)
+function BdCompareCard({ icon, label, color, diff, pct, metaLabel, metaValue }: {
+  icon: string; label: string; color: string; diff: number; pct: number; metaLabel: string; metaValue: number;
+}) {
+  return (
+    <div className="bd-subcard bd-stat" style={{ borderLeft: `3px solid ${color}` }}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="bd-label truncate"><span>{icon}</span> {label}</span>
+        <span className={`bd-chip ${diff >= 0 ? "bd-chip-ok" : "bd-chip-bad"}`}>
+          {diff >= 0 ? "+" : ""}{diff.toLocaleString("id-ID")}
+        </span>
+      </div>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className={`bd-stat-pct ${pct >= 100 ? "bd-ok-text" : "bd-bad-text"}`}>
+          {formatTruncated(pct, 1, false)}%
+        </span>
+        <span className="bd-stat-meta truncate">{metaLabel}: {metaValue.toLocaleString("id-ID")}</span>
+      </div>
+    </div>
+  );
+}
+
 export function ManagerView({
   onLogout,
   ylAccounts = [],
@@ -139,8 +227,19 @@ export function ManagerView({
   theme,
   onToggleTheme
 }: ManagerViewProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "grafik" | "input_realisasi" | "lhpp_realisasi" | "breakdown" | "target_kompensasi" | "evaluasi" | "plg_pjl" | "lady" | "seragam" | "product_knowledge" | "presentasi" | "setting" | "tautan" | "archive" | "attention">("dashboard");
-  useTabHistory(activeTab, setActiveTab, "dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "grafik" | "input_realisasi" | "lhpp_realisasi" | "breakdown" | "target_kompensasi" | "evaluasi" | "plg_pjl" | "lady" | "seragam" | "product_knowledge" | "presentasi" | "setting" | "tautan" | "archive" | "attention" | "ai_chat">("dashboard");
+  useTabHistory(activeTab, (tab) => {
+    if (tab === "ai_chat") {
+      window.dispatchEvent(new CustomEvent("open-ai-chat"));
+    } else {
+      setActiveTab(tab as any);
+    }
+  }, "dashboard", "manager");
+
+  // Sidebar & Drawer states (Desktop collapsible + Mobile bottom drawer)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   
   // Breakdown Plan & Realisasi state (Manager)
   const [breakdownPlanMap, setBreakdownPlanMap] = useState<BreakdownGridMap>({});
@@ -193,14 +292,11 @@ export function ManagerView({
 
   const [undoStack, setUndoStack] = useState<BreakdownGridMap[]>([]);
   const [redoStack, setRedoStack] = useState<BreakdownGridMap[]>([]);
-
-  const [breakdownDateRange] = useState<"1-10" | "11-20" | "21-31" | "1-31">("1-31");
   const [isBreakdownSaving, setIsBreakdownSaving] = useState<boolean>(false);
   const [isSavingTarget, setIsSavingTarget] = useState<boolean>(false);
   const isTargetDirtyRef = useRef<boolean>(false);
   const [breakdownMsg, setBreakdownMsg] = useState<string>("");
   const [isGridFullScreen, setIsGridFullScreen] = useState<boolean>(false);
-  const jsonFileInputRef = useRef<HTMLInputElement>(null);
 
   // Supabase Cloud State
   const [sbUrl, setSbUrl] = useState<string>(() => getSupabaseCredentials().url);
@@ -544,56 +640,6 @@ export function ManagerView({
       setIsSbSyncing(false);
     }
   };
-
-
-
-  const handleDeleteArchiveFromSupabase = (targetMonth: string) => {
-    if (!targetMonth) {
-      setArchiveStatusMsg("⚠️ Pilih bulan arsip yang ingin dihapus terlebih dahulu.");
-      return;
-    }
-    setMonthToDeleteFromSupabase(targetMonth);
-  };
-
-  const handleExecuteDeleteArchiveFromSupabase = async () => {
-    if (!monthToDeleteFromSupabase) return;
-    const targetMonth = monthToDeleteFromSupabase;
-    const label = getIndonesianMonthLabel(targetMonth) || targetMonth;
-
-    setIsSbSyncing(true);
-    setArchiveStatusMsg(`⏳ Menghapus arsip bulan ${label} dari Supabase...`);
-    try {
-      // 1. Hapus key monthly_archive_YYYY-MM dari Supabase
-      const res = await deleteFromSupabase(`monthly_archive_${targetMonth}`);
-      if (!res.success) {
-        throw new Error(res.error || "Gagal menghapus arsip dari Supabase");
-      }
-
-      // 2. Perbarui daftar monthly_archive_list di Supabase
-      let currentList = await loadFromSupabase<string[]>("monthly_archive_list");
-      if (Array.isArray(currentList)) {
-        currentList = currentList.filter(m => m !== targetMonth);
-        await saveToSupabase("monthly_archive_list", currentList);
-        setArchivedMonthsList(currentList);
-        if (selectedMonthlyArchive === targetMonth) {
-          setSelectedMonthlyArchive(currentList[currentList.length - 1] || globalMonth || new Date().toISOString().substring(0, 7));
-        }
-      }
-
-      // 3. Jika sedang melihat arsip bulan yang baru dihapus, kembalikan ke live
-      if (isViewingHistoricalMonth && (historicalMonthLabel === label || historicalMonthLabel === targetMonth)) {
-        handleResetToLiveData();
-      }
-
-      setMonthToDeleteFromSupabase(null);
-      setArchiveStatusMsg(`🗑️ Berhasil menghapus arsip Bulan ${label} (${targetMonth}) secara permanen dari Supabase.`);
-    } catch (e: any) {
-      setArchiveStatusMsg(`❌ Gagal menghapus arsip bulan ${label}: ${e.message || "Periksa koneksi Supabase"}`);
-    } finally {
-      setIsSbSyncing(false);
-    }
-  };
-
   // Helper: Update targetTKU in live state OR historical snapshot
   const handleUpdateTargetTKU = useCallback((updater: (prev: any) => any) => {
     isTargetDirtyRef.current = true;
@@ -862,7 +908,6 @@ export function ManagerView({
     ? historicalDataSnapshot.breakdownRealisasiMap
     : breakdownRealisasiMap;
   const activeGridMap = gridSubMode === "BD" ? activeBreakdownPlanMap : activeBreakdownRealisasiMap;
-  const [isBreakdownLoading, setIsBreakdownLoading] = useState(false);
 
   // Helper to update grid state and record undo history
   const updateActiveGridMap = (updater: (prev: typeof breakdownPlanMap) => typeof breakdownPlanMap) => {
@@ -953,7 +998,6 @@ export function ManagerView({
 
   // Spreadsheet selection state (Manager Breakdown)
   const [ylList, setYlList] = useState<Array<{ area: string; nama: string; pin: string; status?: string; tanggalDaftar?: string; tanggalResign?: string }>>(() => getStoredYlList());
-  const [showYlMenu, setShowYlMenu] = useState(false);
   const activeYLsList = useMemo(() => ylList.filter(y => y.status !== "Resign"), [ylList]);
 
   // Total Harian (gabungan semua YL per tanggal) — dipakai baris footer "TOTAL HARIAN" di tabel Breakdown/Realisasi
@@ -986,8 +1030,6 @@ export function ManagerView({
     });
     return { yo, om, os, yt, total: yo + om + os + yt };
   }, [dailyGridTotals]);
-
-  const [selectedDayInspector, setSelectedDayInspector] = useState<number>(1);
 
   // === Grid BD & Realisasi — sistem spreadsheet baru (useSimpleGrid) ===
   // Menggantikan sistem lama (gridSelection/touchStartRef/handleTouchMoveGrid
@@ -1064,7 +1106,12 @@ export function ManagerView({
     const day = Math.floor(c / 4) + 1;
     const item = BREAKDOWN_ITEM_LABELS[BREAKDOWN_ITEMS[c % 4]];
     if (!yl) return `Hari ${day} • ${item}`;
-    return `[${yl.area}] ${String(yl.nama || "").replace(/^\d+\s*/, "")} • Hari ${day} • ${item}`;
+    const name = String(yl.nama || "")
+      .trim()
+      .replace(/^\[\d+\]\s*/, "")
+      .replace(/^\d+(?:\s*[-–—.)/:]\s*|\s+)/, "")
+      .trim();
+    return `${name} • Hari ${day} • ${item}`;
   }, [activeYLsList]);
   // === akhir grid BD & Realisasi baru ===
 
@@ -1074,8 +1121,8 @@ export function ManagerView({
     endR: number;
     endC: number;
   } | null>(null);
-  const [isBreakdownMenuOpen, setIsBreakdownMenuOpen] = useState<boolean>(false);
-  const [breakdownMenuPos, setBreakdownMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [, setIsBreakdownMenuOpen] = useState<boolean>(false);
+  const [, setBreakdownMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
@@ -1109,87 +1156,8 @@ export function ManagerView({
   } | null>(null);
 
   const breakdownAnchorRef = useRef<{ r: number; c: number } | null>(null);
-
-  const calculateBreakdownAnchor = (
-    currentSel: { startR: number; startC: number; endR: number; endC: number } | null,
-    targetR: number,
-    targetC: number,
-    isExtending: boolean
-  ): { anchorR: number; anchorC: number } => {
-    if (!isExtending || !currentSel) {
-      return { anchorR: targetR, anchorC: targetC };
-    }
-
-    const sR = Math.min(currentSel.startR, currentSel.endR);
-    const eR = Math.max(currentSel.startR, currentSel.endR);
-    const sC = Math.min(currentSel.startC, currentSel.endC);
-    const eC = Math.max(currentSel.startC, currentSel.endC);
-
-    const distToStartR = Math.abs(targetR - sR);
-    const distToEndR = Math.abs(targetR - eR);
-    const anchorR = distToEndR <= distToStartR ? sR : eR;
-
-    const distToStartC = Math.abs(targetC - sC);
-    const distToEndC = Math.abs(targetC - eC);
-    const anchorC = distToEndC <= distToStartC ? sC : eC;
-
-    return { anchorR, anchorC };
-  };
-
-  const gridTableRef = useRef<HTMLDivElement>(null);
-
-  // Mobile selection helper state
-    const [showPasteModal, setShowPasteModal] = useState<boolean>(false);
-  const [pasteInputText, setPasteInputText] = useState<string>("");
-  const [showCopyResultModal, setShowCopyResultModal] = useState<boolean>(false);
-  const [copiedText, setCopiedText] = useState<string>("");
-  const [breakdownClipboardModal, setBreakdownClipboardModal] = useState<{ mode: "copy" | "paste"; text: string } | null>(null);
-
-  // Handler: Select All Grid Cells
-  const handleSelectAllGridCells = () => {
-    if (activeYLsList.length === 0) return;
-    setGridSelection({
-      startR: 0,
-      startC: 0,
-      endR: activeYLsList.length - 1,
-      endC: 123
-    });
-    setBreakdownMsg(`🔲 Seluruh sel tabel (${activeYLsList.length} YL x 124 kolom) berhasil diblok!`);
-    setTimeout(() => setBreakdownMsg(""), 3000);
-  };
-
-  // Handler: Select Row Grid Cells
-  const handleSelectRowGridCells = (rIdx: number) => {
-    if (rIdx < 0 || rIdx >= activeYLsList.length) return;
-    setGridSelection({
-      startR: rIdx,
-      startC: 0,
-      endR: rIdx,
-      endC: 123
-    });
-    setBreakdownMsg(`👤 Baris YL "${activeYLsList[rIdx]?.nama.replace(/^\d+\s*/, "")}" berhasil diblok!`);
-    setTimeout(() => setBreakdownMsg(""), 3000);
-  };
-
-  // Handler: Select Day Grid Cells
-  const handleSelectDayGridCells = (dayNum: number) => {
-    if (activeYLsList.length === 0) return;
-    const startC = (dayNum - 1) * 4;
-    const endC = startC + 3;
-    setGridSelection({
-      startR: 0,
-      startC: startC,
-      endR: activeYLsList.length - 1,
-      endC: endC
-    });
-    setBreakdownMsg(`📅 Kolom Tanggal ${dayNum} (YO, OM, OS, YT) berhasil diblok!`);
-    setTimeout(() => setBreakdownMsg(""), 3000);
-  };
-
-  const handleCutGridCells = () => {
-    handleCopyGridCells();
-    handleClearSelectedGridCells();
-  };
+  const [, setCopiedText] = useState<string>("");
+  const [, setBreakdownClipboardModal] = useState<{ mode: "copy" | "paste"; text: string } | null>(null);
 
   // Handler: Clear selected cells (Delete / Backspace)
   const handleClearSelectedGridCells = () => {
@@ -1393,79 +1361,6 @@ export function ManagerView({
     setTimeout(() => setBreakdownMsg(""), 3500);
   };
 
-  // Mobile Paste Trigger
-  const handleMobilePasteClick = async () => {
-    try {
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        const text = await navigator.clipboard.readText();
-        if (text && text.trim().length > 0) {
-          handlePasteIntoGrid(text);
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn("Direct clipboard read unavailable:", err);
-    }
-    // Fallback: baca clipboard sistem sering diblokir di preview AI Studio (jalan
-    // di dalam iframe). Kalau sebelumnya sudah SALIN lewat tombol app ini sendiri,
-    // datanya masih tersimpan di memori (copiedText) — langsung tempel dari situ
-    // tanpa perlu nampilin modal manual.
-    if (copiedText && copiedText.trim().length > 0) {
-      handlePasteIntoGrid(copiedText);
-      return;
-    }
-    setBreakdownClipboardModal({ mode: "paste", text: "" });
-  };
-
-  // Touch move handler for mobile screen cell dragging and fill dragging
-  const handleTouchMoveGrid = (e: any) => {
-    if (!e.touches || e.touches.length === 0) return;
-    const touch = e.touches[0];
-
-    if (touchStartRef.current) {
-      const dx = Math.abs(touch.clientX - touchStartRef.current.clientX);
-      const dy = Math.abs(touch.clientY - touchStartRef.current.clientY);
-      if (dx > 6 || dy > 6) {
-        touchStartRef.current.hasMoved = true;
-        if (!isGridDragging && !isFillDragging) {
-          // Hanya aktifkan drag seleksi jika sentuhan berawal dari sel yang sudah terpilih (klik kolom lalu ditarik)
-          if (touchStartRef.current.isInsideSelection) {
-            setIsGridDragging(true);
-            const anchor = calculateBreakdownAnchor(gridSelection, touchStartRef.current.r, touchStartRef.current.c, true);
-            breakdownAnchorRef.current = anchor;
-          } else {
-            // User sedang menggeser/scroll tabel - jangan ngeblok
-            return;
-          }
-        }
-      }
-    }
-
-    if (!isGridDragging && !isFillDragging) return;
-
-    if (e.cancelable) {
-      e.preventDefault();
-    }
-    const rawTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (!rawTarget) return;
-    const targetEl = (rawTarget instanceof Element ? rawTarget : (rawTarget as any)?.parentElement) as HTMLElement | null;
-    if (!targetEl || typeof targetEl.closest !== "function") return;
-    const tdEl = targetEl.closest("td[data-r]");
-    if (tdEl) {
-      const r = parseInt(tdEl.getAttribute("data-r") || "-1", 10);
-      const c = parseInt(tdEl.getAttribute("data-c") || "-1", 10);
-      if (r >= 0 && c >= 0) {
-        if (isFillDragging) {
-          setFillHoverCell({ r, c });
-        } else {
-          const startR = breakdownAnchorRef.current ? breakdownAnchorRef.current.r : (gridSelection ? gridSelection.startR : r);
-          const startC = breakdownAnchorRef.current ? breakdownAnchorRef.current.c : (gridSelection ? gridSelection.startC : c);
-          setGridSelection({ startR, startC, endR: r, endC: c });
-        }
-      }
-    }
-  };
-
   // Lock viewport scroll and track pointer move while dragging grid selection or fill handle
   useEffect(() => {
     if (!isGridDragging && !isFillDragging) return;
@@ -1638,7 +1533,6 @@ export function ManagerView({
   const [ylDetail, setYLDetail] = useState<any>(null);
       const [aiInsight, setAiInsight] = useState<string>("");
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
-  const [isFullscreenEval, setIsFullscreenEval] = useState<boolean>(false);
   const [scriptUrlInput, setScriptUrlInput] = useState<string>(scriptUrl || "");
 
   // Kirim ke DP1 state
@@ -1685,9 +1579,6 @@ export function ManagerView({
   const [isResetting, setIsResetting] = useState<boolean>(false);
   const [resetSuccessMsg, setResetSuccessMsg] = useState<string>("");
 
-  // Supabase Delete Archive Modal state
-  const [monthToDeleteFromSupabase, setMonthToDeleteFromSupabase] = useState<string | null>(null);
-
   // Manager Realisasi Input state
 
   const [targetTKU, setTargetTKU] = useState<{ target: number; bln_lalu: number; thn_lalu: number }>({
@@ -1707,8 +1598,7 @@ export function ManagerView({
     const sumBL = activeYLs.reduce((sum: number, yl: any) => sum + (Number(activeTargetYLMap?.[yl.area]?.bln_lalu) || 0), 0);
     const sumTL = activeYLs.reduce((sum: number, yl: any) => sum + (Number(activeTargetYLMap?.[yl.area]?.thn_lalu) || 0), 0);
     
-    const pembagiStr = (activeGridMap && Object.keys(activeGridMap).length > 0) ? (activeGridMap[Object.keys(activeGridMap)[0]]?.pembagiTanggal ?? 25) : 25;
-    const pembagi = Number(pembagiStr) || 25;
+    const pembagi = getEffectivePembagi(activeGridMap);
 
     const totalTarget = Math.trunc(sumTarget) * pembagi;
     const totalBL = Math.trunc(sumBL) * pembagi;
@@ -1716,19 +1606,64 @@ export function ManagerView({
     
     const grandTotal = monthlyGridTotals.total;
     
-    const pctTgt = totalTarget > 0 ? (grandTotal / totalTarget) * 100 : 100;
-    const pctBL = totalBL > 0 ? (grandTotal / totalBL) * 100 : 100;
-    const pctTL = totalTL > 0 ? (grandTotal / totalTL) * 100 : 100;
+    const pctTgt = totalTarget > 0 ? (grandTotal / totalTarget) * 100 : 0;
+    const pctBL = totalBL > 0 ? (grandTotal / totalBL) * 100 : 0;
+    const pctTL = totalTL > 0 ? (grandTotal / totalTL) * 100 : 0;
+
+    const diffTarget = grandTotal - totalTarget;
+    const diffBL = grandTotal - totalBL;
+    const diffTL = grandTotal - totalTL;
 
     return {
       sumTarget, sumBL, sumTL,
       totalTarget, totalBL, totalTL,
-      pctTgt, pctBL, pctTL
+      pctTgt, pctBL, pctTL,
+      diffTarget, diffBL, diffTL,
+      grandTotal, pembagi
     };
   }, [activeYLsList, activeTargetYLMap, activeGridMap, monthlyGridTotals]);
 
-  // Spreadsheet Grid Integration - tabel Target per Yakult Lady (menu Target & Kompensasi)
-  const targetGridContainerRef = useRef<HTMLDivElement>(null);
+  // Informasi dan deteksi tanggal-tanggal yang sudah terealisasi pada bulan aktif
+  const realizedDaysInfo = useMemo(() => {
+    const realMap = activeBreakdownRealisasiMap;
+    const realizedDays: number[] = [];
+    let totRealizedSales = 0;
+
+    for (let d = 1; d <= 31; d++) {
+      let dayTeamTotal = 0;
+      Object.values(realMap || {}).forEach((ylData: any) => {
+        const dObj = ylData?.days?.[String(d)] || ylData?.days?.[d];
+        if (dObj) {
+          dayTeamTotal += (Number(dObj.yo) || 0) + (Number(dObj.om) || 0) + (Number(dObj.os) || 0) + (Number(dObj.yt) || 0);
+        }
+      });
+      if (dayTeamTotal > 0) {
+        realizedDays.push(d);
+        totRealizedSales += dayTeamTotal;
+      }
+    }
+
+    const pembagi = monthlyGridStats.pembagi || 25;
+    const sisaHari = Math.max(0, pembagi - realizedDays.length);
+    const kekuranganTarget = Math.max(0, monthlyGridStats.totalTarget - totRealizedSales);
+    const sisaTarget = monthlyGridStats.totalTarget - totRealizedSales;
+    const sisaBL = monthlyGridStats.totalBL - totRealizedSales;
+    const sisaTL = monthlyGridStats.totalTL - totRealizedSales;
+    const rata2Dibutuhkan = sisaHari > 0 ? Math.trunc(kekuranganTarget / sisaHari) : 0;
+
+    return {
+      realizedDays,
+      totRealizedSales,
+      minDay: realizedDays.length > 0 ? Math.min(...realizedDays) : 0,
+      maxDay: realizedDays.length > 0 ? Math.max(...realizedDays) : 0,
+      sisaHari,
+      kekuranganTarget,
+      sisaTarget,
+      sisaBL,
+      sisaTL,
+      rata2Dibutuhkan,
+    };
+  }, [activeBreakdownRealisasiMap, monthlyGridStats]);
 
   const getTargetCellValue = useCallback((r: number, c: number) => {
     const yl = activeYLsList[r];
@@ -2054,7 +1989,9 @@ export function ManagerView({
       }
       if (Object.keys(breakdownRealisasiMap).length > 0) {
         localStorage.setItem(`bd_realisasi_${globalMonth}`, JSON.stringify(breakdownRealisasiMap));
-        window.dispatchEvent(new Event("bd_realisasi_updated"));
+        // JANGAN dispatch "bd_realisasi_updated" dari sini: ManagerView sendiri mendengarkan event itu dan
+        // memanggil fetchBreakdownPlan -> menimpa state dengan data server -> effect ini jalan lagi -> loop.
+        // Itu yang membuat ketikan Pembagi langsung ditimpa kembali ke nilai lama (mis. 7).
       }
     } catch (e) {
       console.warn("Gagal menyimpan cache lokal breakdown:", e);
@@ -2075,6 +2012,11 @@ export function ManagerView({
 
   const fetchBreakdownPlan = async (month: string = globalMonth) => {
     if (breakdownBaseRef.current && breakdownBaseRef.current.month !== month) breakdownBaseRef.current = null;
+    const editVersionAtFetchStart = breakdownEditVersionRef.current;
+    // true bila Admin sudah mengubah sesuatu (belum tersimpan) sejak/selama fetch ini berjalan.
+    const hasUnsavedLocalEdits = () =>
+      breakdownEditVersionRef.current !== editVersionAtFetchStart ||
+      (isBreakdownDirtyRef.current && !!breakdownBaseRef.current && breakdownBaseRef.current.month === month);
     try {
       // Tampilkan data dari localStorage dulu sebagai fallback (mengembalikan data user yg sempat "hilang")
       const localPlan = localStorage.getItem(`bd_plan_${month}`);
@@ -2099,36 +2041,143 @@ export function ManagerView({
         const mergedPlan = Object.keys(serverPlan).length > 0 ? serverPlan : initialPlan;
         const mergedReal = Object.keys(serverReal).length > 0 ? serverReal : initialReal;
 
-        setBreakdownPlanMap(mergedPlan);
-        setBreakdownRealisasiMap(mergedReal);
-        breakdownBaseRef.current = {
-          month,
-          plan: JSON.parse(JSON.stringify(serverPlan)),
-          real: JSON.parse(JSON.stringify(serverReal)),
-        };
-        
-        // Save back to localStorage to keep it updated
-        localStorage.setItem(`bd_plan_${month}`, JSON.stringify(mergedPlan));
-        localStorage.setItem(`bd_realisasi_${month}`, JSON.stringify(mergedReal));
+        // Otomatis masukkan data tanggal yang sudah terealisasi ke dalam Breakdown Plan
+        const realizedDays: number[] = [];
+        for (let d = 1; d <= 31; d++) {
+          let dayTeamTotal = 0;
+          Object.values(mergedReal || {}).forEach((ylData: any) => {
+            const dObj = ylData?.days?.[String(d)] || ylData?.days?.[d];
+            if (dObj) {
+              dayTeamTotal += (Number(dObj.yo) || 0) + (Number(dObj.om) || 0) + (Number(dObj.os) || 0) + (Number(dObj.yt) || 0);
+            }
+          });
+          if (dayTeamTotal > 0) realizedDays.push(d);
+        }
+
+        const autoSyncedPlan: BreakdownGridMap = JSON.parse(JSON.stringify(mergedPlan || {}));
+        if (realizedDays.length > 0) {
+          Object.keys(mergedReal || {}).forEach((area) => {
+            if (!autoSyncedPlan[area]) {
+              autoSyncedPlan[area] = {
+                pembagiTanggal: mergedReal[area]?.pembagiTanggal || 25,
+                days: {}
+              };
+            }
+            if (!autoSyncedPlan[area].days) autoSyncedPlan[area].days = {};
+
+            realizedDays.forEach((d) => {
+              const dStr = String(d);
+              const rDay = mergedReal[area]?.days?.[dStr] || mergedReal[area]?.days?.[d] || { yo: 0, om: 0, os: 0, yt: 0 };
+              autoSyncedPlan[area].days[dStr] = {
+                yo: Number(rDay.yo) || 0,
+                om: Number(rDay.om) || 0,
+                os: Number(rDay.os) || 0,
+                yt: Number(rDay.yt) || 0
+              };
+            });
+          });
+        }
+
+        if (hasUnsavedLocalEdits()) {
+          // Ada perubahan Admin yang belum tersimpan -> JANGAN timpa layar dengan data server (lama).
+          // Acuan (base) lama dipertahankan agar penyimpanan gabungan 3 arah tetap benar;
+          // kalau belum ada acuan sama sekali, pakai data server ini.
+          if (!breakdownBaseRef.current || breakdownBaseRef.current.month !== month) {
+            breakdownBaseRef.current = {
+              month,
+              plan: JSON.parse(JSON.stringify(autoSyncedPlan)),
+              real: JSON.parse(JSON.stringify(serverReal)),
+            };
+          }
+        } else {
+          setBreakdownPlanMap(autoSyncedPlan);
+          setBreakdownRealisasiMap(mergedReal);
+          breakdownBaseRef.current = {
+            month,
+            plan: JSON.parse(JSON.stringify(autoSyncedPlan)),
+            real: JSON.parse(JSON.stringify(serverReal)),
+          };
+
+          // Save back to localStorage to keep it updated
+          localStorage.setItem(`bd_plan_${month}`, JSON.stringify(autoSyncedPlan));
+          localStorage.setItem(`bd_realisasi_${month}`, JSON.stringify(mergedReal));
+        }
       } else {
         // Fallback to local storage only
-        setBreakdownPlanMap(initialPlan);
-        setBreakdownRealisasiMap(initialReal);
-        breakdownBaseRef.current = null; // tidak ada acuan dari server -> jangan simpan otomatis
+        if (!hasUnsavedLocalEdits()) {
+          setBreakdownPlanMap(initialPlan);
+          setBreakdownRealisasiMap(initialReal);
+          breakdownBaseRef.current = null; // tidak ada acuan dari server -> jangan simpan otomatis
+        }
       }
     } catch (e) {
       console.error("Error fetching breakdown plan:", e);
     }
   };
 
+  // Sinkronisasi manual/eksplisit data tanggal terealisasi ke dalam Breakdown Plan
+  const handleSyncRealisasiToBreakdown = useCallback(() => {
+    const realMap = breakdownRealisasiMap;
+    const planMap = breakdownPlanMap;
+
+    const realizedDays: number[] = [];
+    for (let d = 1; d <= 31; d++) {
+      let dayTeamTotal = 0;
+      Object.values(realMap || {}).forEach((ylData: any) => {
+        const dObj = ylData?.days?.[String(d)] || ylData?.days?.[d];
+        if (dObj) {
+          dayTeamTotal += (Number(dObj.yo) || 0) + (Number(dObj.om) || 0) + (Number(dObj.os) || 0) + (Number(dObj.yt) || 0);
+        }
+      });
+      if (dayTeamTotal > 0) realizedDays.push(d);
+    }
+
+    if (realizedDays.length === 0) {
+      setBreakdownMsg("ℹ️ Belum ada tanggal yang terealisasi pada bulan ini.");
+      setTimeout(() => setBreakdownMsg(""), 3000);
+      return;
+    }
+
+    const nextPlan: BreakdownGridMap = JSON.parse(JSON.stringify(planMap || {}));
+    Object.keys(realMap || {}).forEach((area) => {
+      if (!nextPlan[area]) {
+        nextPlan[area] = { pembagiTanggal: realMap[area]?.pembagiTanggal || 25, days: {} };
+      }
+      if (!nextPlan[area].days) nextPlan[area].days = {};
+
+      realizedDays.forEach((d) => {
+        const dStr = String(d);
+        const rDay = realMap[area]?.days?.[dStr] || realMap[area]?.days?.[d] || { yo: 0, om: 0, os: 0, yt: 0 };
+        nextPlan[area].days[dStr] = {
+          yo: Number(rDay.yo) || 0,
+          om: Number(rDay.om) || 0,
+          os: Number(rDay.os) || 0,
+          yt: Number(rDay.yt) || 0
+        };
+      });
+    });
+
+    setBreakdownPlanMap(nextPlan);
+    localStorage.setItem(`bd_plan_${globalMonth}`, JSON.stringify(nextPlan));
+    isBreakdownDirtyRef.current = true;
+    const minD = Math.min(...realizedDays);
+    const maxD = Math.max(...realizedDays);
+    setBreakdownMsg(`✅ Data tanggal terealisasi (Tgl ${minD}${maxD > minD ? ` - ${maxD}` : ""}) berhasil dimasukkan ke Breakdown! (${realizedDays.length} hari terlaksana)`);
+    setTimeout(() => setBreakdownMsg(""), 4000);
+  }, [breakdownPlanMap, breakdownRealisasiMap, globalMonth]);
+
   useEffect(() => {
     fetchBreakdownPlan(globalMonth);
     
-    const handleLhppSaved = () => {
+    const handleSyncEvent = () => {
       fetchBreakdownPlan(globalMonth);
     };
-    window.addEventListener("lhpp_saved", handleLhppSaved);
-    return () => window.removeEventListener("lhpp_saved", handleLhppSaved);
+    window.addEventListener("lhpp_saved", handleSyncEvent);
+    window.addEventListener("bd_realisasi_updated", handleSyncEvent);
+    return () => {
+      window.removeEventListener("lhpp_saved", handleSyncEvent);
+      window.removeEventListener("bd_realisasi_updated", handleSyncEvent);
+    };
   }, [globalMonth]);
 
   const breakdownPlanMapRef = useRef(breakdownPlanMap);
@@ -2365,42 +2414,52 @@ export function ManagerView({
     e.target.value = "";
   };
 
-  // Handler: Change single cell in breakdown grid
-  const handleBreakdownCellChange = (area: string, day: number, item: "yo" | "om" | "os" | "yt", val: number) => {
-    updateActiveGridMap(prev => {
-      const copy = { ...prev };
-      const ylObj = copy[area] ? { ...copy[area] } : { pembagiTanggal: 25, days: {} };
-      const daysObj = { ...ylObj.days };
-      const dayObj = daysObj[String(day)] ? { ...daysObj[String(day)] } : { yo: 0, om: 0, os: 0, yt: 0 };
-      dayObj[item] = val;
-      daysObj[String(day)] = dayObj;
-      ylObj.days = daysObj;
-      copy[area] = ylObj;
-      return copy;
-    });
-  };
-
+  // Pembagi breakdown adalah pembagi sendiri (rencana target), dan pembagi realisasi
+  // adalah pembagi menyeluruh (realisasi berjalan). Keduanya independen sesuai sub-mode aktif (BD / R).
   const handleGlobalPembagiChange = (val: number | string) => {
-    updateActiveGridMap(prev => {
-      const copy = { ...prev };
-      const newPembagi = val === '' ? ('' as any) : Math.max(1, Number(val));
-      // Update all existing entries
-      Object.keys(copy).forEach(area => {
-        if (copy[area]) {
-          copy[area] = { ...copy[area], pembagiTanggal: newPembagi };
-        }
+    const n = Math.min(31, Math.max(1, Math.trunc(Number(val))));
+    if (!Number.isFinite(n)) return;
+
+    const isSame = (m: BreakdownGridMap | null | undefined) => {
+      const cur = m || {};
+      const keys = Object.keys(cur);
+      return keys.length > 0 && keys.every((k) => Number(cur[k]?.pembagiTanggal) === n) &&
+        activeYLsList.every((yl: any) => cur[String(yl.area).substring(0, 3)]);
+    };
+    if (isSame(activeGridMap)) return;
+
+    const apply = (prev: BreakdownGridMap): BreakdownGridMap => {
+      const copy: BreakdownGridMap = { ...prev };
+      Object.keys(copy).forEach((area) => {
+        if (copy[area]) copy[area] = { ...copy[area], pembagiTanggal: n };
       });
-      // Ensure all active YLs have this pembagi
-      activeYLsList.forEach(yl => {
+      activeYLsList.forEach((yl: any) => {
         const area = String(yl.area).substring(0, 3);
-        if (!copy[area]) {
-          copy[area] = { pembagiTanggal: newPembagi, days: {} };
-        } else {
-          copy[area] = { ...copy[area], pembagiTanggal: newPembagi };
-        }
+        copy[area] = copy[area]
+          ? { ...copy[area], pembagiTanggal: n }
+          : { pembagiTanggal: n, days: {} };
       });
       return copy;
-    });
+    };
+
+    isBreakdownDirtyRef.current = true;
+    breakdownEditVersionRef.current += 1;
+    if (isViewingHistoricalMonth) {
+      setHistoricalDataSnapshot((prevSnap: any) => {
+        if (!prevSnap) return prevSnap;
+        const targetKey = gridSubMode === "BD" ? "breakdownPlanMap" : "breakdownRealisasiMap";
+        return {
+          ...prevSnap,
+          [targetKey]: apply(prevSnap[targetKey] || {}),
+        };
+      });
+    } else {
+      if (gridSubMode === "BD") {
+        setBreakdownPlanMap((prev) => apply(prev));
+      } else {
+        setBreakdownRealisasiMap((prev) => apply(prev));
+      }
+    }
   };
 
   // Removed auto-fill baseline
@@ -3241,6 +3300,13 @@ export function ManagerView({
     ? historicalDataSnapshot.targetTKU
     : targetTKU;
 
+  const mainContentRef = useRef<HTMLElement | null>(null);
+
+  const scrollManagerContentToTop = () => {
+    mainContentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handleHeaderRefresh = async () => {
     if (onRefresh) await onRefresh();
     try {
@@ -3252,132 +3318,112 @@ export function ManagerView({
   };
 
   if (showArchiveEditor) {
-    return <ArchiveEditor onClose={() => setShowArchiveEditor(false)} motivasiConfig={motivasiConfig} ylList={ylList} />;
+    return (
+      <React.Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100 p-8 font-bold">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 rounded-full border-3 border-indigo-500 border-t-transparent animate-spin" />
+            <span className="text-sm">Memuat Editor Arsip...</span>
+          </div>
+        </div>
+      }>
+        <ArchiveEditor onClose={() => setShowArchiveEditor(false)} motivasiConfig={motivasiConfig} ylList={ylList} />
+      </React.Suspense>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 text-slate-800 dark:text-slate-100 transition-colors duration-200">
-      {/* Dynamic Header */}
-      <header className="bg-gradient-to-r from-red-950 to-red-800 border-b-2 border-red-600 text-white py-2 px-3 sm:py-2.5 sm:px-4 sticky top-0 z-50 shadow-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
-          {/* Logo + Judul (kiri) */}
-          <div className="flex items-center gap-2.5 min-w-0">
-            <JossLogo size={34} compact />
-            <div className="min-w-0 flex flex-col justify-center">
-              <h1 className="text-base sm:text-lg font-black tracking-tight leading-none uppercase text-white">
-                JOSS
-              </h1>
-              <p className="text-[11px] sm:text-xs font-semibold text-red-200 leading-none mt-1">DP Jember 1</p>
+    <div className={`h-[100dvh] min-h-0 overflow-hidden md:min-h-screen md:h-auto md:overflow-visible bg-neutral-100/60 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex flex-col font-sans transition-colors ${theme === 'dark' ? 'dark' : ''}`}>
+      {/* Responsive Top Navbar */}
+      <AppNavbar
+        role="manager"
+        title={TAB_LABELS[activeTab] || "Dashboard"}
+        subtitle={`Cabang Jember 1 • ${isViewingHistoricalMonth ? `Arsip ${historicalMonthLabel || selectedMonthlyArchive}` : globalMonth}`}
+        currentMenu={activeTab}
+        onSelectMenu={(menu: string) => {
+          if (menu === "ai_chat") {
+            window.dispatchEvent(new CustomEvent("open-ai-chat"));
+          } else {
+            setActiveTab(menu as any);
+            scrollManagerContentToTop();
+          }
+        }}
+        onToggleSidebar={() => {
+          setDrawerOpen(o => !o);
+          setSidebarCollapsed(o => !o);
+        }}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
+        onRefresh={handleHeaderRefresh}
+        isRefreshing={isRefreshing}
+        onLogout={() => setShowLogoutConfirm(true)}
+        ylAccounts={ylAccounts}
+        onSwitchToYl={(name) => onImpersonateYl && onImpersonateYl(name)}
+        globalMonth={globalMonth}
+        setGlobalMonth={setGlobalMonth}
+        isViewingHistoricalMonth={isViewingHistoricalMonth}
+        historicalMonthLabel={historicalMonthLabel}
+        onResetToLiveData={handleResetToLiveData}
+        notificationSlot={<NotificationBell role="manager" globalMonth={globalMonth} ylList={ylList} />}
+      />
+
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mgr-logout-title"
+            className="w-full max-w-xs rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xl p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="mgr-logout-title" className="text-base font-bold text-neutral-900 dark:text-neutral-100">Keluar dari akun?</h3>
+            <p className="mt-1.5 text-sm text-neutral-600 dark:text-neutral-400">Kamu akan keluar dan perlu memasukkan PIN lagi untuk masuk.</p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-2 rounded-lg text-sm font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowLogoutConfirm(false); onLogout(); }}
+                className="flex-1 py-2 rounded-lg text-sm font-semibold bg-rose-600 text-white hover:bg-rose-700"
+              >
+                Ya, keluar
+              </button>
             </div>
           </div>
-
-          {/* Tombol Aksi (kanan) */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <NotificationBell
-              role="manager"
-              globalMonth={globalMonth}
-              ylList={ylList}
-            />
-            <button
-              onClick={handleHeaderRefresh}
-              className="flex items-center justify-center p-1.5 bg-black/20 hover:bg-black/40 text-white rounded-lg border border-white/20 shadow-xs transition-all cursor-pointer active:scale-95"
-              title="Refresh Data"
-            >
-              <RefreshCw className={`w-4 h-4 text-white ${isRefreshing ? "animate-spin" : ""}`} />
-            </button>
-            {activeTab !== "dashboard" && (
-              <button
-                onClick={() => setActiveTab("dashboard")}
-                className="flex bg-red-700 hover:bg-red-600 active:scale-95 text-white font-extrabold text-xs px-2.5 py-1.5 rounded-lg border border-red-500 shadow-xs transition-all cursor-pointer items-center gap-1"
-                title="Kembali ke Dasbor"
-              >
-                <Home className="w-4 h-4 text-white" />
-                <span className="hidden sm:inline font-extrabold text-xs">Dasbor</span>
-              </button>
-            )}
-            <button
-              onClick={onLogout}
-              className="bg-slate-900/80 hover:bg-slate-950 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-700 shadow-xs transition-all cursor-pointer active:scale-95"
-            >
-              Keluar
-            </button>
-          </div>
         </div>
-      </header>
+      )}
 
-      {/* Sub-bar di bawah Header: Kontrol Admin (Pilih Bulan & Ganti Akun YL) */}
-      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-xs px-3 py-2 sm:px-4 relative z-40">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2.5 flex-wrap">
-          {/* Kontrol 1: Pilih Bulan Data / Indikator Arsip */}
-          <div className="flex items-center gap-2">
-            {isViewingHistoricalMonth ? (
-              <div className="h-9 px-3 flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs font-bold text-indigo-700 dark:text-indigo-300 shadow-xs">
-                <Calendar className="w-4 h-4 text-indigo-500 shrink-0" />
-                <span className="truncate">Arsip: {historicalMonthLabel || selectedMonthlyArchive}</span>
-                <button
-                  onClick={handleResetToLiveData}
-                  className="ml-1 bg-red-600 hover:bg-red-500 text-white font-black text-[11px] px-2 py-1 rounded-lg shadow-xs cursor-pointer transition-all active:scale-95"
-                  title="Kembali ke Mode Data Live"
-                >
-                  Live Data
-                </button>
-              </div>
-            ) : (
-              <div className="h-9 px-3 flex items-center gap-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-all">
-                <Calendar className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
-                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 hidden sm:inline">Pilih Bulan:</span>
-                <input
-                  type="month"
-                  value={globalMonth}
-                  onChange={(e) => {
-                    if (setGlobalMonth) setGlobalMonth(e.target.value);
-                  }}
-                  className="bg-transparent text-slate-800 dark:text-slate-100 font-bold text-xs outline-none cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
-                  title="Pilih Bulan Data Aktif"
-                />
-              </div>
-            )}
-          </div>
+      {/* Main Workspace Layout with Responsive Sidebar and Drawer */}
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row w-full max-w-[1700px] mx-auto">
+        <AppSidebar
+          role="manager"
+          currentMenu={activeTab}
+          onSelectMenu={(menu: string) => {
+            if (menu === "ai_chat") {
+              window.dispatchEvent(new CustomEvent("open-ai-chat"));
+            } else {
+              setActiveTab(menu as any);
+              scrollManagerContentToTop();
+            }
+          }}
+          isDrawerOpen={drawerOpen}
+          onCloseDrawer={() => setDrawerOpen(false)}
+          onOpenDrawer={() => setDrawerOpen(true)}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(o => !o)}
+          itemCount={ylList.filter((y: any) => y.status !== "Resign" && y.status !== "nonaktif").length || 10}
+        />
 
-          {/* Kontrol 2: Ganti Akun YL (Ukuran disamakan persis: h-9, rounded-xl, text-xs font-bold) */}
-          {onImpersonateYl && ylAccounts.length > 0 && (
-            <div className="relative">
-              <button
-                onClick={() => setShowYlMenu(v => !v)}
-                className="h-9 px-3 flex items-center gap-2 bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 shadow-xs transition-all cursor-pointer active:scale-95"
-                title="Ganti / Masuk ke akun YL"
-              >
-                <Users className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
-                <span>Ganti Akun YL</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
-              </button>
-              {showYlMenu && (
-                <>
-                  <div className="fixed inset-0 z-[60]" onClick={() => setShowYlMenu(false)} />
-                  <div className="absolute right-0 mt-1.5 w-60 max-h-[60vh] overflow-y-auto z-[70] bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl py-1">
-                    <div className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                      <span>Pilih Akun YL</span>
-                      <span className="text-[9px] font-semibold text-slate-400">{ylAccounts.length} YL</span>
-                    </div>
-                    {ylAccounts.map(name => (
-                      <button
-                        key={name}
-                        onClick={() => { setShowYlMenu(false); onImpersonateYl(name); }}
-                        className="w-full text-left px-3 py-2 text-xs font-semibold hover:bg-red-50 dark:hover:bg-slate-800 hover:text-red-600 dark:hover:text-red-400 border-b border-slate-100 dark:border-slate-800/60 last:border-0 cursor-pointer transition-colors"
-                      >
-                        {cleanYlName(name)}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto p-4">
+        {/* Main Content Area */}
+        <main ref={mainContentRef} className="order-first md:order-none flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-y-contain p-3 sm:p-5 pb-4 sm:pb-5 md:overflow-visible md:pb-8">
         {/* Notifikasi Ulang Tahun */}
         {(() => {
           const today = new Date();
@@ -3396,12 +3442,12 @@ export function ManagerView({
                   <span className="text-xl sm:text-2xl leading-none block">🎂</span>
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-white drop-shadow-md flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold uppercase tracking-wider text-white drop-shadow-md flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-rose-200" />
                     Notifikasi Ulang Tahun!
                   </h3>
                   <p className="text-rose-50 text-[11px] sm:text-xs font-medium mt-0.5 max-w-xl leading-snug">
-                    Hari ini adalah hari ulang tahun: <strong className="text-white font-black text-xs sm:text-sm">{birthdayLadies.map((y:any) => cleanYlName(y.nama)).join(", ")}</strong>. Jangan lupa berikan ucapan selamat! 🎉
+                    Hari ini adalah hari ulang tahun: <strong className="text-white font-bold text-xs sm:text-sm">{birthdayLadies.map((y:any) => cleanYlName(y.nama)).join(", ")}</strong>. Jangan lupa berikan ucapan selamat! 🎉
                   </p>
                 </div>
               </div>
@@ -3414,21 +3460,21 @@ export function ManagerView({
           <div className={`p-3.5 mb-4 rounded-2xl border shadow-md flex flex-wrap items-center justify-between gap-3 animate-fade-in ${
             historicalDataNotFound 
               ? "bg-amber-50 dark:bg-amber-950/80 border-amber-300 dark:border-amber-700 text-amber-950 dark:text-amber-100" 
-              : "bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900 border-indigo-500 text-white"
+              : "bg-gradient-to-r from-indigo-950 via-neutral-900 to-indigo-900 border-indigo-500 text-white"
           }`}>
             <div className="flex items-center gap-3">
-              <div className={`p-2.5 rounded-xl text-lg font-black shrink-0 ${
-                historicalDataNotFound ? "bg-amber-200 text-amber-900" : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+              <div className={`p-2.5 rounded-xl text-lg font-bold shrink-0 ${
+                historicalDataNotFound ? "bg-amber-200 text-amber-900 dark:text-amber-300" : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
               }`}>
                 {historicalDataNotFound ? "⚠️" : "📅"}
               </div>
               <div>
-                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider">
+                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
                   {historicalDataNotFound 
                     ? `Data Bulan ${historicalMonthLabel} Tidak Ada di Supabase`
                     : `Menampilkan Data Bulan ${historicalMonthLabel} (Diambil dari Supabase)`}
                 </h3>
-                <p className="text-[10.5px] font-medium opacity-90 mt-0.5">
+                <p className="text-[11px] font-medium opacity-90 mt-0.5">
                   {historicalDataNotFound
                     ? `Data untuk bulan ${historicalMonthLabel} belum pernah disimpan / difinish ke Supabase.`
                     : `Seluruh menu aplikasi saat ini menampilkan arsip data bulan ${historicalMonthLabel}.`}
@@ -3437,40 +3483,31 @@ export function ManagerView({
             </div>
             <button
               onClick={handleResetToLiveData}
-              className="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm cursor-pointer flex items-center gap-1.5 shrink-0 border border-red-500"
+              className="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm cursor-pointer flex items-center gap-1.5 shrink-0 border border-red-500"
             >
               🔄 Kembali ke Data Live (Bulan Berjalan)
             </button>
           </div>
         )}
 
-        {/* Tab Dashboard (Bento Grid) */}
-        {activeTab === "dashboard" && (
-          <AdminBentoMenu
-            dashboardData={activeDashboardData}
-            targetTKU={activeTargetTKU}
-            currentMonthTotal={currentMonthTotal}
-            activeGridMap={activeGridMap}
-            setActiveTab={setActiveTab}
-            selectedMonth={isViewingHistoricalMonth ? (historicalDataSnapshot?.month || selectedMonthlyArchive || globalMonth) : globalMonth}
-          />
-        )}
-
-        {/* Tab Grafik (Old Dashboard) */}
-        {activeTab === "grafik" && (
-          <ManagerDashboardTab
-            dashboardData={activeDashboardData}
-            targetTKU={activeTargetTKU}
-            cleanYlName={cleanYlName}
-            currentMonthTotal={currentMonthTotal}
-            calculateSektorTotals={calculateSektorTotals}
-          />
+        {/* Tab Dashboard: Menampilkan Seluruh Grafik & Tren Penjualan Lengkap */}
+        {(activeTab === "dashboard" || activeTab === "grafik") && (
+          <React.Suspense fallback={<TabLoadingFallback />}>
+            <ManagerDashboardTab
+              dashboardData={activeDashboardData}
+              targetTKU={activeTargetTKU}
+              cleanYlName={cleanYlName}
+              currentMonthTotal={currentMonthTotal}
+              calculateSektorTotals={calculateSektorTotals}
+              month={globalMonth}
+            />
+          </React.Suspense>
         )}
 
         {/* Tab Presentasi */}
         {activeTab === "presentasi" && (
           <ErrorBoundary>
-            <React.Suspense fallback={<div className="py-16 text-center text-slate-400 text-sm font-bold">Memuat Presentasi...</div>}>
+            <React.Suspense fallback={<div className="py-16 text-center text-neutral-400 text-sm font-bold">Memuat Presentasi...</div>}>
               <PresentasiView />
             </React.Suspense>
           </ErrorBoundary>
@@ -3478,31 +3515,32 @@ export function ManagerView({
 
         {/* Tab Evaluasi */}
         {activeTab === "evaluasi" && (
-          <EvaluasiView
-            evaluasiData={activeEvaluasiData}
-            globalMonth={globalMonth}
-            role="manager"
-          />
+          <React.Suspense fallback={<TabLoadingFallback />}>
+            <EvaluasiView
+              evaluasiData={activeEvaluasiData}
+              globalMonth={globalMonth}
+              role="manager"
+            />
+          </React.Suspense>
         )}
 
         {/* Tab Breakdown Plan & Realisasi */}
         {activeTab === "breakdown" && (
           <div className="space-y-4">
-            {/* Header / Month & Mode Selection Card */}
-            <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm flex flex-col gap-3">
+            {/* Header / Bulan & Mode */}
+            <div className="bd-card p-4 flex flex-col gap-4">
               <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">🧩</span>
-                  <div>
-                    <h2 className="text-sm font-black text-slate-900 uppercase leading-none">Breakdown & Realisasi Harian</h2>
-                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">Input rencana harian (BD) & realisasi harian per Yakult Lady</p>
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="bd-icon"><MenuTitleIcon id="breakdown" /></span>
+                  <div className="min-w-0">
+                    <h2 className="bd-title">Breakdown & Realisasi Harian</h2>
+                    <p className="bd-sub">Input rencana harian (BD) & realisasi harian per Yakult Lady</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  {/* Month Picker */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10.5px] font-bold text-slate-600">Bulan:</span>
+                  <label className="bd-field">
+                    <span className="bd-label">Bulan</span>
                     <input
                       type="month"
                       value={globalMonth}
@@ -3510,85 +3548,32 @@ export function ManagerView({
                         setGlobalMonth(e.target.value);
                         fetchBreakdownPlan(e.target.value);
                       }}
-                      className="p-1 text-xs font-bold bg-slate-50 rounded-lg border border-slate-200 text-slate-800 outline-none"
+                      className="bd-input"
+                    />
+                  </label>
+
+                  <div className="bd-seg" role="tablist">
+                    <button role="tab" data-active={gridSubMode === "BD"} onClick={() => setGridSubMode("BD")}>Breakdown (BD)</button>
+                    <button role="tab" data-active={gridSubMode === "R"} onClick={() => setGridSubMode("R")}>Realisasi (R)</button>
+                  </div>
+
+                  <div className="bd-field">
+                    <span className="bd-label">{gridSubMode === "BD" ? "Pembagi BD" : "Pembagi Realisasi"}</span>
+                    <PembagiInput
+                      value={getEffectivePembagi(activeGridMap)}
+                      onCommit={handleGlobalPembagiChange}
                     />
                   </div>
 
-                  {/* Mode Switcher */}
-                  <div className="flex bg-slate-100 p-0.5 rounded-lg gap-0.5">
-                    <button
-                      onClick={() => setGridSubMode("BD")}
-                      className={`px-2.5 py-1 text-[11px] font-extrabold rounded-md transition-all cursor-pointer ${
-                        gridSubMode === "BD" ? "bg-red-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      Breakdown (BD)
-                    </button>
-                    <button
-                      onClick={() => setGridSubMode("R")}
-                      className={`px-2.5 py-1 text-[11px] font-extrabold rounded-md transition-all cursor-pointer ${
-                        gridSubMode === "R" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      Realisasi (R)
-                    </button>
-                  </div>
-
-                  {/* Pembagi & Percentages Group */}
-                  <div className="flex items-center gap-2.5 flex-nowrap">
-                    {/* Manual Pembagi */}
-                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg">
-                      <span className="text-[10px] font-bold text-slate-700">Pembagi:</span>
-                      <input
-                        type="number"
-                        min={1}
-                        max={31}
-                        value={
-                          activeGridMap && Object.keys(activeGridMap).length > 0
-                            ? activeGridMap[Object.keys(activeGridMap)[0]]?.pembagiTanggal ?? 25
-                            : 25
-                        }
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => handleGlobalPembagiChange(e.target.value === '' ? '' : Number(e.target.value))}
-                        className="w-10 p-0.5 text-xs font-extrabold text-center bg-white border border-slate-300 rounded-md text-slate-900 outline-none"
-                      />
-                    </div>
-                    
-                    {/* Percentages */}
-                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <span className="text-slate-500">vs Tgt:</span>
-                        <span className={monthlyGridStats.pctTgt >= 100 ? "text-emerald-600" : "text-rose-600"}>
-                          {formatTruncated(monthlyGridStats.pctTgt, 1, false)}%
-                        </span>
-                      </div>
-                      <div className="w-px h-3 bg-slate-300 dark:bg-slate-600" />
-                      <div className="flex items-center gap-1">
-                        <span className="text-slate-500">vs BL:</span>
-                        <span className={monthlyGridStats.pctBL >= 100 ? "text-emerald-600" : "text-rose-600"}>
-                          {formatTruncated(monthlyGridStats.pctBL, 1, false)}%
-                        </span>
-                      </div>
-                      <div className="w-px h-3 bg-slate-300 dark:bg-slate-600" />
-                      <div className="flex items-center gap-1">
-                        <span className="text-slate-500">vs TL:</span>
-                        <span className={monthlyGridStats.pctTL >= 100 ? "text-emerald-600" : "text-rose-600"}>
-                          {formatTruncated(monthlyGridStats.pctTL, 1, false)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Save */}
                   <button
                     onClick={() => handleSaveBreakdownPlan(true)}
                     disabled={isBreakdownSaving}
-                    className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-[11px] px-3 py-1.5 rounded-lg transition-all shadow-sm cursor-pointer disabled:opacity-50 flex items-center gap-1.5 ml-auto"
+                    className="bd-btn ml-auto"
                   >
                     {isBreakdownSaving ? (
                       <>
                         <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Simpan...</span>
+                        <span>Menyimpan...</span>
                       </>
                     ) : (
                       <>
@@ -3599,75 +3584,118 @@ export function ManagerView({
                   </button>
                 </div>
               </div>
-              
+
+              {/* Kartu komparasi — struktur & ukuran seragam */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+                <BdCompareCard icon="🎯" label="vs Target" color="var(--accent-ring)"
+                  diff={monthlyGridStats.diffTarget} pct={monthlyGridStats.pctTgt}
+                  metaLabel="Tgt" metaValue={monthlyGridStats.totalTarget} />
+                <BdCompareCard icon="📅" label="vs Bln Lalu" color="var(--info)"
+                  diff={monthlyGridStats.diffBL} pct={monthlyGridStats.pctBL}
+                  metaLabel="BL" metaValue={monthlyGridStats.totalBL} />
+                <BdCompareCard icon="📈" label="vs Thn Lalu" color="var(--warn)"
+                  diff={monthlyGridStats.diffTL} pct={monthlyGridStats.pctTL}
+                  metaLabel="TL" metaValue={monthlyGridStats.totalTL} />
+
+                <div className="bd-subcard bd-stat" style={{ borderLeft: "3px solid var(--ok)" }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="bd-label truncate"><span>⚡</span> Realisasi & Sisa</span>
+                    <span className="bd-chip bd-chip-ok">{realizedDaysInfo.realizedDays.length} Hari Rls</span>
+                  </div>
+                  <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1.5">
+                    <div className="flex flex-col min-w-0 shrink-0">
+                      <span className="bd-stat-pct whitespace-nowrap" style={{ color: "var(--ink)" }}>
+                        {realizedDaysInfo.totRealizedSales.toLocaleString("id-ID")}
+                      </span>
+                      <span className="bd-stat-meta whitespace-nowrap">
+                        {monthlyGridStats.totalTarget > 0 ? `${formatTruncated((realizedDaysInfo.totRealizedSales / monthlyGridStats.totalTarget) * 100, 1, false)}% Tgt` : "Realisasi"}
+                      </span>
+                    </div>
+                    <div className="flex flex-col text-right bd-num text-xs font-semibold leading-snug shrink-0 whitespace-nowrap">
+                      {[
+                        { k: "Sisa Tgt", v: realizedDaysInfo.sisaTarget },
+                        { k: "Sisa BL", v: realizedDaysInfo.sisaBL },
+                        { k: "Sisa TL", v: realizedDaysInfo.sisaTL },
+                      ].map(({ k, v }) => (
+                        <div key={k} className="flex items-center justify-end gap-1.5">
+                          <span className="font-sans font-medium" style={{ color: "var(--ink-muted)" }}>{k}:</span>
+                          <span className={v > 0 ? "bd-bad-text" : "bd-ok-text"}>
+                            {v > 0 ? v.toLocaleString("id-ID") : `+${Math.abs(v).toLocaleString("id-ID")}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {breakdownMsg && (
-                <p className="text-[11px] font-bold text-emerald-600 bg-emerald-50 p-1.5 rounded-lg border border-emerald-200 animate-pulse text-center">
-                  {breakdownMsg}
-                </p>
+                <p className="bd-chip bd-chip-ok text-center !py-1.5 !text-xs animate-pulse">{breakdownMsg}</p>
               )}
             </div>
 
-            {/* Grid Table Card */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead className="bg-slate-50 text-slate-600 text-[10px] uppercase font-bold sticky top-0 z-10 shadow-sm">
-                    {/* Baris 1: Tanggal Grouping (colSpan=4) & Summary Categories */}
-                    <tr>
-                      <th rowSpan={2} className="p-2 sticky left-0 bg-slate-50 z-20 min-w-[130px] border-b border-r border-slate-200 text-slate-700 shadow-[1px_0_0_0_#e2e8f0]">
-                        Yakult Lady
-                      </th>
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                        <th key={d} colSpan={4} className="p-1 text-center border-l border-b border-slate-300 bg-blue-100 text-blue-900 min-w-[160px]">
-                          {d}
-                        </th>
-                      ))}
-                      <th colSpan={5} className="p-1 text-center border-l border-b border-slate-300 bg-slate-200 text-slate-800">
-                        TOTAL 4 ITEM
-                      </th>
-                      <th colSpan={5} className="p-1 text-center border-l border-b border-slate-300 bg-amber-100 text-amber-900">
-                        RATA-RATA HARIAN
-                      </th>
-                      <th colSpan={6} className="p-1 text-center border-l border-b border-slate-300 bg-purple-100 text-purple-900">
-                        TARGET & PEMBANDING
-                      </th>
-                    </tr>
+            {/* Legenda */}
+            <div className="bd-subcard p-3 flex flex-col gap-2 text-xs" style={{ color: "var(--ink-2)" }}>
+              <div className="flex items-start gap-2">
+                <span className="bd-dot" style={{ background: "var(--ok)" }} />
+                <span><b className="bd-ok-text">Header hijau "Riil"</b> = tanggal sudah terealisasi (data penjualan nyata)</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="bd-dot" style={{ background: "var(--accent-ring)" }} />
+                <span><b style={{ color: "var(--ink)" }}>Header biru</b> = target rencana sisa hari</span>
+              </div>
+            </div>
 
-                    {/* Baris 2: Sub-kolom Per Tanggal (YO, OM, OS, YT) & Sub-kolom Ringkasan */}
+            {/* Tabel */}
+            <div className="bd-card overflow-hidden">
+              <div className="bd-table-wrap">
+                <table className="bd-table">
+                  <thead>
+                    <tr>
+                      <th rowSpan={2} className="bd-th-name">Yakult Lady</th>
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
+                        const isRealized = realizedDaysInfo.realizedDays.includes(d);
+                        return (
+                          <th key={d} colSpan={4} className={`bd-grp ${isRealized ? "bd-grp-real" : "bd-grp-plan"}`} style={{ minWidth: 160 }}>
+                            <span className="inline-flex items-center justify-center gap-1.5">
+                              <span>Tgl {d}</span>
+                              {isRealized && <span className="bd-badge-ok">Riil</span>}
+                            </span>
+                          </th>
+                        );
+                      })}
+                      <th colSpan={5} className="bd-grp bd-grp-sum">Total 4 Item</th>
+                      <th colSpan={5} className="bd-grp bd-grp-avg">Rata-rata Harian</th>
+                      <th colSpan={6} className="bd-grp bd-grp-cmp">Target & Pembanding</th>
+                    </tr>
                     <tr>
                       {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                         <React.Fragment key={d}>
-                          <th className="p-1 text-center border-l border-b border-slate-300 text-slate-700 bg-slate-200/90 text-[9px] min-w-[40px]">YO</th>
-                          <th className="p-1 text-center border-l border-b border-slate-300 text-slate-700 bg-slate-200/90 text-[9px] min-w-[40px]">OM</th>
-                          <th className="p-1 text-center border-l border-b border-slate-300 text-slate-700 bg-slate-200/90 text-[9px] min-w-[40px]">OS</th>
-                          <th className="p-1 text-center border-l border-b border-slate-300 text-slate-700 bg-slate-200/90 text-[9px] min-w-[40px]">YT</th>
+                          <th className="bd-v bd-v-yo">YO</th>
+                          <th className="bd-v bd-v-om">OM</th>
+                          <th className="bd-v bd-v-os">OS</th>
+                          <th className="bd-v bd-v-yt">YT</th>
                         </React.Fragment>
                       ))}
-
-                      {/* Sub-header TOTAL 4 ITEM */}
-                      <th className="p-1 text-center border-l border-b border-slate-300 text-slate-800 bg-slate-200 text-[9px] min-w-[42px]">YO</th>
-                      <th className="p-1 text-center border-l border-b border-slate-300 text-slate-800 bg-slate-200 text-[9px] min-w-[42px]">OM</th>
-                      <th className="p-1 text-center border-l border-b border-slate-300 text-slate-800 bg-slate-200 text-[9px] min-w-[42px]">OS</th>
-                      <th className="p-1 text-center border-l border-b border-slate-300 text-slate-800 bg-slate-200 text-[9px] min-w-[42px]">YT</th>
-                      <th className="p-1 text-center border-l border-b border-slate-300 text-slate-900 bg-slate-300 text-[9px] min-w-[48px]">TOTAL</th>
-
-                      {/* Sub-header RATA-RATA HARIAN */}
-                      <th className="p-1 text-center border-l border-b border-slate-200 text-red-700 bg-amber-100/60 text-[9px] min-w-[42px]">YO</th>
-                      <th className="p-1 text-center border-l border-b border-slate-200 text-amber-700 bg-amber-100/60 text-[9px] min-w-[42px]">OM</th>
-                      <th className="p-1 text-center border-l border-b border-slate-200 text-pink-700 bg-amber-100/60 text-[9px] min-w-[42px]">OS</th>
-                      <th className="p-1 text-center border-l border-b border-slate-200 text-blue-700 bg-amber-100/60 text-[9px] min-w-[42px]">YT</th>
-                      <th className="p-1 text-center border-l border-b border-slate-200 text-amber-900 bg-amber-300 text-[9px] min-w-[48px]">RATA</th>
-
-                      {/* Sub-header TARGET & PEMBANDING */}
-                      <th className="p-1 text-center border-l border-b border-slate-200 text-purple-700 bg-purple-100/60 text-[9px] min-w-[48px]">Target</th>
-                      <th className="p-1 text-center border-l border-b border-slate-200 text-emerald-700 bg-purple-100/60 text-[9px] min-w-[48px]">Sel. Tgt</th>
-                      <th className="p-1 text-center border-l border-b border-slate-200 text-indigo-700 bg-purple-100/60 text-[9px] min-w-[48px]">Bln Lalu</th>
-                      <th className="p-1 text-center border-l border-b border-slate-200 text-emerald-700 bg-purple-100/60 text-[9px] min-w-[48px]">Sel. BL</th>
-                      <th className="p-1 text-center border-l border-b border-slate-200 text-teal-700 bg-purple-100/60 text-[9px] min-w-[48px]">Thn Lalu</th>
-                      <th className="p-1 text-center border-l border-b border-slate-200 text-emerald-700 bg-purple-100/60 text-[9px] min-w-[48px]">Sel. TL</th>
+                      <th className="bd-v bd-v-yo">YO</th>
+                      <th className="bd-v bd-v-om">OM</th>
+                      <th className="bd-v bd-v-os">OS</th>
+                      <th className="bd-v bd-v-yt">YT</th>
+                      <th className="bd-th-sub" style={{ color: "var(--ink)" }}>Total</th>
+                      <th className="bd-v bd-v-yo">YO</th>
+                      <th className="bd-v bd-v-om">OM</th>
+                      <th className="bd-v bd-v-os">OS</th>
+                      <th className="bd-v bd-v-yt">YT</th>
+                      <th className="bd-th-sub" style={{ color: "var(--ink)" }}>Rata</th>
+                      <th className="bd-th-sub">Target</th>
+                      <th className="bd-th-sub">Sel. Tgt</th>
+                      <th className="bd-th-sub">Bln Lalu</th>
+                      <th className="bd-th-sub">Sel. BL</th>
+                      <th className="bd-th-sub">Thn Lalu</th>
+                      <th className="bd-th-sub">Sel. TL</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody>
                     {ylList.filter((y: any) => y.status !== "nonaktif").map((yl: any, idx: number) => (
                       <BreakdownGridRow
                         key={yl.area || idx}
@@ -3682,31 +3710,27 @@ export function ManagerView({
                       />
                     ))}
                   </tbody>
-                  <tfoot className="bg-slate-50 text-slate-800 font-black border-t-2 border-slate-300 shadow-[0_-1px_0_0_#cbd5e1]">
-                    <tr className="text-[11px] divide-x divide-slate-200">
-                      <td className="p-2.5 sticky left-0 bg-slate-50 z-20 font-black text-slate-800 text-left whitespace-nowrap shadow-[1px_0_0_0_#e2e8f0]">
-                        TOTAL HARIAN
-                      </td>
+                  <tfoot className="bd-tfoot">
+                    <tr>
+                      <td className="bd-td-name bd-td">Total Harian</td>
                       {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
                         const data = dailyGridTotals[d] || { yo: 0, om: 0, os: 0, yt: 0 };
                         return (
                           <React.Fragment key={d}>
-                            <td className="p-1 text-center text-red-700 font-black bg-slate-50/90">{data.yo}</td>
-                            <td className="p-1 text-center text-amber-700 font-black bg-slate-50/90">{data.om}</td>
-                            <td className="p-1 text-center text-pink-700 font-black bg-slate-50/90">{data.os}</td>
-                            <td className="p-1 text-center text-blue-700 font-black bg-slate-50/90">{data.yt}</td>
+                            {(["yo", "om", "os", "yt"] as const).map((k) => (
+                              <td key={k} className={`bd-td ${data[k] ? "" : "bd-td-zero"}`}>{nf(data[k])}</td>
+                            ))}
                           </React.Fragment>
                         );
                       })}
-                      <td className="p-1 text-center font-bold text-red-800 bg-red-100/60">{monthlyGridTotals.yo}</td>
-                      <td className="p-1 text-center font-bold text-amber-800 bg-red-100/60">{monthlyGridTotals.om}</td>
-                      <td className="p-1 text-center font-bold text-pink-800 bg-red-100/60">{monthlyGridTotals.os}</td>
-                      <td className="p-1 text-center font-bold text-blue-800 bg-red-100/60">{monthlyGridTotals.yt}</td>
-                      <td className="p-1 text-center font-black text-slate-800 bg-slate-200">{monthlyGridTotals.yo + monthlyGridTotals.om + monthlyGridTotals.os + monthlyGridTotals.yt}</td>
-                      
+                      <td className="bd-td">{nf(monthlyGridTotals.yo)}</td>
+                      <td className="bd-td">{nf(monthlyGridTotals.om)}</td>
+                      <td className="bd-td">{nf(monthlyGridTotals.os)}</td>
+                      <td className="bd-td">{nf(monthlyGridTotals.yt)}</td>
+                      <td className="bd-td">{nf(monthlyGridTotals.yo + monthlyGridTotals.om + monthlyGridTotals.os + monthlyGridTotals.yt)}</td>
+
                       {(() => {
-                        const pembagiStr = (activeGridMap && Object.keys(activeGridMap).length > 0) ? (activeGridMap[Object.keys(activeGridMap)[0]]?.pembagiTanggal ?? 25) : 25;
-                        const pembagi = Number(pembagiStr) || 25;
+                        const pembagi = getEffectivePembagi(activeGridMap);
                         const ryo = Math.trunc(monthlyGridTotals.yo / pembagi);
                         const rom = Math.trunc(monthlyGridTotals.om / pembagi);
                         const ros = Math.trunc(monthlyGridTotals.os / pembagi);
@@ -3714,83 +3738,64 @@ export function ManagerView({
                         const rsum = ryo + rom + ros + ryt;
                         return (
                           <React.Fragment>
-                            <td className="p-1 text-center font-bold text-red-800 bg-amber-100/60">{ryo}</td>
-                            <td className="p-1 text-center font-bold text-amber-800 bg-amber-100/60">{rom}</td>
-                            <td className="p-1 text-center font-bold text-pink-800 bg-amber-100/60">{ros}</td>
-                            <td className="p-1 text-center font-bold text-blue-800 bg-amber-100/60">{ryt}</td>
-                            <td className="p-1 text-center font-black text-amber-900 bg-amber-300">{rsum}</td>
+                            <td className="bd-td">{nf(ryo)}</td>
+                            <td className="bd-td">{nf(rom)}</td>
+                            <td className="bd-td">{nf(ros)}</td>
+                            <td className="bd-td">{nf(ryt)}</td>
+                            <td className="bd-td bd-td-avgt">{nf(rsum)}</td>
                           </React.Fragment>
                         );
                       })()}
 
                       {(() => {
-                        let totalTarget = 0, totalBL = 0, totalTL = 0;
-                        const pembagiStr = (activeGridMap && Object.keys(activeGridMap).length > 0) ? (activeGridMap[Object.keys(activeGridMap)[0]]?.pembagiTanggal ?? 25) : 25;
-                        const pembagi = Number(pembagiStr) || 25;
-                        
+                        const pembagi = getEffectivePembagi(activeGridMap);
                         const activeYLs = activeYLsList.filter((y: any) => y.status !== "nonaktif");
                         const sumTarget = activeYLs.reduce((sum: number, yl: any) => sum + (Number(activeTargetYLMap[yl.area]?.target) || 0), 0);
                         const sumBL = activeYLs.reduce((sum: number, yl: any) => sum + (Number(activeTargetYLMap[yl.area]?.bln_lalu) || 0), 0);
                         const sumTL = activeYLs.reduce((sum: number, yl: any) => sum + (Number(activeTargetYLMap[yl.area]?.thn_lalu) || 0), 0);
-                        
-                        totalTarget = Math.trunc(sumTarget) * pembagi;
-                        totalBL = Math.trunc(sumBL) * pembagi;
-                        totalTL = Math.trunc(sumTL) * pembagi;
+
+                        const totalTarget = Math.trunc(sumTarget) * pembagi;
+                        const totalBL = Math.trunc(sumBL) * pembagi;
+                        const totalTL = Math.trunc(sumTL) * pembagi;
 
                         const grandTotal = monthlyGridTotals.yo + monthlyGridTotals.om + monthlyGridTotals.os + monthlyGridTotals.yt;
                         const dTarget = grandTotal - totalTarget;
                         const dBL = grandTotal - totalBL;
                         const dTL = grandTotal - totalTL;
+                        const dc = (v: number) => `bd-td ${v >= 0 ? "bd-td-pos" : "bd-td-neg"}`;
                         return (
                           <React.Fragment>
-                            <td className="p-1 text-center font-bold text-purple-800 bg-purple-100/60">{totalTarget}</td>
-                            <td className={`p-1 text-center font-black ${dTarget >= 0 ? "text-emerald-700 bg-emerald-100/80" : "text-rose-700 bg-rose-100/80"}`}>
-                              {dTarget >= 0 ? `+${dTarget}` : dTarget}
-                            </td>
-                            <td className="p-1 text-center font-bold text-indigo-800 bg-purple-100/60">{totalBL}</td>
-                            <td className={`p-1 text-center font-black ${dBL >= 0 ? "text-emerald-700 bg-emerald-100/80" : "text-rose-700 bg-rose-100/80"}`}>
-                              {dBL >= 0 ? `+${dBL}` : dBL}
-                            </td>
-                            <td className="p-1 text-center font-bold text-teal-300 bg-purple-950/60">{totalTL}</td>
-                            <td className={`p-1 text-center font-black ${dTL >= 0 ? "text-emerald-300 bg-emerald-900/60" : "text-rose-300 bg-rose-900/60"}`}>
-                              {dTL >= 0 ? `+${dTL}` : dTL}
-                            </td>
+                            <td className="bd-td">{nf(totalTarget)}</td>
+                            <td className={dc(dTarget)}>{dTarget >= 0 ? `+${nf(dTarget)}` : nf(dTarget)}</td>
+                            <td className="bd-td">{nf(totalBL)}</td>
+                            <td className={dc(dBL)}>{dBL >= 0 ? `+${nf(dBL)}` : nf(dBL)}</td>
+                            <td className="bd-td">{nf(totalTL)}</td>
+                            <td className={dc(dTL)}>{dTL >= 0 ? `+${nf(dTL)}` : nf(dTL)}</td>
                           </React.Fragment>
                         );
                       })()}
                     </tr>
 
-                    <tr className="bg-slate-200 text-slate-800 font-black text-[11px] uppercase divide-x divide-slate-300">
-                      <td className="p-2.5 sticky left-0 bg-slate-300 z-20 text-left font-black tracking-wide text-slate-900 shadow-[1px_0_0_0_#cbd5e1]">
-                        TOTAL ALL VARIAN
-                      </td>
+                    <tr className="bd-tfoot-all">
+                      <td className="bd-td-name bd-td">Total All Varian</td>
                       {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
                         const data = dailyGridTotals[d] || { yo: 0, om: 0, os: 0, yt: 0 };
                         const sum = data.yo + data.om + data.os + data.yt;
                         return (
-                          <td key={d} colSpan={4} className="p-1 text-center bg-slate-200 font-black text-slate-800">
-                            {sum} btl
-                          </td>
+                          <td key={d} colSpan={4} className="bd-td">{nf(sum)} btl</td>
                         );
                       })}
-                      <td colSpan={5} className="p-1 text-center font-black text-slate-900 bg-slate-300">
-                        {monthlyGridTotals.yo + monthlyGridTotals.om + monthlyGridTotals.os + monthlyGridTotals.yt} btl
+                      <td colSpan={5} className="bd-td">
+                        {nf(monthlyGridTotals.yo + monthlyGridTotals.om + monthlyGridTotals.os + monthlyGridTotals.yt)} btl
                       </td>
                       {(() => {
-                        const pembagiStr = (activeGridMap && Object.keys(activeGridMap).length > 0) ? (activeGridMap[Object.keys(activeGridMap)[0]]?.pembagiTanggal ?? 25) : 25;
-                        const pembagi = Number(pembagiStr) || 25;
-                        const ryo = Math.trunc(monthlyGridTotals.yo / pembagi);
-                        const rom = Math.trunc(monthlyGridTotals.om / pembagi);
-                        const ros = Math.trunc(monthlyGridTotals.os / pembagi);
-                        const ryt = Math.trunc(monthlyGridTotals.yt / pembagi);
-                        const rsum = ryo + rom + ros + ryt;
-                        return (
-                          <td colSpan={5} className="p-1 text-center font-black text-slate-900 bg-slate-300/90">
-                            {rsum} btl
-                          </td>
-                        );
+                        const pembagi = getEffectivePembagi(activeGridMap);
+                        const rsum =
+                          Math.trunc(monthlyGridTotals.yo / pembagi) + Math.trunc(monthlyGridTotals.om / pembagi) +
+                          Math.trunc(monthlyGridTotals.os / pembagi) + Math.trunc(monthlyGridTotals.yt / pembagi);
+                        return <td colSpan={5} className="bd-td">{nf(rsum)} btl</td>;
                       })()}
-                      <td colSpan={6} className="bg-slate-300/80"></td>
+                      <td colSpan={6} className="bd-td"></td>
                     </tr>
                   </tfoot>
                 </table>
@@ -3839,13 +3844,13 @@ export function ManagerView({
         {activeTab === "target_kompensasi" && (
           <div className="space-y-4">
             {/* Target TKU Card */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div className="bd-card p-3.5 sm:p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] pb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">🎯</span>
+                  <span className="bd-icon"><MenuTitleIcon id="target_kompensasi" /></span>
                   <div>
-                    <h2 className="text-sm font-black text-slate-900 uppercase">Target TKU Bulan Ini</h2>
-                    <p className="text-[10.5px] text-slate-500 font-medium">Pengaturan target penjualan harian untuk TKU (Tanpa desimal, angka bulat/trunc)</p>
+                    <h2 className="bd-title uppercase">Target TKU Bulan Ini</h2>
+                    <p className="bd-sub">Pengaturan target penjualan harian untuk TKU (Tanpa desimal, angka bulat/trunc)</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -3853,7 +3858,7 @@ export function ManagerView({
                     type="button"
                     onClick={handleFetchTargetFromArchive}
                     disabled={isFetchingArchiveTarget}
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all shadow cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
                   >
                     {isFetchingArchiveTarget ? (
                       <>
@@ -3870,7 +3875,7 @@ export function ManagerView({
                   <button
                     onClick={() => handleSaveSettingTargets(false)}
                     disabled={isSavingTarget}
-                    className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
+                    className="bd-btn"
                   >
                     {isSavingTarget ? (
                       <>
@@ -3888,30 +3893,30 @@ export function ManagerView({
               </div>
 
               {compSavedMsg && (
-                <p className="text-xs font-bold text-emerald-600 bg-emerald-50 p-2 rounded-xl border border-emerald-200 animate-pulse">
+                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 p-2 rounded-xl border border-emerald-200 dark:border-emerald-800 animate-pulse">
                   {compSavedMsg}
                 </p>
               )}
 
               {archiveTargetMsg && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-900 whitespace-pre-line leading-relaxed">
+                <div className="p-3 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 rounded-xl text-xs font-bold text-brand-900 dark:text-brand-300 whitespace-pre-line leading-relaxed">
                   {archiveTargetMsg}
                 </div>
               )}
 
-              <div className="overflow-x-auto pt-2">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead className="bg-slate-100 text-slate-700 text-[10px] uppercase font-bold">
+              <div className="bd-table-wrap pt-2">
+                <table className="bd-table">
+                  <thead>
                     <tr>
-                      <th className="p-2 border-b border-slate-200">Baris Target / Realisasi</th>
-                      <th className="p-2 border-b border-slate-200 text-center font-extrabold text-blue-700 bg-blue-50/50">Total</th>
-                      <th className="p-2 border-b border-slate-200 text-center">Original (YO)</th>
-                      <th className="p-2 border-b border-slate-200 text-center">Original Mangga (OM)</th>
-                      <th className="p-2 border-b border-slate-200 text-center">Original Stroberi (OS)</th>
-                      <th className="p-2 border-b border-slate-200 text-center">Yakult Light (YT)</th>
+                      <th className="bd-label text-left py-2 px-3">Baris Target / Realisasi</th>
+                      <th className="bd-grp bd-grp-sum py-2 px-2">Total</th>
+                      <th className="bd-v bd-v-yo py-2 px-2">Original (YO)</th>
+                      <th className="bd-v bd-v-om py-2 px-2">Original Mangga (OM)</th>
+                      <th className="bd-v bd-v-os py-2 px-2">Original Stroberi (OS)</th>
+                      <th className="bd-v bd-v-yt py-2 px-2">Yakult Light (YT)</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 font-mono">
+                  <tbody>
                     {[
                       { title: "Target Bulan Ini", prefix: "target", r: 0 },
                       { title: "Realisasi Bulan Lalu", prefix: "bln_lalu", r: 1 },
@@ -3919,11 +3924,11 @@ export function ManagerView({
                     ].map((rowItem) => {
                       const totalVal = (activeTargetTKU as any)[rowItem.prefix] ?? 0;
                       return (
-                        <tr key={rowItem.prefix} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="p-2.5 font-bold text-slate-800 border-r border-slate-200 bg-slate-50/60 select-none">
+                        <tr key={rowItem.prefix} className="bd-row hover:bg-[var(--bg-hover)] transition-colors">
+                          <td className="bd-td text-left font-bold px-3 py-2 bg-[var(--bg-inset)]">
                             {rowItem.title}
                           </td>
-                          <td className="p-2 text-center border-r border-slate-200 font-black text-blue-900 bg-blue-50/30 text-xs">
+                          <td className="bd-td bd-num font-bold px-2 py-1.5 bg-[var(--bg-hover)] text-neutral-900 dark:text-white">
                             {Math.trunc(Number(totalVal) || 0).toLocaleString("id-ID")}
                           </td>
                           {(["_yo", "_om", "_os", "_yt"] as const).map((sfx, cIdx) => {
@@ -3933,7 +3938,7 @@ export function ManagerView({
                               <td
                                 key={sfx}
                                 {...cellProps}
-                                className={`p-1.5 text-center border-r border-slate-200 relative ${cellProps.className}`}
+                                className={`bd-td bd-num relative p-1 text-center ${cellProps.className}`}
                               >
                                 {renderTkuSelectionHandle(rowItem.r, cIdx)}
                                 <NumberInput
@@ -3963,7 +3968,7 @@ export function ManagerView({
                                       return updated;
                                     });
                                   }}
-                                  className="w-full h-full p-1 text-xs text-center font-bold text-slate-900 bg-transparent outline-none border-none"
+                                  className="w-full h-full p-1 text-xs text-center font-bold font-mono tabular-nums text-neutral-900 dark:text-white bg-transparent outline-none border-none"
                                 />
                               </td>
                             );
@@ -3977,18 +3982,18 @@ export function ManagerView({
             </div>
 
             {/* Target YL Table Card */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-4 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div className="bd-card p-3.5 sm:p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] pb-3">
                 <div>
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Target & Realisasi per Yakult Lady</h3>
-                  <p className="text-[11px] text-slate-500 font-medium">Angka Target, Realisasi Bulan Lalu, dan Tahun Lalu mendukung format desimal 2 digit.</p>
+                  <h3 className="bd-title uppercase">Target & Realisasi per Yakult Lady</h3>
+                  <p className="bd-sub">Angka Target, Realisasi Bulan Lalu, dan Tahun Lalu mendukung format desimal 2 digit.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={handleFetchTargetFromArchive}
                     disabled={isFetchingArchiveTarget}
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all shadow cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
                   >
                     {isFetchingArchiveTarget ? (
                       <>
@@ -4006,7 +4011,7 @@ export function ManagerView({
                   <button
                     type="button"
                     onClick={handleSyncTargetTimFromYL}
-                    className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all shadow cursor-pointer flex items-center gap-1.5"
+                    className="bd-btn"
                   >
                     <span>⚡</span>
                     <span>Sinkronkan Target Tim dari Total 10 YL</span>
@@ -4014,17 +4019,17 @@ export function ManagerView({
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead className="bg-slate-100 text-slate-700 text-[10px] uppercase font-bold">
+              <div className="bd-table-wrap">
+                <table className="bd-table">
+                  <thead>
                     <tr>
-                      <th className="p-2 border-b border-slate-200">Yakult Lady</th>
-                      <th className="p-2 border-b border-slate-200 text-center">Target Rata-Rata</th>
-                      <th className="p-2 border-b border-slate-200 text-center">Realisasi Bulan Lalu</th>
-                      <th className="p-2 border-b border-slate-200 text-center">Realisasi Tahun Lalu</th>
+                      <th className="bd-th-name">Yakult Lady</th>
+                      <th className="bd-grp py-2 px-2 text-center">Target Rata-Rata</th>
+                      <th className="bd-grp py-2 px-2 text-center">Realisasi Bulan Lalu</th>
+                      <th className="bd-grp py-2 px-2 text-center">Realisasi Tahun Lalu</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody>
                     {ylList.filter((y: any) => y.status !== "nonaktif").map((yl: any, idx: number) => (
                       <TargetManagerRow
                         key={yl.area || idx}
@@ -4040,22 +4045,22 @@ export function ManagerView({
                       />
                     ))}
                   </tbody>
-                  <tfoot className="bg-slate-100 text-slate-800 text-[11px] font-black uppercase shadow-[inset_0_1px_0_rgba(0,0,0,0.1)]">
+                  <tfoot className="bd-tfoot font-mono tabular-nums">
                     <tr>
-                      <td className="p-2.5 text-right border-r-2 border-slate-300">TOTAL</td>
-                      <td className="p-1.5 text-center border-r border-slate-300 text-sm font-black text-slate-900">
+                      <td className="bd-td-name text-right font-bold">TOTAL</td>
+                      <td className="bd-td bd-num text-center text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">
                         {ylList
                           .filter((y: any) => y.status !== "nonaktif")
                           .reduce((sum: number, yl: any) => sum + (Number(activeTargetYLMap[yl.area]?.target) || 0), 0)
                           .toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td className="p-1.5 text-center border-r border-slate-300 text-sm font-black text-slate-900">
+                      <td className="bd-td bd-num text-center text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">
                         {ylList
                           .filter((y: any) => y.status !== "nonaktif")
                           .reduce((sum: number, yl: any) => sum + (Number(activeTargetYLMap[yl.area]?.bln_lalu) || 0), 0)
                           .toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td className="p-1.5 text-center border-r border-slate-300 text-sm font-black text-slate-900">
+                      <td className="bd-td bd-num text-center text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">
                         {ylList
                           .filter((y: any) => y.status !== "nonaktif")
                           .reduce((sum: number, yl: any) => sum + (Number(activeTargetYLMap[yl.area]?.thn_lalu) || 0), 0)
@@ -4068,15 +4073,15 @@ export function ManagerView({
             </div>
 
             {/* Estimasi Rincian Kompensasi Bulanan per YL Card */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="bd-card p-3.5 sm:p-4 space-y-4">
+              <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">💰</span>
                   <div>
-                    <h2 className="text-sm font-black text-slate-900 uppercase">
+                    <h2 className="bd-title uppercase">
                       Estimasi Rincian Kompensasi Bulanan per YL
                     </h2>
-                    <p className="text-[10.5px] text-slate-500 font-medium">
+                    <p className="bd-sub">
                       Simulasi kompensasi kotor, potongan PPh (2,5%), Iuran JKK/JKM, JHT, dan kompensasi bersih per Yakult Lady
                     </p>
                   </div>
@@ -4084,13 +4089,13 @@ export function ManagerView({
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">
+                <label className="bd-label block mb-1.5">
                   Pilih Yakult Lady
                 </label>
                 <select
                   value={selectedYLArea}
                   onChange={(e) => setSelectedYLArea(e.target.value)}
-                  className="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 outline-none font-bold text-slate-700"
+                  className="bd-field w-full text-xs font-bold text-neutral-900 dark:text-white cursor-pointer"
                 >
                   {(ylList && ylList.length > 0 ? ylList : names.map((n: string) => ({ area: n.substring(0, 3), nama: n }))).map((yl: any) => (
                     <option key={yl.area} value={yl.area}>
@@ -4150,72 +4155,72 @@ export function ManagerView({
                 return (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-center">
-                        <span className="text-[9px] font-black text-slate-400 uppercase block">Total Akumulasi Penjualan</span>
-                        <span className="text-sm font-black text-slate-900 mt-1 block">
+                      <div className="bd-subcard p-3 text-center">
+                        <span className="bd-label block">Total Akumulasi Penjualan</span>
+                        <span className="bd-num text-sm sm:text-base font-bold text-neutral-900 dark:text-white mt-1 block">
                           {Math.trunc(totalPenjualanYL).toLocaleString("id-ID")} btl
                         </span>
                       </div>
-                      <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-center">
-                        <span className="text-[9px] font-black text-slate-400 uppercase block">Rata-Rata Penjualan</span>
-                        <span className="text-sm font-black text-slate-900 mt-1 block">
+                      <div className="bd-subcard p-3 text-center">
+                        <span className="bd-label block">Rata-Rata Penjualan</span>
+                        <span className="bd-num text-sm sm:text-base font-bold text-neutral-900 dark:text-white mt-1 block">
                           {Math.trunc(rata2PenjualanYL)} btl/hr
                         </span>
                       </div>
                     </div>
 
                     {/* Kompensasi Table */}
-                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                      <div className="p-3 bg-slate-900 text-white font-black text-xs uppercase tracking-wider flex items-center justify-between">
+                    <div className="bd-subcard overflow-hidden">
+                      <div className="p-2.5 bg-[var(--bg-header)] text-[var(--ink)] font-bold text-xs uppercase tracking-wider flex items-center justify-between border-b border-[var(--line)]">
                         <span>Rincian Kompensasi & Potongan</span>
-                        <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-2 py-0.5 rounded">
+                        <span className="text-[10px] bg-brand-500 text-white font-bold px-2 py-0.5 rounded font-mono">
                           Area {selectedYLArea}
                         </span>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse">
-                          <tbody className="divide-y divide-slate-100 font-bold">
+                          <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800 font-bold font-mono tabular-nums">
                             <tr>
-                              <td className="p-2.5 text-slate-600 font-normal">Kompensasi Kotor</td>
-                              <td className="p-2.5 text-right text-slate-900 font-black">{formatRp(kompenKotor)}</td>
+                              <td className="p-2.5 font-sans text-neutral-600 dark:text-neutral-300 font-normal">Kompensasi Kotor</td>
+                              <td className="p-2.5 text-right text-neutral-900 dark:text-white font-bold">{formatRp(kompenKotor)}</td>
                             </tr>
-                            <tr className="text-rose-600 bg-rose-50/40">
-                              <td className="p-2.5 font-normal">PPh ({pphRateNum.toString().replace('.', ',')}%)</td>
+                            <tr className="text-rose-600 dark:text-rose-400 bg-rose-50/40 dark:bg-rose-950/20">
+                              <td className="p-2.5 font-sans font-normal">PPh ({pphRateNum.toString().replace('.', ',')}%)</td>
                               <td className="p-2.5 text-right font-bold">- {formatRp(pphVal)}</td>
                             </tr>
-                            <tr className="text-rose-600 bg-rose-50/40">
-                              <td className="p-2.5 font-normal">Iuran JKK / JKM</td>
+                            <tr className="text-rose-600 dark:text-rose-400 bg-rose-50/40 dark:bg-rose-950/20">
+                              <td className="p-2.5 font-sans font-normal">Iuran JKK / JKM</td>
                               <td className="p-2.5 text-right font-bold">- {formatRp(jkkVal)}</td>
                             </tr>
-                            <tr className="text-rose-600 bg-rose-50/40">
-                              <td className="p-2.5 font-normal" colSpan={2}>
+                            <tr className="text-rose-600 dark:text-rose-400 bg-rose-50/40 dark:bg-rose-950/20">
+                              <td className="p-2.5 font-sans font-normal" colSpan={2}>
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-1.5 font-sans">
                                     <span>Iuran JHT</span>
-                                    <span className={`text-[9.5px] font-black px-2 py-0.5 rounded-full border ${
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                                       isIkutJht
-                                        ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                                        : "bg-slate-200 text-slate-700 border-slate-300"
+                                        ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700"
+                                        : "bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border-neutral-300 dark:border-neutral-600"
                                     }`}>
                                       {isIkutJht ? "✓ Ikut Program" : "✕ Tidak Ikut"}
                                     </span>
                                   </div>
-                                  <span className="font-bold text-rose-700">
+                                  <span className="font-bold text-rose-700 dark:text-rose-400">
                                     {isIkutJht ? `- ${formatRp(jhtVal)}` : "Rp 0"}
                                   </span>
                                 </div>
-                                <span className="text-[10px] text-slate-500 font-normal italic block mt-1 leading-snug">
+                                <span className="text-[10px] text-neutral-500 dark:text-neutral-400 font-normal italic block mt-1 leading-snug font-sans">
                                   *Nilai ini hanya ditampilkan. Untuk mengubah Iuran JHT, edit di tabel Profil/Kelola Yakult Lady.
                                 </span>
                               </td>
                             </tr>
-                            <tr className="text-rose-600 bg-rose-50/40">
-                              <td className="p-2.5 font-normal">Kresek / Potongan Mandiri</td>
+                            <tr className="text-rose-600 dark:text-rose-400 bg-rose-50/40 dark:bg-rose-950/20">
+                              <td className="p-2.5 font-sans font-normal">Kresek / Potongan Mandiri</td>
                               <td className="p-2.5 text-right font-bold">- {formatRp(kresekVal)}</td>
                             </tr>
-                            <tr className="bg-emerald-100/80 text-emerald-950 font-black text-sm border-t-2 border-emerald-300">
-                              <td className="p-3">Kompensasi Bersih</td>
-                              <td className="p-3 text-right text-emerald-700 font-black text-base">{formatRp(kompenBersihVal)}</td>
+                            <tr className="bg-emerald-100/80 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-200 font-bold text-sm border-t-2 border-emerald-300 dark:border-emerald-800">
+                              <td className="p-3 font-sans">Kompensasi Bersih</td>
+                              <td className="p-3 text-right text-emerald-700 dark:text-emerald-300 font-bold text-base">{formatRp(kompenBersihVal)}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -4297,75 +4302,81 @@ export function ManagerView({
         )}
 
         {/* Tautan Yakult */}
-        {activeTab === "tautan" && <OfficialLinksViewer isAdmin={true} onBack={() => setActiveTab("dashboard")} />}
+        {activeTab === "tautan" && (
+          <React.Suspense fallback={<TabLoadingFallback />}>
+            <OfficialLinksViewer isAdmin={true} onBack={() => setActiveTab("dashboard")} />
+          </React.Suspense>
+        )}
 
         {/* Tab Pengaturan & Cloud Supabase */}
         {/* Tab Arsip */}
         {activeTab === "archive" && (
           <div className="space-y-4">
             {/* Archive Editor Feature */}
-            <div className="bg-white rounded-2xl p-4 border border-indigo-200 shadow-sm space-y-3">
-              <h2 className="text-xs font-black text-indigo-900 uppercase tracking-wider border-l-4 border-indigo-600 pl-2">
-                📂 Archive Editor (Edit Data Masa Lalu)
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-indigo-200 dark:border-indigo-800 shadow-sm space-y-3">
+              <h2 className="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1.5"><MenuTitleIcon id="archive" className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />Archive Editor (Edit Data Masa Lalu)</span>
               </h2>
-              <p className="text-[10px] text-slate-500 font-medium">
+              <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">
                 Masuk ke lingkungan terisolasi untuk melihat dan merevisi data arsip bulan-bulan sebelumnya yang tersimpan di Supabase tanpa mempengaruhi bulan berjalan.
               </p>
               <button
                 onClick={() => setShowArchiveEditor(true)}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer shadow flex items-center justify-center gap-2 mt-2"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer shadow flex items-center justify-center gap-2 mt-2"
               >
                 🛠️ Buka Archive Editor
               </button>
             </div>
 
             {/* Arsip Target Tahunan Feature */}
-            <div className="bg-white rounded-2xl p-4 border border-emerald-200 shadow-sm space-y-3">
-              <h2 className="text-xs font-black text-emerald-900 uppercase tracking-wider border-l-4 border-emerald-600 pl-2">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-emerald-200 dark:border-emerald-800 shadow-sm space-y-3">
+              <h2 className="text-xs font-bold text-emerald-900 dark:text-emerald-300 uppercase tracking-wider">
                 📊 Arsip Target Tahunan (Rekap Semester & Tahunan)
               </h2>
-              <p className="text-[10px] text-slate-500 font-medium">
+              <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">
                 Lihat rekap Target vs AKM PJL per bulan, semester, dan total tahunan — otomatis tersinkron dari arsip bulanan, dengan opsi isi manual untuk bulan yang belum diarsipkan.
               </p>
               <button
                 onClick={() => setShowTargetArsipTahunan(true)}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer shadow flex items-center justify-center gap-2 mt-2"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer shadow flex items-center justify-center gap-2 mt-2"
               >
                 📊 Buka Arsip Target Tahunan
               </button>
             </div>
 
             {showTargetArsipTahunan && (
-              <TargetArsipTahunanModal onClose={() => setShowTargetArsipTahunan(false)} />
+              <React.Suspense fallback={null}>
+                <TargetArsipTahunanModal onClose={() => setShowTargetArsipTahunan(false)} />
+              </React.Suspense>
             )}
 
             {/* 2. Finish & Archive Month */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider border-l-4 border-indigo-600 pl-2">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 dark:border-neutral-800 pb-3">
+                <h2 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
                   📦 Selesaikan & Arsipkan Bulan Berjalan
                 </h2>
                 {/* Month Picker for Archive */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-600">Pilih Bulan:</span>
+                  <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400">Pilih Bulan:</span>
                   <input
                     type="month"
                     value={selectedMonthlyArchive}
                     onChange={(e) => setSelectedMonthlyArchive(e.target.value)}
-                    className="p-1.5 text-xs font-bold bg-slate-50 rounded-xl border border-slate-200 text-slate-800 outline-none"
+                    className="p-1.5 text-xs font-bold bg-neutral-50 dark:bg-neutral-800/40 rounded-xl border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 outline-none"
                   />
                 </div>
               </div>
 
               {archivedMonthsList.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                  <span className="text-[10.5px] font-bold text-slate-600">📂 Daftar Bulan Tersimpan di Supabase:</span>
+                <div className="flex flex-wrap items-center gap-2 bg-neutral-50 dark:bg-neutral-800/40 p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800">
+                  <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400">📂 Daftar Bulan Tersimpan di Supabase:</span>
                   <select
                     value={archivedMonthsList.includes(selectedMonthlyArchive) ? selectedMonthlyArchive : ""}
                     onChange={(e) => {
                       if (e.target.value) setSelectedMonthlyArchive(e.target.value);
                     }}
-                    className="p-1.5 text-xs font-bold bg-white rounded-lg border border-slate-300 text-slate-800 outline-none cursor-pointer"
+                    className="p-1.5 text-xs font-bold bg-white dark:bg-neutral-800 rounded-lg border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 outline-none cursor-pointer"
                   >
                     <option value="" disabled>-- Pilih Bulan Tersimpan --</option>
                     {archivedMonthsList.map((m) => (
@@ -4377,12 +4388,12 @@ export function ManagerView({
                 </div>
               )}
 
-              <p className="text-[10.5px] text-slate-500 font-medium">
-                Mengunci dan mengarsipkan seluruh rekapitulasi data bulan <strong className="text-indigo-900 font-black">{getIndonesianMonthLabel(selectedMonthlyArchive) || selectedMonthlyArchive} ({selectedMonthlyArchive})</strong> ke Supabase secara permanen.
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">
+                Mengunci dan mengarsipkan seluruh rekapitulasi data bulan <strong className="text-indigo-900 dark:text-indigo-300 font-bold">{getIndonesianMonthLabel(selectedMonthlyArchive) || selectedMonthlyArchive} ({selectedMonthlyArchive})</strong> ke Supabase secara permanen.
               </p>
 
               {archiveStatusMsg && (
-                <p className="text-xs font-bold text-indigo-600 bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 leading-relaxed">
+                <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 leading-relaxed">
                   {archiveStatusMsg}
                 </p>
               )}
@@ -4391,14 +4402,14 @@ export function ManagerView({
                 <button
                   onClick={handleFinishAndArchiveMonth}
                   disabled={isSbSyncing}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs py-2.5 px-3 rounded-xl transition-all cursor-pointer shadow disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-3 rounded-xl transition-all cursor-pointer shadow disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   🔒 Selesaikan & Arsipkan Data ({selectedMonthlyArchive})
                 </button>
                 {isViewingHistoricalMonth && (
                   <button
                     onClick={handleResetToLiveData}
-                    className="bg-slate-700 hover:bg-slate-800 text-white font-extrabold text-xs py-2.5 px-3 rounded-xl transition-all cursor-pointer shadow flex items-center justify-center gap-2 shrink-0"
+                    className="bg-neutral-700 hover:bg-neutral-800 text-white font-bold text-xs py-2.5 px-3 rounded-xl transition-all cursor-pointer shadow flex items-center justify-center gap-2 shrink-0"
                   >
                     🔄 Kembali ke Data Live
                   </button>
@@ -4406,54 +4417,6 @@ export function ManagerView({
               </div>
             </div>
 
-            {/* 3. Kelola / Hapus Arsip Supabase */}
-            <div className="bg-white rounded-2xl p-4 border border-rose-100 shadow-sm space-y-3">
-              <h2 className="text-xs font-black text-rose-950 uppercase tracking-wider flex items-center gap-2 border-l-4 border-rose-600 pl-2">
-                🗑️ Kelola & Hapus Arsip Cloud di Supabase
-              </h2>
-              <p className="text-[10.5px] text-slate-500 font-medium leading-relaxed">
-                Di sini Anda dapat mengelola dan menghapus data arsip yang tersimpan di cloud Supabase. (Penghapusan data di menu Setting tidak menghapus arsip Supabase; hanya di menu ini Anda dapat menghapus arsip Supabase).
-              </p>
-
-              {archivedMonthsList.length === 0 ? (
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-center text-xs text-slate-500 font-bold">
-                  Belum ada bulan arsip yang tersimpan di database Supabase.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                    {archivedMonthsList.map((m) => (
-                      <div key={m} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-2">
-                        <div>
-                          <div className="text-xs font-black text-slate-800">{getIndonesianMonthLabel(m) || m}</div>
-                          <div className="text-[10px] font-mono text-slate-500">{m}</div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => {
-                              setSelectedMonthlyArchive(m);
-                              handleFetchMonthFromSupabase(m);
-                            }}
-                            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[10px] px-2 py-1.5 rounded-lg border border-indigo-200 transition-all cursor-pointer"
-                            title="Buka data arsip bulan ini"
-                          >
-                            Buka
-                          </button>
-                          <button
-                            onClick={() => handleDeleteArchiveFromSupabase(m)}
-                            disabled={isSbSyncing}
-                            className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[10px] px-2 py-1.5 rounded-lg border border-rose-200 transition-all cursor-pointer disabled:opacity-50"
-                            title="Hapus arsip ini dari Supabase"
-                          >
-                            🗑️ Hapus
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         )}
 
@@ -4461,21 +4424,21 @@ export function ManagerView({
         {activeTab === "attention" && (
           <div className="space-y-4 max-w-4xl mx-auto pb-10">
             {/* Top Bar Header */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 sm:p-5 border border-neutral-200 dark:border-neutral-800 shadow-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setActiveTab("dashboard")}
-                  className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+                  className="p-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Kembali</span>
                 </button>
                 <div>
-                  <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                    <Pin className="w-4 h-4 text-violet-600" />
+                  <h2 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <MenuTitleIcon id="attention" className="w-4 h-4 text-violet-600 dark:text-violet-400" />
                     <span>Catatan Perhatian Manager (Attention YL)</span>
                   </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
                     Pesan atau arahan khusus yang tampil langsung di dashboard YL sesuai area.
                   </p>
                 </div>
@@ -4483,9 +4446,9 @@ export function ManagerView({
             </div>
 
             {/* Input & Form Card */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 sm:p-5 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-extrabold text-slate-600 dark:text-slate-300 uppercase tracking-wider block">
+                <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-wider block">
                   Pilih Sasaran YL
                 </label>
                 <select
@@ -4495,7 +4458,7 @@ export function ManagerView({
                     setAttentionArea(area);
                     setAttentionText(area === "all" ? "" : (attentionMap[area] || ""));
                   }}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl p-3 font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  className="w-full bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs rounded-xl p-3 font-bold text-neutral-800 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
                   <option value="all">🌐 Semua YL (Broadcast ke seluruh Lady)</option>
                   {ylList.map((y: any) => (
@@ -4507,7 +4470,7 @@ export function ManagerView({
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-extrabold text-slate-600 dark:text-slate-300 uppercase tracking-wider block">
+                <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-wider block">
                   Pesan Attention / Instruksi Khusus
                 </label>
                 <textarea
@@ -4515,13 +4478,13 @@ export function ManagerView({
                   value={attentionText}
                   onChange={(e) => setAttentionText(e.target.value)}
                   placeholder="Ketik catatan, instruksi, atau perhatian khusus untuk YL..."
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl p-3 font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+                  className="w-full bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs rounded-xl p-3 font-medium text-neutral-800 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
                 />
               </div>
 
               {attentionSavedMsg && (
                 <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>Catatan Attention berhasil disimpan dan diperbarui di sistem!</span>
                 </div>
               )}
@@ -4529,7 +4492,7 @@ export function ManagerView({
               <div className="flex items-center justify-between pt-1">
                 <button
                   onClick={handleSaveAttention}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-2 active:scale-95"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-2 active:scale-95"
                 >
                   <span>💾</span>
                   <span>Simpan Catatan Attention</span>
@@ -4537,7 +4500,7 @@ export function ManagerView({
                 {attentionText && (
                   <button
                     onClick={() => setAttentionText("")}
-                    className="text-xs font-bold text-slate-500 hover:text-red-500 px-3 py-1.5 transition-colors cursor-pointer"
+                    className="text-xs font-bold text-neutral-500 dark:text-neutral-400 hover:text-red-500 px-3 py-1.5 transition-colors cursor-pointer"
                   >
                     Bersihkan Kolom
                   </button>
@@ -4546,8 +4509,8 @@ export function ManagerView({
             </div>
 
             {/* Status Attention Per Area Overview */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-              <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider border-l-4 border-indigo-600 pl-2">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 sm:p-5 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-3">
+              <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
                 Daftar Catatan Perhatian Aktif Saat Ini
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -4563,20 +4526,20 @@ export function ManagerView({
                       className={`p-3 rounded-xl border transition-all cursor-pointer ${
                         note 
                           ? "bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/60 hover:border-amber-400" 
-                          : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/60 hover:border-slate-300"
+                          : "bg-neutral-50 dark:bg-neutral-800/40 border-neutral-200 dark:border-neutral-700/60 hover:border-neutral-300"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px] font-black text-slate-900 dark:text-white">
+                        <span className="text-[11px] font-bold text-neutral-900 dark:text-white">
                           Area {y.area} - {y.nama}
                         </span>
-                        <span className={`text-[9.5px] font-extrabold px-1.5 py-0.5 rounded-md ${
-                          note ? "bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                          note ? "bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400"
                         }`}>
                           {note ? "Ada Catatan" : "Kosong"}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-2 italic">
+                      <p className="text-[11px] text-neutral-600 dark:text-neutral-300 line-clamp-2 italic">
                         {note || "Belum ada catatan khusus."}
                       </p>
                     </div>
@@ -4590,15 +4553,15 @@ export function ManagerView({
         {activeTab === "setting" && (
           <div className="space-y-4">
             {/* 0. Konfigurasi Cloud Supabase (dikunci PIN) */}
-            <div className="bg-white rounded-2xl p-4 border border-cyan-200 shadow-sm space-y-3">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-cyan-200 dark:border-cyan-800 shadow-sm space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-xs font-black text-cyan-900 uppercase tracking-wider border-l-4 border-cyan-600 pl-2">
-                  ☁️ Konfigurasi Cloud Supabase
+                <h2 className="text-xs font-bold text-cyan-900 dark:text-cyan-300 uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1.5"><MenuTitleIcon id="setting" className="w-4 h-4 text-cyan-600 dark:text-cyan-300" />Konfigurasi Cloud Supabase</span>
                 </h2>
                 {isSbUnlocked && (
                   <button
                     onClick={handleLockSbMenu}
-                    className="text-[10px] font-extrabold text-slate-500 hover:text-cyan-700 bg-slate-100 hover:bg-cyan-50 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                    className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 hover:text-cyan-700 bg-neutral-100 dark:bg-neutral-800 hover:bg-cyan-50 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shrink-0"
                     title="Kunci kembali panel ini"
                   >
                     🔒 Kunci Lagi
@@ -4608,7 +4571,7 @@ export function ManagerView({
 
               {!isSbUnlocked ? (
                 <div className="space-y-2">
-                  <p className="text-[10px] text-slate-500 font-medium">
+                  <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">
                     Bagian ini dikunci PIN khusus demi keamanan link & API key database.
                   </p>
                   <div className="flex gap-2">
@@ -4617,21 +4580,21 @@ export function ManagerView({
                       value={sbPinInput}
                       onChange={(e) => setSbPinInput(e.target.value)}
                       placeholder="Masukkan PIN"
-                      className="flex-1 bg-slate-50 border border-slate-200 text-xs rounded-xl p-2.5 font-bold text-slate-800 outline-none focus:ring-2 focus:ring-cyan-500"
+                      className="flex-1 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 text-xs rounded-xl p-2.5 font-bold text-neutral-800 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-cyan-500"
                     />
                     <button
                       onClick={handleUnlockSbMenu}
-                      className="bg-cyan-600 hover:bg-cyan-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow"
+                      className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow"
                     >
                       🔓 Buka
                     </button>
                   </div>
-                  {sbPinError && <p className="text-[10px] font-bold text-rose-600">{sbPinError}</p>}
+                  {sbPinError && <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400">{sbPinError}</p>}
                 </div>
               ) : (
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                    <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
                       URL Supabase
                     </label>
                     <input
@@ -4639,11 +4602,11 @@ export function ManagerView({
                       value={sbUrl}
                       onChange={(e) => setSbUrl(e.target.value)}
                       placeholder="https://xxxxx.supabase.co"
-                      className="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl p-2.5 font-bold text-slate-800 outline-none focus:ring-2 focus:ring-cyan-500"
+                      className="w-full bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 text-xs rounded-xl p-2.5 font-bold text-neutral-800 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-cyan-500"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                    <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
                       Anon/Public Key Supabase
                     </label>
                     <input
@@ -4651,72 +4614,72 @@ export function ManagerView({
                       value={sbKey}
                       onChange={(e) => setSbKey(e.target.value)}
                       placeholder="eyJhbGciOi..."
-                      className="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl p-2.5 font-bold text-slate-800 outline-none focus:ring-2 focus:ring-cyan-500"
+                      className="w-full bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 text-xs rounded-xl p-2.5 font-bold text-neutral-800 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-cyan-500"
                     />
                   </div>
 
                   <div className="flex flex-wrap gap-2 pt-1">
                     <button
                       onClick={handleSaveSupabaseConfig}
-                      className="bg-cyan-600 hover:bg-cyan-700 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow"
+                      className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow"
                     >
                       💾 Simpan &amp; Tes Koneksi
                     </button>
                     <button
                       onClick={handleSyncAllToSupabase}
                       disabled={isSbSyncing}
-                      className="bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                      className="bg-emerald-100 dark:bg-emerald-900/50 hover:bg-emerald-200 text-emerald-900 dark:text-emerald-300 font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-50"
                     >
                       ⬆️ Unggah Semua Data
                     </button>
                     <button
                       onClick={handleLoadAllFromSupabase}
                       disabled={isSbSyncing}
-                      className="bg-sky-100 hover:bg-sky-200 text-sky-900 font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                      className="bg-sky-100 dark:bg-sky-900/50 hover:bg-sky-200 text-sky-900 dark:text-sky-300 font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-50"
                     >
                       ⬇️ Tarik Semua Data
                     </button>
                   </div>
 
                   {sbMsg && (
-                    <p className="text-xs font-bold text-cyan-700 bg-cyan-50 p-2.5 rounded-xl border border-cyan-200 leading-relaxed">
+                    <p className="text-xs font-bold text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/40 p-2.5 rounded-xl border border-cyan-200 dark:border-cyan-800 leading-relaxed">
                       {sbMsg}
                     </p>
                   )}
 
                   {/* SUB-PANEL: AKUN SUPABASE KEDUA (KHUSUS MEDIA / FOTO / SERAGAM / MOTIVASI) */}
-                  <div className="pt-3 border-t border-slate-200 mt-2 space-y-2.5">
+                  <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800 mt-2 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="text-base">🖼️</span>
-                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-wide">
+                        <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wide">
                           Akun Supabase Media (Akun Kedua)
                         </h4>
                       </div>
-                      <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                         mediaStatus?.tableReady 
-                          ? "bg-emerald-100 text-emerald-800" 
-                          : "bg-amber-100 text-amber-800"
+                          ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300" 
+                          : "bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300"
                       }`}>
                         {mediaStatus?.tableReady ? "🟢 Aktif & Siap" : "🟡 Menunggu Tabel SQL"}
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                    <p className="text-[11px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
                       Akun kedua ini khusus menyimpan foto profil YL, jadwal &amp; gambar seragam, dan konfigurasi motivasi agar akun utama 100% bebas beban egress.
                     </p>
 
                     {/* Form Edit Manual URL & Key Akun Media */}
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-3 text-[11px]">
+                    <div className="bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 rounded-xl p-3 space-y-3 text-[11px]">
                       <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                          <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
                             URL Akun Media (Supabase Kedua)
                           </label>
                           <button
                             type="button"
                             onClick={handleResetDefaultMedia}
-                            className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
+                            className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 underline cursor-pointer"
                           >
                             Isi URL Default
                           </button>
@@ -4726,12 +4689,12 @@ export function ManagerView({
                           value={sbMediaUrl}
                           onChange={(e) => setSbMediaUrl(e.target.value)}
                           placeholder="https://xxxxx.supabase.co"
-                          className="w-full bg-white border border-slate-200 text-xs rounded-xl p-2.5 font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-xs rounded-xl p-2.5 font-bold text-neutral-800 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                        <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
                           Anon / Public Key Akun Media
                         </label>
                         <input
@@ -4739,12 +4702,12 @@ export function ManagerView({
                           value={sbMediaKey}
                           onChange={(e) => setSbMediaKey(e.target.value)}
                           placeholder="eyJhbGciOi... atau sb_publishable_..."
-                          className="w-full bg-white border border-slate-200 text-xs rounded-xl p-2.5 font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-xs rounded-xl p-2.5 font-bold text-neutral-800 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
 
                       {mediaStatus?.message && (
-                        <div className={`text-[10px] font-bold mt-1 ${mediaStatus.tableReady ? "text-emerald-700" : "text-amber-700"}`}>
+                        <div className={`text-[10px] font-bold mt-1 ${mediaStatus.tableReady ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700"}`}>
                           Status: {mediaStatus.message}
                         </div>
                       )}
@@ -4754,7 +4717,7 @@ export function ManagerView({
                       <button
                         onClick={handleSaveSupabaseMediaConfig}
                         disabled={isSbMediaSaving}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow disabled:opacity-50 flex items-center gap-1"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow disabled:opacity-50 flex items-center gap-1"
                       >
                         {isSbMediaSaving ? "⏳ Menyimpan..." : "💾 Simpan & Hubungkan Akun Media"}
                       </button>
@@ -4762,31 +4725,31 @@ export function ManagerView({
                       <button
                         onClick={handleMigrateMedia}
                         disabled={isMigratingMedia}
-                        className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow disabled:opacity-50"
+                        className="bg-neutral-800 hover:bg-neutral-900 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow disabled:opacity-50"
                       >
                         {isMigratingMedia ? "⏳ Memindahkan..." : "🔄 Cek & Pindahkan Media ke Akun Baru"}
                       </button>
 
                       <button
                         onClick={() => setShowSqlGuide(!showSqlGuide)}
-                        className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs px-3 py-2 rounded-xl transition-all cursor-pointer"
+                        className="bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 text-neutral-800 dark:text-neutral-200 font-bold text-xs px-3 py-2 rounded-xl transition-all cursor-pointer"
                       >
                         {showSqlGuide ? "Sembunyikan Petunjuk SQL" : "📜 Petunjuk Buat Tabel SQL"}
                       </button>
                     </div>
 
                     {mediaMigrationMsg && (
-                      <div className="text-xs font-bold text-indigo-900 bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 leading-relaxed">
+                      <div className="text-xs font-bold text-indigo-900 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 leading-relaxed">
                         {mediaMigrationMsg}
                       </div>
                     )}
 
                     {showSqlGuide && (
-                      <div className="bg-slate-900 text-slate-100 p-3 rounded-xl space-y-2 text-xs font-mono">
+                      <div className="bg-neutral-900 dark:bg-neutral-950 text-neutral-100 p-3 rounded-xl space-y-2 text-xs font-mono">
                         <div className="text-amber-300 font-bold text-[11px] font-sans">
                           Jalankan perintah SQL ini di SQL Editor Supabase Baru (wkwjmwxxdfxyfqaseuha):
                         </div>
-                        <pre className="text-[10px] bg-slate-950 p-2 rounded border border-slate-800 overflow-x-auto whitespace-pre-wrap select-all">
+                        <pre className="text-[10px] bg-neutral-950 p-2 rounded border border-neutral-800 overflow-x-auto whitespace-pre-wrap select-all">
 {`CREATE TABLE IF NOT EXISTS public.app_store (
   key TEXT PRIMARY KEY,
   data JSONB NOT NULL,
@@ -4815,11 +4778,11 @@ WITH CHECK (true);`}
                     )}
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100">
+                  <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800">
                     {!isChangingSbPin ? (
                       <button
                         onClick={() => setIsChangingSbPin(true)}
-                        className="text-[10px] font-bold text-slate-500 hover:text-slate-700 underline cursor-pointer"
+                        className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 underline cursor-pointer"
                       >
                         Ganti PIN Keamanan Supabase
                       </button>
@@ -4830,30 +4793,30 @@ WITH CHECK (true);`}
                           value={newSbPinInput}
                           onChange={(e) => setNewSbPinInput(e.target.value)}
                           placeholder="PIN baru (min 4 karakter)"
-                          className="flex-1 bg-slate-50 border border-slate-200 text-xs rounded-xl p-2 font-bold text-slate-800 outline-none"
+                          className="flex-1 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 text-xs rounded-xl p-2 font-bold text-neutral-800 dark:text-neutral-200 outline-none"
                         />
                         <button
                           onClick={handleChangeSbPin}
-                          className="bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-xl cursor-pointer"
+                          className="bg-neutral-800 text-white text-xs font-bold px-3 py-2 rounded-xl cursor-pointer"
                         >
                           Simpan
                         </button>
                       </div>
                     )}
-                    {sbPinChangeMsg && <p className="text-[10px] font-bold text-emerald-600 mt-1">{sbPinChangeMsg}</p>}
+                    {sbPinChangeMsg && <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">{sbPinChangeMsg}</p>}
                   </div>
                 </div>
               )}
             </div>
 
             {/* 6. Kelola Kalimat Motivasi Harian (YL) */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider border-l-4 border-amber-500 pl-2">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-3">
+                <h2 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
                   📢 Kelola Kalimat Motivasi Harian (Running Text YL)
                 </h2>
                 <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 text-xs font-extrabold text-slate-700 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-300 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={localMotivasiEnabled}
@@ -4863,23 +4826,23 @@ WITH CHECK (true);`}
                     Aktifkan Running Text
                   </label>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">Interval:</span>
+                    <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase">Interval:</span>
                     <input
                       type="number"
                       min={5}
                       value={localMotivasiInterval}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => setLocalMotivasiInterval(e.target.value === '' ? '' : Number(e.target.value))}
-                      className="bg-slate-50 border border-slate-200 text-xs rounded-xl p-1.5 font-extrabold text-slate-800 w-16 text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 text-xs rounded-xl p-1.5 font-bold text-neutral-800 dark:text-neutral-200 w-16 text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
-                    <span className="text-xs font-bold text-slate-500">detik</span>
+                    <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400">detik</span>
                   </div>
                 </div>
               </div>
 
               {/* Input Tambah Kalimat */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
                   Tambah Kalimat Motivasi Baru
                 </label>
                 <div className="flex gap-2">
@@ -4889,11 +4852,11 @@ WITH CHECK (true);`}
                     onChange={(e) => setNewMotivasiInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleAddMotivasi(); }}
                     placeholder="Ketik kalimat motivasi baru untuk YL di sini..."
-                    className="flex-1 bg-slate-50 border border-slate-200 text-xs rounded-xl p-2.5 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="flex-1 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 text-xs rounded-xl p-2.5 font-medium text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                   <button
                     onClick={handleAddMotivasi}
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow shrink-0"
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow shrink-0"
                   >
                     ➕ Tambah
                   </button>
@@ -4905,32 +4868,32 @@ WITH CHECK (true);`}
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={handleSelectAllMotivasi}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+                    className="bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-bold text-[11px] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                   >
                     ☑️ Pilih Semua ({localMotivasiList.length})
                   </button>
                   <button
                     onClick={handleDeselectAllMotivasi}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+                    className="bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-bold text-[11px] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                   >
                     🔲 Batal Semua
                   </button>
                   <button
                     onClick={handleLoadSampleMotivasi}
-                    className="bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[11px] px-3 py-1.5 rounded-lg border border-amber-200 transition-all cursor-pointer"
+                    className="bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-bold text-[11px] px-3 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800 transition-all cursor-pointer"
                   >
                     💡 Muat Contoh Motivasi
                   </button>
                 </div>
-                <span className="text-[11px] font-bold text-slate-500">
-                  Terpilih: <strong className="text-amber-600">{localMotivasiTerpilih.length}</strong> / {localMotivasiList.length}
+                <span className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400">
+                  Terpilih: <strong className="text-amber-600 dark:text-amber-400">{localMotivasiTerpilih.length}</strong> / {localMotivasiList.length}
                 </span>
               </div>
 
               {/* Daftar Kalimat Motivasi */}
-              <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 border border-slate-100 rounded-xl p-2 bg-slate-50/50">
+              <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 border border-neutral-100 dark:border-neutral-800 rounded-xl p-2 bg-neutral-50/50 dark:bg-neutral-800/50">
                 {localMotivasiList.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic text-center py-4">Belum ada kalimat motivasi. Silakan tambah atau muat contoh motivasi.</p>
+                  <p className="text-xs text-neutral-400 italic text-center py-4">Belum ada kalimat motivasi. Silakan tambah atau muat contoh motivasi.</p>
                 ) : (
                   localMotivasiList.map((item, idx) => {
                     const isSelected = localMotivasiTerpilih.includes(item);
@@ -4938,7 +4901,7 @@ WITH CHECK (true);`}
                       <div
                         key={idx}
                         className={`flex items-start justify-between gap-2 p-2.5 rounded-xl border text-xs transition-all ${
-                          isSelected ? "bg-white border-amber-300 shadow-sm text-slate-800" : "bg-slate-100/60 border-slate-200 text-slate-500 opacity-70"
+                          isSelected ? "bg-white dark:bg-neutral-900 border-amber-300 dark:border-amber-700 shadow-sm text-neutral-800 dark:text-neutral-200" : "bg-neutral-100/60 dark:bg-neutral-800/60 border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 opacity-70"
                         }`}
                       >
                         <label className="flex items-start gap-2.5 flex-1 cursor-pointer select-none">
@@ -4952,7 +4915,7 @@ WITH CHECK (true);`}
                         </label>
                         <button
                           onClick={() => handleDeleteMotivasiItem(item)}
-                          className="text-slate-400 hover:text-rose-600 font-bold text-xs p-1 rounded transition-colors shrink-0 cursor-pointer"
+                          className="text-neutral-400 hover:text-rose-600 font-bold text-xs p-1 rounded transition-colors shrink-0 cursor-pointer"
                           title="Hapus kalimat ini"
                         >
                           🗑️
@@ -4965,7 +4928,7 @@ WITH CHECK (true);`}
 
               {/* Pesan Sukses Simpan */}
               {motivasiSavedMsg && (
-                <p className="text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
+                <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
                   {motivasiSavedMsg}
                 </p>
               )}
@@ -4973,7 +4936,7 @@ WITH CHECK (true);`}
               {/* Tombol Simpan Akhir */}
               <button
                 onClick={handleSaveMotivasiConfigAll}
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer shadow flex items-center justify-center gap-2"
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer shadow flex items-center justify-center gap-2"
               >
                 💾 Simpan Pengaturan Motivasi & Branding
               </button>
@@ -4983,13 +4946,13 @@ WITH CHECK (true);`}
 
 
             {/* 5. Branding & Identitas Aplikasi */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider border-l-4 border-cyan-600 pl-2">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-3">
+              <h2 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
                 🏷️ Identitas Depo & Chatbot AI
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                  <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
                     Nama TKU / Depo (DP)
                   </label>
                   <input
@@ -4997,11 +4960,11 @@ WITH CHECK (true);`}
                     value={tkuNameInput}
                     onChange={(e) => setTkuNameInput(e.target.value)}
                     placeholder="DP Jember 1"
-                    className="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl p-2.5 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="w-full bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 text-xs rounded-xl p-2.5 font-bold text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                  <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
                     Nama Chatbot AI
                   </label>
                   <input
@@ -5009,13 +4972,13 @@ WITH CHECK (true);`}
                     value={chatbotNameInput}
                     onChange={(e) => setChatbotNameInput(e.target.value)}
                     placeholder="AI Jember 1 Pro"
-                    className="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl p-2.5 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="w-full bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 text-xs rounded-xl p-2.5 font-bold text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                   />
                 </div>
               </div>
               <button
                 onClick={handleSaveMotivasiConfigAll}
-                className="bg-cyan-600 hover:bg-cyan-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow cursor-pointer flex items-center gap-1.5"
+                className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow cursor-pointer flex items-center gap-1.5"
               >
                 <span>💾</span>
                 <span>Simpan Branding</span>
@@ -5023,52 +4986,52 @@ WITH CHECK (true);`}
             </div>
 
             {/* 3. Reset Data (Targeted) */}
-            <div className="bg-white rounded-2xl p-4 border border-rose-100 shadow-sm space-y-3">
-              <h2 className="text-xs font-black text-rose-950 uppercase tracking-wider flex items-center gap-2 border-l-4 border-rose-600 pl-2">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-rose-100 dark:border-rose-900/40 shadow-sm space-y-3">
+              <h2 className="text-xs font-bold text-rose-950 dark:text-rose-200 uppercase tracking-wider flex items-center gap-2">
                 🗑️ Reset Data Kerja Aktif (4 Kategori)
               </h2>
-              <p className="text-[10.5px] text-slate-500 leading-relaxed font-medium">
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">
                 Hanya menghapus data aktif kerja: PLG & PJL, Input PJL Harian, BD & Realisasi (termasuk LHPP), dan Target YL/TKU pada bulan yang dipilih. Data master profil, PIN, Motivasi, Seragam tetap AMAN.
               </p>
 
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-emerald-900 text-xs flex items-start gap-2">
+              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 text-emerald-900 dark:text-emerald-300 text-xs flex items-start gap-2">
                 <span className="text-base">🛡️</span>
-                <div className="text-[10.5px] leading-relaxed">
+                <div className="text-[11px] leading-relaxed">
                   <strong className="text-emerald-950 font-bold block mb-0.5">Arsip di Supabase Tetap Aman:</strong>
-                  Reset data di sini <u>TIDAK AKAN</u> menghapus arsip bulanan yang tersimpan di Supabase. Untuk mengelola atau menghapus data arsip di Supabase, silakan buka menu <span className="font-bold text-indigo-700 bg-white px-1.5 py-0.5 rounded border border-indigo-200">Arsip</span>.
+                  Reset data di sini <u>TIDAK AKAN</u> menghapus arsip bulanan yang tersimpan di Supabase. Untuk mengelola atau menghapus data arsip di Supabase, silakan buka menu <span className="font-bold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-neutral-900 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">Arsip</span>.
                 </div>
               </div>
 
               <div className="space-y-3 mt-2">
-                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Pilih Cakupan Reset:</label>
+                <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block">Pilih Cakupan Reset:</label>
                 <div className="flex flex-col gap-2">
-                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-300 cursor-pointer">
                     <input type="radio" name="resetScope" value="current_month" checked={resetScope === "current_month"} onChange={() => setResetScope("current_month")} className="accent-rose-600" />
                     <span>Hanya Bulan Tertentu</span>
                   </label>
 
                   {resetScope === "current_month" && (
-                    <div className="ml-6 flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                      <span className="text-xs font-bold text-slate-600">Pilih Bulan:</span>
+                    <div className="ml-6 flex items-center gap-2 bg-neutral-50 dark:bg-neutral-800/40 p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800">
+                      <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400">Pilih Bulan:</span>
                       <input
                         type="month"
                         value={resetSelectedMonth}
                         onChange={(e) => setResetSelectedMonth(e.target.value)}
-                        className="p-1.5 text-xs font-bold bg-white rounded-lg border border-slate-300 text-slate-800 outline-none cursor-pointer"
+                        className="p-1.5 text-xs font-bold bg-white dark:bg-neutral-800 rounded-lg border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 outline-none cursor-pointer"
                       />
-                      <span className="text-[10px] text-slate-500 font-medium">({getIndonesianMonthLabel(resetSelectedMonth) || resetSelectedMonth})</span>
+                      <span className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">({getIndonesianMonthLabel(resetSelectedMonth) || resetSelectedMonth})</span>
                     </div>
                   )}
 
-                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-300 cursor-pointer">
                     <input type="radio" name="resetScope" value="all" checked={resetScope === "all"} onChange={() => setResetScope("all")} className="accent-rose-600" />
                     <span>Semua Riwayat (Semua Bulan)</span>
                   </label>
                 </div>
               </div>
 
-              <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-rose-900 text-xs space-y-2">
-                <p><strong>Cakupan yang akan direset:</strong> <span className="font-mono font-bold text-rose-950">{resetScope === "all" ? "SEMUA RIWAYAT BULAN" : `BULAN ${resetSelectedMonth} (${getIndonesianMonthLabel(resetSelectedMonth)})`}</span></p>
+              <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl p-3 text-rose-900 dark:text-rose-300 text-xs space-y-2">
+                <p><strong>Cakupan yang akan direset:</strong> <span className="font-mono font-bold text-rose-950 dark:text-rose-200">{resetScope === "all" ? "SEMUA RIWAYAT BULAN" : `BULAN ${resetSelectedMonth} (${getIndonesianMonthLabel(resetSelectedMonth)})`}</span></p>
                 <p><strong>Data aktif yang AKAN DIKOSONGKAN:</strong></p>
                 <ul className="list-disc pl-4 font-bold text-[10px] space-y-1">
                   <li>Data Pelanggan & Penjualan (PLG & PJL)</li>
@@ -5079,7 +5042,7 @@ WITH CHECK (true);`}
               </div>
 
               {resetSuccessMsg && (
-                <div className={`p-3 rounded-xl border text-xs font-bold ${resetSuccessMsg.startsWith('✅') ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-rose-50 border-rose-300 text-rose-900'}`}>
+                <div className={`p-3 rounded-xl border text-xs font-bold ${resetSuccessMsg.startsWith('✅') ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-300' : 'bg-rose-50 border-rose-300 text-rose-900'}`}>
                   {resetSuccessMsg}
                 </div>
               )}
@@ -5087,7 +5050,7 @@ WITH CHECK (true);`}
               <button
                 onClick={handleResetTargeted}
                 disabled={isResetting}
-                className="w-full bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs py-2.5 rounded-xl transition-all shadow cursor-pointer flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+                className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow cursor-pointer flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
               >
                 <span>🗑️</span>
                 <span>{isResetting ? "Sedang Mereset Data..." : `Reset Data ${resetScope === "all" ? "Semua Bulan" : `Bulan ${resetSelectedMonth}`} Sekarang`}</span>
@@ -5095,24 +5058,24 @@ WITH CHECK (true);`}
             </div>
 
             {/* 4. Backup & Cache */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider border-l-4 border-slate-600 pl-2">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-3">
+              <h2 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
                 💾 Cadangan & Pembersihan Cache
               </h2>
               <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   onClick={handleExportBackupJson}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+                  className="bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer"
                 >
                   📥 Ekspor Backup Data JSON
                 </button>
-                <label className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1">
+                <label className="bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1">
                   <span>📤 Impor Backup JSON</span>
                   <input type="file" accept=".json" onChange={handleImportBackupJson} className="hidden" />
                 </label>
                 <button
                   onClick={handleClearCache}
-                  className="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+                  className="bg-amber-100 dark:bg-amber-900/50 hover:bg-amber-200 text-amber-900 dark:text-amber-300 font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer"
                 >
                   🧹 Bersihkan Cache LocalStorage
                 </button>
@@ -5121,91 +5084,106 @@ WITH CHECK (true);`}
           </div>
         )}
         
-        {activeTab === "seragam" && <ErrorBoundary><ManagerSeragamView /></ErrorBoundary>}
+        {activeTab === "seragam" && (
+          <ErrorBoundary>
+            <React.Suspense fallback={<TabLoadingFallback />}>
+              <ManagerSeragamView />
+            </React.Suspense>
+          </ErrorBoundary>
+        )}
         
         {activeTab === "lady" && (
-                    <ManagerLadyTab
-            ylList={ylList}
-            setYlList={setYlList}
-            handleSaveYlList={handleSaveYlList}
-            handleDeleteYl={handleDeleteYl}
-            handleAddYl={handleAddYl}
-            newYlArea={newYlArea}
-            setNewYlArea={setNewYlArea}
-            newYlKode={newYlKode}
-            setNewYlKode={setNewYlKode}
-            newYlNama={newYlNama}
-            setNewYlNama={setNewYlNama}
-            newYlTanggalMasuk={newYlTanggalMasuk}
-            setNewYlTanggalMasuk={setNewYlTanggalMasuk}
-            newYlPin={newYlPin}
-            setNewYlPin={setNewYlPin}
-            newYlNik={newYlNik}
-            setNewYlNik={setNewYlNik}
-            newYlTglLahir={newYlTglLahir}
-            setNewYlTglLahir={setNewYlTglLahir}
-            newYlIkutJht={newYlIkutJht}
-            setNewYlIkutJht={setNewYlIkutJht}
-            newYlIuranJht={newYlIuranJht}
-            setNewYlIuranJht={setNewYlIuranJht}
-            ylSavedMsg={ylSavedMsg}
-            newYlNoHP={newYlNoHP}
-            setNewYlNoHP={setNewYlNoHP}
-            newYlAlamat={newYlAlamat}
-            setNewYlAlamat={setNewYlAlamat}
-            compConfig={compConfig}
-            setCompConfig={setCompConfig}
-            handleSaveCompConfig={handleSaveCompConfig}
-            compSavedMsg={compSavedMsg}
-          />
+          <React.Suspense fallback={<TabLoadingFallback />}>
+            <ManagerLadyTab
+              ylList={ylList}
+              setYlList={setYlList}
+              handleSaveYlList={handleSaveYlList}
+              handleDeleteYl={handleDeleteYl}
+              handleAddYl={handleAddYl}
+              newYlArea={newYlArea}
+              setNewYlArea={setNewYlArea}
+              newYlKode={newYlKode}
+              setNewYlKode={setNewYlKode}
+              newYlNama={newYlNama}
+              setNewYlNama={setNewYlNama}
+              newYlTanggalMasuk={newYlTanggalMasuk}
+              setNewYlTanggalMasuk={setNewYlTanggalMasuk}
+              newYlPin={newYlPin}
+              setNewYlPin={setNewYlPin}
+              newYlNik={newYlNik}
+              setNewYlNik={setNewYlNik}
+              newYlTglLahir={newYlTglLahir}
+              setNewYlTglLahir={setNewYlTglLahir}
+              newYlIkutJht={newYlIkutJht}
+              setNewYlIkutJht={setNewYlIkutJht}
+              newYlIuranJht={newYlIuranJht}
+              setNewYlIuranJht={setNewYlIuranJht}
+              ylSavedMsg={ylSavedMsg}
+              newYlNoHP={newYlNoHP}
+              setNewYlNoHP={setNewYlNoHP}
+              newYlAlamat={newYlAlamat}
+              setNewYlAlamat={setNewYlAlamat}
+              compConfig={compConfig}
+              setCompConfig={setCompConfig}
+              handleSaveCompConfig={handleSaveCompConfig}
+              compSavedMsg={compSavedMsg}
+            />
+          </React.Suspense>
         )}
         
         {(activeTab === "input_realisasi" || activeTab === "lhpp_realisasi") && (
           <div className="space-y-4">
-            <LhppRealisasiView
-              ylList={ylList}
-              selectedMonth={globalMonth}
-              breakdownPlanMap={breakdownPlanMap}
-              breakdownRealisasiMap={breakdownRealisasiMap}
-              onSaveLhpp={async () => { await fetchBreakdownPlan(globalMonth); }}
-            />
+            <React.Suspense fallback={<TabLoadingFallback />}>
+              <LhppRealisasiView
+                ylList={ylList}
+                selectedMonth={globalMonth}
+                breakdownPlanMap={breakdownPlanMap}
+                breakdownRealisasiMap={breakdownRealisasiMap}
+                onSaveLhpp={async () => { await fetchBreakdownPlan(globalMonth); }}
+              />
+            </React.Suspense>
           </div>
         )}
 
         {activeTab === "plg_pjl" && (
-          <PlgPjlView ylList={ylList} historicalMonth={globalMonth} />
+          <React.Suspense fallback={<TabLoadingFallback />}>
+            <PlgPjlView ylList={ylList} historicalMonth={globalMonth} />
+          </React.Suspense>
         )}
 
         {activeTab === "product_knowledge" && (
-          <ProductKnowledgeView />
+          <React.Suspense fallback={<TabLoadingFallback />}>
+            <ProductKnowledgeView />
+          </React.Suspense>
         )}
       </main>
+      </div>
 
       {/* 1. In-App Modal: Konfirmasi Reset Data Kerja Aktif */}
       {showTargetedResetModal && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-rose-200 space-y-4 animate-in fade-in zoom-in duration-150">
+        <div className="fixed inset-0 bg-neutral-950/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-rose-200 dark:border-rose-800 space-y-4 animate-in fade-in zoom-in duration-150">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 text-2xl shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center text-rose-600 dark:text-rose-400 text-2xl shrink-0">
                 🗑️
               </div>
               <div>
-                <h3 className="text-base font-black text-slate-900 leading-tight">Konfirmasi Reset Data Kerja Aktif</h3>
-                <p className="text-xs text-rose-600 font-bold">Pengosongan Data Transaksi & Target</p>
+                <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 leading-tight">Konfirmasi Reset Data Kerja Aktif</h3>
+                <p className="text-xs text-rose-600 dark:text-rose-400 font-bold">Pengosongan Data Transaksi & Target</p>
               </div>
             </div>
 
-            <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-xs text-rose-950 space-y-2.5">
-              <p className="font-bold text-slate-800">
+            <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl p-4 text-xs text-rose-950 dark:text-rose-200 space-y-2.5">
+              <p className="font-bold text-neutral-800 dark:text-neutral-200">
                 Apakah Anda yakin ingin mengosongkan data kerja aktif untuk:
               </p>
-              <div className="text-center py-2.5 px-3 bg-white rounded-xl border border-rose-300 font-mono font-black text-sm text-rose-700 shadow-sm">
+              <div className="text-center py-2.5 px-3 bg-white dark:bg-neutral-900 rounded-xl border border-rose-300 dark:border-rose-700 font-mono font-black text-sm text-rose-700 dark:text-rose-300 shadow-sm">
                 📅 {resetScope === "all" ? "SEMUA RIWAYAT (Semua Bulan)" : `BULAN ${resetSelectedMonth} (${getIndonesianMonthLabel(resetSelectedMonth) || resetSelectedMonth})`}
               </div>
 
-              <div className="text-[11px] text-slate-700 space-y-1">
-                <p className="font-bold text-rose-900">Data yang AKAN DIKOSONGKAN:</p>
-                <ul className="list-disc pl-4 space-y-0.5 text-slate-600 font-medium">
+              <div className="text-[11px] text-neutral-700 dark:text-neutral-300 space-y-1">
+                <p className="font-bold text-rose-900 dark:text-rose-300">Data yang AKAN DIKOSONGKAN:</p>
+                <ul className="list-disc pl-4 space-y-0.5 text-neutral-600 dark:text-neutral-400 font-medium">
                   <li>Data Pelanggan & Penjualan (PLG & PJL)</li>
                   <li>Transaksi Harian / LHPP PDM</li>
                   <li>Target YL & Target TKU</li>
@@ -5213,7 +5191,7 @@ WITH CHECK (true);`}
                 </ul>
               </div>
 
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-[11px] text-emerald-900 font-medium flex items-start gap-2">
+              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg p-2.5 text-[11px] text-emerald-900 dark:text-emerald-300 font-medium flex items-start gap-2">
                 <span className="text-sm">🛡️</span>
                 <span>
                   <strong className="text-emerald-950 font-bold">Arsip Supabase Aman:</strong> Data arsip bulanan yang tersimpan di cloud Supabase <u>TIDAK AKAN</u> terhapus.
@@ -5225,14 +5203,14 @@ WITH CHECK (true);`}
               <button
                 onClick={() => setShowTargetedResetModal(false)}
                 disabled={isResetting}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                className="flex-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-bold text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer disabled:opacity-50"
               >
                 Batal
               </button>
               <button
                 onClick={handleExecuteResetTargeted}
                 disabled={isResetting}
-                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 <span>🗑️</span>
                 <span>{isResetting ? "Mereset..." : "Ya, Reset Data Sekarang"}</span>
@@ -5242,52 +5220,6 @@ WITH CHECK (true);`}
         </div>
       )}
 
-      {/* 2. In-App Modal: Konfirmasi Hapus Permanen Arsip Supabase */}
-      {monthToDeleteFromSupabase && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 space-y-4 animate-in fade-in zoom-in duration-150">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 text-2xl shrink-0">
-                ⚠️
-              </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900 leading-tight">Hapus Arsip Cloud Supabase</h3>
-                <p className="text-xs text-rose-600 font-bold">Tindakan Permanen & Tidak Dapat Dibatalkan</p>
-              </div>
-            </div>
-
-            <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-xs text-rose-950 space-y-2.5">
-              <p className="font-bold text-slate-800">
-                Apakah Anda yakin ingin <strong>MENGHAPUS PERMANEN</strong> arsip data bulan berikut dari cloud database Supabase?
-              </p>
-              <div className="text-center py-2.5 px-3 bg-white rounded-xl border border-rose-300 font-mono font-black text-sm text-rose-700 shadow-sm">
-                📅 BULAN {monthToDeleteFromSupabase} ({getIndonesianMonthLabel(monthToDeleteFromSupabase) || monthToDeleteFromSupabase})
-              </div>
-              <p className="text-[11px] text-rose-800 leading-relaxed font-medium">
-                ⚠️ Snapshot rekapitulasi data arsip bulan ini akan dihapus selamanya dari Supabase.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                onClick={() => setMonthToDeleteFromSupabase(null)}
-                disabled={isSbSyncing}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer disabled:opacity-50"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleExecuteDeleteArchiveFromSupabase}
-                disabled={isSbSyncing}
-                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
-              >
-                <span>🗑️</span>
-                <span>{isSbSyncing ? "Menghapus..." : "Ya, Hapus Permanen"}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

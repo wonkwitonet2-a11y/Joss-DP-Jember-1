@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Copy, ClipboardPaste, X } from "lucide-react";
-import type { GridSelection } from "./useSimpleGrid";
 
 export interface ClipboardFallbackModalProps {
   mode: "copy" | "paste";
@@ -45,9 +44,9 @@ export function ClipboardFallbackModal({
         padding: 16,
       }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-4">
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl w-full max-w-md p-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+          <h3 className="font-bold text-slate-800 dark:text-neutral-100 flex items-center gap-2 text-sm">
             {mode === "copy" ? (
               <>
                 <Copy size={16} className="text-blue-500" /> Salin Data (Manual)
@@ -58,12 +57,12 @@ export function ClipboardFallbackModal({
               </>
             )}
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 dark:text-neutral-400 dark:hover:text-neutral-100">
             <X size={18} />
           </button>
         </div>
 
-        <p className="text-xs text-slate-500 mb-2">
+        <p className="text-xs text-slate-500 dark:text-neutral-400 mb-2">
           {mode === "copy"
             ? 'Tahan (long-press) teks di bawah ini, lalu pilih "Salin Semua" dari menu keyboard.'
             : 'Tahan (long-press) di kotak kosong di bawah ini, lalu pilih "Tempel" dari menu keyboard.'}
@@ -75,13 +74,13 @@ export function ClipboardFallbackModal({
           readOnly={mode === "copy"}
           onChange={(e) => setText(e.target.value)}
           placeholder={mode === "paste" ? "Tempel data di sini..." : undefined}
-          className="w-full h-40 border border-slate-300 rounded-lg p-2 text-xs font-mono"
+          className="w-full h-40 border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-lg p-2 text-xs font-mono"
         />
 
         <div className="flex justify-end gap-2 mt-3">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-600"
+            className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-600 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
           >
             {mode === "copy" ? "Tutup" : "Batal"}
           </button>

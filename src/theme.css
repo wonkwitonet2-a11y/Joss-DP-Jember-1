@@ -1,0 +1,444 @@
+/* ==========================================================================
+   THEME GLOBAL JOSS — disamakan dengan JOC (Jember Operation Center).
+   SATU file untuk seluruh menu: font tulisan, font angka, bobot huruf,
+   ukuran huruf, dan palet warna. Diimpor SETELAH index.css di main.tsx.
+   Ubah nilai di :root di bawah ini → seluruh aplikasi ikut berubah.
+   ========================================================================== */
+
+:root {
+  /* ---- Font (sama dengan JOC) ---- */
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;   /* angka: nol bulat bersih tanpa garis miring / titik */
+  --font-num:  "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* ---- Ukuran huruf kecil: batas minimum (JOC memakai 9–11px) ---- */
+  --fs-micro: 0.625rem;    /* 10px — pengganti text-[8px] / text-[9px] */
+  --fs-micro-lh: 0.875rem;
+
+  /* ---- Bobot huruf: JOC memakai bold/semibold, hampir tidak pernah black ---- */
+  --fw-heavy: 700;         /* pengganti font-black & font-extrabold */
+
+  /* ---- PALET WARNA SERAGAM (sama dengan pemakaian JOC) ----
+     abu-abu  : slate / gray / zinc / stone  → neutral
+     aksen    : cyan → sky · teal → emerald · purple/violet → indigo · orange/yellow → amber
+     (hijau, merah, amber, sky, indigo, pink tetap seperti aslinya) */
+  --color-slate-50: #fafafa;
+  --color-slate-100: #f5f5f5;
+  --color-slate-200: #e5e5e5;
+  --color-slate-300: #d4d4d4;
+  --color-slate-400: #a3a3a3;
+  --color-slate-500: #737373;
+  --color-slate-600: #525252;
+  --color-slate-700: #404040;
+  --color-slate-800: #262626;
+  --color-slate-900: #171717;
+  --color-slate-950: #0a0a0a;
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f5f5f5;
+  --color-gray-200: #e5e5e5;
+  --color-gray-300: #d4d4d4;
+  --color-gray-400: #a3a3a3;
+  --color-gray-500: #737373;
+  --color-gray-600: #525252;
+  --color-gray-700: #404040;
+  --color-gray-800: #262626;
+  --color-gray-900: #171717;
+  --color-gray-950: #0a0a0a;
+  --color-zinc-50: #fafafa;
+  --color-zinc-100: #f5f5f5;
+  --color-zinc-200: #e5e5e5;
+  --color-zinc-300: #d4d4d4;
+  --color-zinc-400: #a3a3a3;
+  --color-zinc-500: #737373;
+  --color-zinc-600: #525252;
+  --color-zinc-700: #404040;
+  --color-zinc-800: #262626;
+  --color-zinc-900: #171717;
+  --color-zinc-950: #0a0a0a;
+  --color-stone-50: #fafafa;
+  --color-stone-100: #f5f5f5;
+  --color-stone-200: #e5e5e5;
+  --color-stone-300: #d4d4d4;
+  --color-stone-400: #a3a3a3;
+  --color-stone-500: #737373;
+  --color-stone-600: #525252;
+  --color-stone-700: #404040;
+  --color-stone-800: #262626;
+  --color-stone-900: #171717;
+  --color-stone-950: #0a0a0a;
+  --color-cyan-50: #f0f9ff;
+  --color-cyan-100: #e0f2fe;
+  --color-cyan-200: #bae6fd;
+  --color-cyan-300: #7dd3fc;
+  --color-cyan-400: #38bdf8;
+  --color-cyan-500: #0ea5e9;
+  --color-cyan-600: #0284c7;
+  --color-cyan-700: #0369a1;
+  --color-cyan-800: #075985;
+  --color-cyan-900: #0c4a6e;
+  --color-cyan-950: #082f49;
+  --color-teal-50: #ecfdf5;
+  --color-teal-100: #d1fae5;
+  --color-teal-200: #a7f3d0;
+  --color-teal-300: #6ee7b7;
+  --color-teal-400: #34d399;
+  --color-teal-500: #10b981;
+  --color-teal-600: #059669;
+  --color-teal-700: #047857;
+  --color-teal-800: #065f46;
+  --color-teal-900: #064e3b;
+  --color-teal-950: #022c22;
+  --color-purple-50: #eef2ff;
+  --color-purple-100: #e0e7ff;
+  --color-purple-200: #c7d2fe;
+  --color-purple-300: #a5b4fc;
+  --color-purple-400: #818cf8;
+  --color-purple-500: #6366f1;
+  --color-purple-600: #4f46e5;
+  --color-purple-700: #4338ca;
+  --color-purple-800: #3730a3;
+  --color-purple-900: #312e81;
+  --color-purple-950: #1e1b4b;
+  --color-violet-50: #eef2ff;
+  --color-violet-100: #e0e7ff;
+  --color-violet-200: #c7d2fe;
+  --color-violet-300: #a5b4fc;
+  --color-violet-400: #818cf8;
+  --color-violet-500: #6366f1;
+  --color-violet-600: #4f46e5;
+  --color-violet-700: #4338ca;
+  --color-violet-800: #3730a3;
+  --color-violet-900: #312e81;
+  --color-violet-950: #1e1b4b;
+  --color-orange-50: #fffbeb;
+  --color-orange-100: #fef3c7;
+  --color-orange-200: #fde68a;
+  --color-orange-300: #fcd34d;
+  --color-orange-400: #fbbf24;
+  --color-orange-500: #f59e0b;
+  --color-orange-600: #d97706;
+  --color-orange-700: #b45309;
+  --color-orange-800: #92400e;
+  --color-orange-900: #78350f;
+  --color-orange-950: #451a03;
+  --color-yellow-50: #fffbeb;
+  --color-yellow-100: #fef3c7;
+  --color-yellow-200: #fde68a;
+  --color-yellow-300: #fcd34d;
+  --color-yellow-400: #fbbf24;
+  --color-yellow-500: #f59e0b;
+  --color-yellow-600: #d97706;
+  --color-yellow-700: #b45309;
+  --color-yellow-800: #92400e;
+  --color-yellow-900: #78350f;
+  --color-yellow-950: #451a03;
+}
+
+/* Slide presentasi punya palet tema sendiri → dikembalikan ke warna aslinya */
+.slide-theme-light, .slide-theme-dark {
+  --color-slate-50: revert-layer;
+  --color-slate-100: revert-layer;
+  --color-slate-200: revert-layer;
+  --color-slate-300: revert-layer;
+  --color-slate-400: revert-layer;
+  --color-slate-500: revert-layer;
+  --color-slate-600: revert-layer;
+  --color-slate-700: revert-layer;
+  --color-slate-800: revert-layer;
+  --color-slate-900: revert-layer;
+  --color-slate-950: revert-layer;
+  --color-gray-50: revert-layer;
+  --color-gray-100: revert-layer;
+  --color-gray-200: revert-layer;
+  --color-gray-300: revert-layer;
+  --color-gray-400: revert-layer;
+  --color-gray-500: revert-layer;
+  --color-gray-600: revert-layer;
+  --color-gray-700: revert-layer;
+  --color-gray-800: revert-layer;
+  --color-gray-900: revert-layer;
+  --color-gray-950: revert-layer;
+  --color-zinc-50: revert-layer;
+  --color-zinc-100: revert-layer;
+  --color-zinc-200: revert-layer;
+  --color-zinc-300: revert-layer;
+  --color-zinc-400: revert-layer;
+  --color-zinc-500: revert-layer;
+  --color-zinc-600: revert-layer;
+  --color-zinc-700: revert-layer;
+  --color-zinc-800: revert-layer;
+  --color-zinc-900: revert-layer;
+  --color-zinc-950: revert-layer;
+  --color-stone-50: revert-layer;
+  --color-stone-100: revert-layer;
+  --color-stone-200: revert-layer;
+  --color-stone-300: revert-layer;
+  --color-stone-400: revert-layer;
+  --color-stone-500: revert-layer;
+  --color-stone-600: revert-layer;
+  --color-stone-700: revert-layer;
+  --color-stone-800: revert-layer;
+  --color-stone-900: revert-layer;
+  --color-stone-950: revert-layer;
+  --color-cyan-50: revert-layer;
+  --color-cyan-100: revert-layer;
+  --color-cyan-200: revert-layer;
+  --color-cyan-300: revert-layer;
+  --color-cyan-400: revert-layer;
+  --color-cyan-500: revert-layer;
+  --color-cyan-600: revert-layer;
+  --color-cyan-700: revert-layer;
+  --color-cyan-800: revert-layer;
+  --color-cyan-900: revert-layer;
+  --color-cyan-950: revert-layer;
+  --color-teal-50: revert-layer;
+  --color-teal-100: revert-layer;
+  --color-teal-200: revert-layer;
+  --color-teal-300: revert-layer;
+  --color-teal-400: revert-layer;
+  --color-teal-500: revert-layer;
+  --color-teal-600: revert-layer;
+  --color-teal-700: revert-layer;
+  --color-teal-800: revert-layer;
+  --color-teal-900: revert-layer;
+  --color-teal-950: revert-layer;
+  --color-purple-50: revert-layer;
+  --color-purple-100: revert-layer;
+  --color-purple-200: revert-layer;
+  --color-purple-300: revert-layer;
+  --color-purple-400: revert-layer;
+  --color-purple-500: revert-layer;
+  --color-purple-600: revert-layer;
+  --color-purple-700: revert-layer;
+  --color-purple-800: revert-layer;
+  --color-purple-900: revert-layer;
+  --color-purple-950: revert-layer;
+  --color-violet-50: revert-layer;
+  --color-violet-100: revert-layer;
+  --color-violet-200: revert-layer;
+  --color-violet-300: revert-layer;
+  --color-violet-400: revert-layer;
+  --color-violet-500: revert-layer;
+  --color-violet-600: revert-layer;
+  --color-violet-700: revert-layer;
+  --color-violet-800: revert-layer;
+  --color-violet-900: revert-layer;
+  --color-violet-950: revert-layer;
+  --color-orange-50: revert-layer;
+  --color-orange-100: revert-layer;
+  --color-orange-200: revert-layer;
+  --color-orange-300: revert-layer;
+  --color-orange-400: revert-layer;
+  --color-orange-500: revert-layer;
+  --color-orange-600: revert-layer;
+  --color-orange-700: revert-layer;
+  --color-orange-800: revert-layer;
+  --color-orange-900: revert-layer;
+  --color-orange-950: revert-layer;
+  --color-yellow-50: revert-layer;
+  --color-yellow-100: revert-layer;
+  --color-yellow-200: revert-layer;
+  --color-yellow-300: revert-layer;
+  --color-yellow-400: revert-layer;
+  --color-yellow-500: revert-layer;
+  --color-yellow-600: revert-layer;
+  --color-yellow-700: revert-layer;
+  --color-yellow-800: revert-layer;
+  --color-yellow-900: revert-layer;
+  --color-yellow-950: revert-layer;
+}
+
+/* ---------- Font dasar ---------- */
+html, body, button, input, select, textarea { font-family: var(--font-sans); }
+
+/* ---------- ANGKA: semua font-mono / tabular-mono (nol bulat bersih tanpa garis miring/titik) ---------- */
+.font-mono,
+.tabular-mono,
+.bd-num,
+input[inputmode="numeric"],
+input[type="number"] {
+  font-family: var(--font-sans) !important;
+  font-variant-numeric: tabular-nums lining-nums !important;
+  letter-spacing: 0 !important;
+  font-feature-settings: "zero" 0, "tnum" 1 !important;
+}
+
+/* ---------- BOBOT: tidak ada yang "hitam tebal" berlebihan ---------- */
+.font-black, .font-extrabold { font-weight: var(--fw-heavy) !important; }
+
+/* ---------- UKURAN: tulisan paling kecil tidak di bawah 10px ---------- */
+.text-\[8px\], .text-\[9px\] {
+  font-size: var(--fs-micro) !important;
+  line-height: var(--fs-micro-lh) !important;
+}
+.slide-theme-light .text-\[8px\],  .slide-theme-dark .text-\[8px\]  { font-size: 8px !important;  line-height: 1.1 !important; }
+.slide-theme-light .text-\[9px\],  .slide-theme-dark .text-\[9px\]  { font-size: 9px !important;  line-height: 1.1 !important; }
+
+/* ---------- Menu YL: skala tulisan RESPONSIF (HP -> tablet -> desktop) ----------
+   Dulu semua ukuran dikunci !important sehingga class responsif (sm:text-base, lg:text-sm, dst)
+   tidak pernah berlaku dan tampilan tablet/desktop terlihat kecil. Sekarang satu skala
+   (--yl-s) dipakai oleh SEMUA menu YL (beranda, input, ringkasan, breakdown, evaluasi,
+   realisasi potensi, seragam, product knowledge, tautan) sehingga ukuran & karakter font seragam.
+   HP = 1x . tablet (>=768px) = 1.08x . laptop (>=1024px) = 1.16x . layar lebar (>=1536px) = 1.24x */
+.yl-view-root { --yl-s: 1; font-size: 1rem !important; }
+@media (min-width: 768px)  { .yl-view-root { --yl-s: 1.08; } }
+@media (min-width: 960px)  { .yl-view-root { --yl-s: 1.16; } }
+@media (min-width: 1536px) { .yl-view-root { --yl-s: 1.24; } }
+
+.yl-view-root .text-\[8px\], .yl-view-root .text-\[8\.5px\], .yl-view-root .text-\[9px\],
+.yl-view-root .text-\[9\.5px\], .yl-view-root .text-\[10px\] {
+  font-size: calc(0.625rem * var(--yl-s)) !important; line-height: calc(0.875rem * var(--yl-s)) !important;
+}
+.yl-view-root .text-\[10\.5px\], .yl-view-root .text-\[11px\] {
+  font-size: calc(0.6875rem * var(--yl-s)) !important; line-height: calc(1rem * var(--yl-s)) !important;
+}
+.yl-view-root .text-\[11\.5px\] {
+  font-size: calc(0.75rem * var(--yl-s)) !important; line-height: calc(1rem * var(--yl-s)) !important;
+}
+.yl-view-root .text-xs   { font-size: calc(0.75rem  * var(--yl-s)) !important; line-height: calc(1rem    * var(--yl-s)) !important; }
+.yl-view-root .text-sm   { font-size: calc(0.875rem * var(--yl-s)) !important; line-height: calc(1.25rem * var(--yl-s)) !important; }
+.yl-view-root .text-base { font-size: calc(1rem     * var(--yl-s)) !important; line-height: calc(1.5rem  * var(--yl-s)) !important; }
+.yl-view-root .text-lg   { font-size: calc(1.125rem * var(--yl-s)) !important; line-height: calc(1.75rem * var(--yl-s)) !important; }
+.yl-view-root .text-xl   { font-size: calc(1.25rem  * var(--yl-s)) !important; line-height: calc(1.75rem * var(--yl-s)) !important; }
+
+/* Kartu YL: sudut sedikit lebih bulat + hover halus, tetap memakai token tema navy (bg-card / border-line) */
+.yl-view-root .bd-card { border-radius: 1.125rem; transition: box-shadow .15s, border-color .15s, transform .15s; }
+.yl-view-root button.bd-card:hover { border-color: var(--accent-ring); box-shadow: var(--shadow-card-hover); }
+.yl-view-root .bd-subcard { border-radius: 0.875rem; }
+
+/* ---------- Tabel: angka sejajar ---------- */
+table { font-variant-numeric: tabular-nums; }
+
+/* JOC-style shared primary action color. Keep red/green status indicators and
+   all non-button performance values semantic; only solid action controls are
+   unified to the JOSS navy brand. */
+button[class*="bg-emerald-600"],
+button[class*="bg-emerald-700"],
+button[class*="bg-green-600"],
+button[class*="bg-green-700"],
+button[class*="bg-teal-600"],
+button[class*="bg-teal-700"],
+button[class*="bg-indigo-600"],
+button[class*="bg-indigo-700"],
+button[class*="bg-cyan-600"],
+button[class*="bg-cyan-700"],
+button[class*="bg-blue-600"],
+button[class*="bg-blue-700"] {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+button[class*="bg-emerald-600"]:hover,
+button[class*="bg-emerald-700"]:hover,
+button[class*="bg-green-600"]:hover,
+button[class*="bg-green-700"]:hover,
+button[class*="bg-teal-600"]:hover,
+button[class*="bg-teal-700"]:hover,
+button[class*="bg-indigo-600"]:hover,
+button[class*="bg-indigo-700"]:hover,
+button[class*="bg-cyan-600"]:hover,
+button[class*="bg-cyan-700"]:hover,
+button[class*="bg-blue-600"]:hover,
+button[class*="bg-blue-700"]:hover {
+  background-color: var(--accent-hover) !important;
+}
+
+html.dark button[class*="bg-emerald-600"],
+html.dark button[class*="bg-emerald-700"],
+html.dark button[class*="bg-green-600"],
+html.dark button[class*="bg-green-700"],
+html.dark button[class*="bg-teal-600"],
+html.dark button[class*="bg-teal-700"],
+html.dark button[class*="bg-indigo-600"],
+html.dark button[class*="bg-indigo-700"],
+html.dark button[class*="bg-cyan-600"],
+html.dark button[class*="bg-cyan-700"],
+html.dark button[class*="bg-blue-600"],
+html.dark button[class*="bg-blue-700"] {
+  background-color: var(--accent-ring) !important;
+  border-color: var(--accent-ring) !important;
+}
+
+
+/* ==========================================================================
+   TEMA BIRU MENYELURUH
+   - Semua tombol aksi solid (Simpan, Tambah, Mode Presentasi, dst.) memakai biru brand,
+     termasuk yang sebelumnya oranye/kuning/ungu.
+   - Ikon di depan judul (h1/h2/h3/.bd-title) diseragamkan biru.
+   ========================================================================== */
+button[class~="bg-amber-500"],
+button[class~="bg-amber-600"],
+button[class~="bg-amber-700"],
+button[class~="bg-orange-500"],
+button[class~="bg-orange-600"],
+button[class~="bg-orange-700"],
+button[class~="bg-yellow-500"],
+button[class~="bg-yellow-600"],
+button[class~="bg-yellow-700"],
+button[class~="bg-violet-500"],
+button[class~="bg-violet-600"],
+button[class~="bg-violet-700"],
+button[class~="bg-purple-500"],
+button[class~="bg-purple-600"],
+button[class~="bg-purple-700"],
+button[class~="bg-sky-500"],
+button[class~="bg-sky-600"],
+button[class~="bg-sky-700"],
+button[class~="bg-fuchsia-500"],
+button[class~="bg-fuchsia-600"],
+button[class~="bg-fuchsia-700"] {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+button[class~="bg-amber-500"]:hover,
+button[class~="bg-amber-600"]:hover,
+button[class~="bg-amber-700"]:hover,
+button[class~="bg-orange-500"]:hover,
+button[class~="bg-orange-600"]:hover,
+button[class~="bg-orange-700"]:hover,
+button[class~="bg-yellow-500"]:hover,
+button[class~="bg-yellow-600"]:hover,
+button[class~="bg-yellow-700"]:hover,
+button[class~="bg-violet-500"]:hover,
+button[class~="bg-violet-600"]:hover,
+button[class~="bg-violet-700"]:hover,
+button[class~="bg-purple-500"]:hover,
+button[class~="bg-purple-600"]:hover,
+button[class~="bg-purple-700"]:hover,
+button[class~="bg-sky-500"]:hover,
+button[class~="bg-sky-600"]:hover,
+button[class~="bg-sky-700"]:hover,
+button[class~="bg-fuchsia-500"]:hover,
+button[class~="bg-fuchsia-600"]:hover,
+button[class~="bg-fuchsia-700"]:hover {
+  background-color: var(--accent-hover) !important;
+}
+html.dark button[class~="bg-amber-500"],
+html.dark button[class~="bg-amber-600"],
+html.dark button[class~="bg-amber-700"],
+html.dark button[class~="bg-orange-500"],
+html.dark button[class~="bg-orange-600"],
+html.dark button[class~="bg-orange-700"],
+html.dark button[class~="bg-yellow-500"],
+html.dark button[class~="bg-yellow-600"],
+html.dark button[class~="bg-yellow-700"],
+html.dark button[class~="bg-violet-500"],
+html.dark button[class~="bg-violet-600"],
+html.dark button[class~="bg-violet-700"],
+html.dark button[class~="bg-purple-500"],
+html.dark button[class~="bg-purple-600"],
+html.dark button[class~="bg-purple-700"],
+html.dark button[class~="bg-sky-500"],
+html.dark button[class~="bg-sky-600"],
+html.dark button[class~="bg-sky-700"],
+html.dark button[class~="bg-fuchsia-500"],
+html.dark button[class~="bg-fuchsia-600"],
+html.dark button[class~="bg-fuchsia-700"] {
+  background-color: var(--accent-ring) !important;
+  border-color: var(--accent-ring) !important;
+}
+
+/* Ikon judul -> biru (kecuali di dalam slide presentasi yang punya tema sendiri) */
+:is(h1, h2, h3, .bd-title) :is(svg, .lucide):not(:where(.slide-theme-light, .slide-theme-dark) *) {
+  color: var(--accent) !important;
+}

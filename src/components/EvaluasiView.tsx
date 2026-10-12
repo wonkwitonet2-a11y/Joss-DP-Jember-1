@@ -1,4 +1,6 @@
+import { MenuTitleIcon } from "./AppSidebar";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { bbColorClass, vsPctColorClass, rata2ColorClass } from "../utils/numberFormat";
 import {
   Maximize2,
   Minimize2,
@@ -54,7 +56,7 @@ export function EvaluasiView({
   // gagal, plus host Supabase yang dipakai runtime ini. Sebelumnya semua
   // kegagalan diringkas jadi satu kalimat generik "semua gagal" — itu yang
   // bikin susah dibedakan antara "memang belum ada" vs "salah project/key".
-  const [prevMonthFetchDebug, setPrevMonthFetchDebug] = useState<string>("");
+  const [, setPrevMonthFetchDebug] = useState<string>("");
 
   const isFullCols = role === "yl" || showFullEvalTable;
 
@@ -82,9 +84,19 @@ export function EvaluasiView({
     const prevY = m === 1 ? y - 1 : y;
     const prevMKey = `${prevY}-${String(prevM).padStart(2, "0")}`;
 
+    // HEMAT EGRESS: server sudah membaca (dan men-cache) arsip dari Supabase. Baca langsung
+    // dari browser ke Supabase HANYA kalau server tidak berhasil memberi arsip.
+    let serverRes: any = null;
+    let serverErr: any = null;
+    try {
+      serverRes = await safeFetchJson<{ ok: boolean; archive?: any; message?: string }>(`/api/getMonthlyArchive?month=${prevMKey}`);
+    } catch (e) {
+      serverErr = e;
+    }
+    const serverOk = !!(serverRes && serverRes.ok && serverRes.archive);
     const results = await Promise.allSettled([
-      safeFetchJson<{ ok: boolean; archive?: any; message?: string }>(`/api/getMonthlyArchive?month=${prevMKey}`),
-      loadFromSupabase<any>(`monthly_archive_${prevMKey}`),
+      serverErr ? Promise.reject(serverErr) : Promise.resolve(serverRes),
+      serverOk ? Promise.resolve(null) : loadFromSupabase<any>(`monthly_archive_${prevMKey}`),
       (async () => {
         try {
           const localSnap = localStorage.getItem(`monthly_archive_${prevMKey}`);
@@ -191,13 +203,41 @@ export function EvaluasiView({
     setIsAiLoading(true);
     setAiInsight("");
     try {
-      const response = await fetch("/api/gemini/evaluate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: activeEvaluasiData })
-      });
-      const d = await parseJsonResponse(response);
-      setAiInsight(d?.insight || "Tidak ada hasil analisis.");
+      if (role === "yl") {
+        const targetArea = (currentYlArea || (currentYlName ? currentYlName.substring(0, 3).trim() : "")).trim();
+        const cleanName = (currentYlName || "").toLowerCase().trim();
+        const ylRow = (activeEvaluasiData.dataRows || []).find((r: any) => {
+          const rArea = String(r[0] || "").trim();
+          const rName = String(r[1] || "").toLowerCase().trim();
+          return (targetArea && rArea === targetArea) || (cleanName && (rName.includes(cleanName) || cleanName.includes(rName)));
+        });
+
+        const ylPayload = {
+          nama: currentYlName || (ylRow ? String(ylRow[1] || "") : targetArea),
+          rata2: ylRow ? (typeof ylRow[13] === "number" ? ylRow[13] : parseFloat(ylRow[13]) || 0) : 0,
+          targetYL: ylRow ? (typeof ylRow[12] === "number" ? ylRow[12] : parseFloat(ylRow[12]) || 0) : 0,
+          akumulasi: ylRow ? (typeof ylRow[7] === "number" ? ylRow[7] : parseFloat(ylRow[7]) || 0) : 0,
+          bbYL: ylRow ? (typeof ylRow[28] === "number" ? ylRow[28] : parseFloat(ylRow[28]) || 0) : 0,
+          totalPb: ylRow ? ((typeof ylRow[22] === "number" ? ylRow[22] : parseFloat(ylRow[22]) || 0) + (typeof ylRow[23] === "number" ? ylRow[23] : parseFloat(ylRow[23]) || 0)) : 0,
+          pbPersen: ylRow ? (typeof ylRow[24] === "number" ? ylRow[24] : parseFloat(ylRow[24]) || 0) : 0,
+        };
+
+        const response = await fetch("/api/gemini/evaluate-yl", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ area: targetArea || (ylRow ? ylRow[0] : ""), data: ylPayload })
+        });
+        const d = await parseJsonResponse(response);
+        setAiInsight(d?.insight || "Tidak ada hasil analisis.");
+      } else {
+        const response = await fetch("/api/gemini/evaluate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: activeEvaluasiData })
+        });
+        const d = await parseJsonResponse(response);
+        setAiInsight(d?.insight || "Tidak ada hasil analisis.");
+      }
     } catch (e) {
       setAiInsight("Gagal menghubungkan ke modul evaluasi AI server.");
     } finally {
@@ -930,7 +970,7 @@ export function EvaluasiView({
 
   if (!activeEvaluasiData) {
     return (
-      <div className="p-12 text-center text-slate-500 dark:text-slate-400 font-bold bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-3">
+      <div className="p-12 text-center text-neutral-500 dark:text-neutral-400 font-bold bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-3">
         <div className="w-8 h-8 border-3 border-red-600 border-t-transparent rounded-full animate-spin" />
         <span>Memuat Data Evaluasi Harian...</span>
       </div>
@@ -943,28 +983,28 @@ export function EvaluasiView({
     <div
       className={
         isFullscreenEval
-          ? "fixed inset-0 z-[9999] bg-slate-950 text-slate-100 overflow-y-auto p-2 sm:p-4 space-y-3"
+          ? "fixed inset-0 z-[9999] bg-neutral-950 text-neutral-100 overflow-y-auto p-2 sm:p-4 space-y-3"
           : "space-y-3"
       }
     >
       {/* Optional Top Navigation Bar if onBack is provided (e.g. in YL View) */}
       {onBack && !isFullscreenEval && (
-        <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center justify-between bg-white dark:bg-neutral-900 p-2 sm:p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-xs">
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 text-xs font-black text-slate-700 dark:text-slate-200 hover:text-red-600 dark:hover:text-red-400 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-red-600 dark:hover:text-red-400 px-2 py-1 rounded-lg transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
             <span>Kembali ke Beranda</span>
           </button>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] sm:text-xs font-extrabold text-slate-500 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
               {globalMonth ? `Periode: ${globalMonth}` : "Evaluasi Harian Tim"}
             </span>
             <button
               onClick={fetchEvaluasi}
               disabled={isFetching}
-              className="p-1 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 rounded cursor-pointer"
+              className="p-1 text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded cursor-pointer"
               title="Refresh Data Evaluasi"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
@@ -975,27 +1015,28 @@ export function EvaluasiView({
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-stretch">
         {/* 1. PALING ATAS (KIRI): Laporan Evaluasi Harian (Mirror Sheet Table Card) */}
-        <div className={`col-span-1 ${role === "yl" ? "md:col-span-12 w-full" : "md:col-span-9"} bg-white text-slate-900 rounded-2xl border-2 border-slate-200 shadow-md p-1 flex flex-col justify-between overflow-hidden h-full`}>
+        <div className={`col-span-1 ${role === "yl" ? "md:col-span-12 w-full" : "md:col-span-9"} bd-card text-neutral-900 dark:text-neutral-100 p-1 flex flex-col justify-between overflow-hidden h-full`}>
           {/* Header */}
-          <div className="py-1 px-2.5 bg-red-950 text-white flex flex-col sm:flex-row sm:items-center justify-between shrink-0 rounded-t-xl gap-1.5 sm:gap-0">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <h3 className="text-[11.5px] sm:text-[13px] font-black uppercase tracking-tight">
+          <div className="py-2.5 px-3 bg-[var(--bg-header)] text-[var(--ink)] border-b border-[var(--line)] flex flex-col sm:flex-row sm:items-center justify-between shrink-0 rounded-t-xl gap-1.5 sm:gap-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="bd-title uppercase tracking-tight flex items-center gap-1.5">
+                <MenuTitleIcon id="evaluasi" role={role === "yl" ? "yl" : "manager"} className="w-4 h-4 text-brand-600 dark:text-brand-400" />
                 {role === "yl"
                   ? `Laporan Evaluasi Harian Perkunjungan (${cleanYlName(currentYlName || "Yakult Lady")})`
                   : "Laporan Evaluasi Harian (Mirror Sheet)"}
               </h3>
-              <div className="text-[9.5px] bg-red-800 text-red-100 px-1.5 py-1 rounded font-bold flex items-center whitespace-nowrap">
+              <div className="text-[10px] bg-brand-500/15 text-brand-300 border border-brand-500/30 px-2 py-0.5 rounded-lg font-bold flex items-center whitespace-nowrap">
                 {role === "yl" ? "32 Kolom Lengkap" : showFullEvalTable ? "32 Kolom Lengkap" : "8 Kategori Utama"}
               </div>
               {role === "yl" && (
-                <div className="text-[9.5px] bg-red-900 border border-red-700/60 text-amber-200 px-1.5 py-0.5 rounded font-bold flex items-center whitespace-nowrap">
+                <div className="text-[10px] bg-amber-500/15 border border-amber-500/30 text-amber-300 px-2 py-0.5 rounded-lg font-bold flex items-center whitespace-nowrap">
                   {ylDailyEvaluation.totalKunjungan} Hari Kunjungan
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1.5">
               {isFullscreenEval && (
-                <div className="text-[9.5px] bg-emerald-600 text-white px-1.5 py-1 rounded font-bold animate-pulse flex items-center whitespace-nowrap">
+                <div className="text-[10px] bg-emerald-600/90 text-white px-2 py-0.5 rounded-lg font-bold animate-pulse flex items-center whitespace-nowrap">
                   Mode Slide Layar Penuh
                 </div>
               )}
@@ -1005,7 +1046,7 @@ export function EvaluasiView({
                     e.stopPropagation();
                     setShowFullEvalTable(!showFullEvalTable);
                   }}
-                  className="text-white bg-red-800 hover:bg-red-700 px-2 py-1 rounded transition-all flex items-center gap-1 font-bold text-[9.5px] cursor-pointer whitespace-nowrap"
+                  className="text-neutral-200 bg-neutral-800 hover:bg-neutral-700 hover:text-white border border-neutral-700 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 font-bold text-[10px] cursor-pointer whitespace-nowrap"
                 >
                   {showFullEvalTable ? "Sembunyikan Kolom" : "Tampilkan Tabel Lengkap"}
                 </button>
@@ -1013,19 +1054,19 @@ export function EvaluasiView({
               {!isFullscreenEval ? (
                 <button
                   onClick={() => setIsFullscreenEval(true)}
-                  className="text-white bg-red-800 hover:bg-red-700 px-2 py-1 rounded transition-all flex items-center gap-1 font-bold text-[9.5px] cursor-pointer whitespace-nowrap"
+                  className="text-neutral-200 bg-neutral-800 hover:bg-neutral-700 hover:text-white border border-neutral-700 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 font-bold text-[10px] cursor-pointer whitespace-nowrap"
                   title="Layar Penuh"
                 >
-                  <Maximize2 className="w-3 h-3" />
+                  <Maximize2 className="w-3 h-3 text-brand-400" />
                   <span>Slide Layar Penuh</span>
                 </button>
               ) : (
                 <button
                   onClick={() => setIsFullscreenEval(false)}
-                  className="text-white bg-red-800 hover:bg-red-700 px-2 py-1 rounded transition-all flex items-center gap-1 font-bold text-[9.5px] cursor-pointer whitespace-nowrap"
+                  className="text-neutral-200 bg-neutral-800 hover:bg-neutral-700 hover:text-white border border-neutral-700 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 font-bold text-[10px] cursor-pointer whitespace-nowrap"
                   title="Keluar Layar Penuh"
                 >
-                  <Minimize2 className="w-3 h-3" />
+                  <Minimize2 className="w-3 h-3 text-brand-400" />
                   <span>Keluar Slide</span>
                 </button>
               )}
@@ -1033,105 +1074,105 @@ export function EvaluasiView({
           </div>
 
           <div
-            className="overflow-x-auto overflow-y-visible flex-1 cursor-pointer bg-white"
+            className="overflow-x-auto overflow-y-visible flex-1 cursor-pointer bg-white dark:bg-neutral-900"
             onClick={() => {
               if (!isFullscreenEval) setIsFullscreenEval(true);
             }}
             title={isFullscreenEval ? "" : "Klik tabel untuk masuk Mode Presentasi Slide"}
           >
-            <table className="w-full text-left border-collapse relative text-[12px] sm:text-[13px] bg-white text-slate-800 font-sans tabular-nums font-semibold">
-              <thead className="sticky top-0 z-10 bg-blue-50 text-blue-900 text-[10.5px] sm:text-[11.5px] uppercase tracking-wider text-center font-bold">
+            <table className="w-full text-left border-collapse relative text-xs sm:text-sm bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 font-sans tabular-nums font-semibold">
+              <thead className="sticky top-0 z-10 bg-brand-50 dark:bg-brand-950/40 text-brand-900 dark:text-brand-300 text-[11px] sm:text-[11.5px] uppercase tracking-wider text-center font-bold">
                 {/* Row 0 */}
-                <tr className="border-b border-blue-200">
-                  <th rowSpan={3} className="py-1 px-1 border-r border-blue-200 min-w-[32px] text-slate-900">
+                <tr className="border-b border-brand-200 dark:border-brand-800">
+                  <th rowSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 min-w-[32px] text-neutral-900 dark:text-neutral-100">
                     {role === "yl" ? "Tanggal" : "Area"}
                   </th>
                   <th
                     rowSpan={3}
-                    className="py-1 px-1.5 border-r border-blue-200 text-left min-w-[75px] text-slate-900"
+                    className="py-1 px-1.5 border-r border-brand-200 dark:border-brand-800 text-left min-w-[75px] text-neutral-900 dark:text-neutral-100"
                   >
                     {role === "yl" ? "Hari" : "Nama YL"}
                   </th>
                   {isFullCols ? (
                     <>
-                      <th rowSpan={3} className="py-1 px-1 border-r border-blue-200 text-slate-700">
+                      <th rowSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-neutral-700 dark:text-neutral-300">
                         Rata Mgg Lalu
                       </th>
-                      <th colSpan={5} className="py-1 px-1 border-r border-blue-200 text-indigo-800">
+                      <th colSpan={5} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-indigo-800 dark:text-indigo-300">
                         Penjualan Hari Ini
                       </th>
-                      <th colSpan={6} className="py-1 px-1 border-r border-blue-200 text-emerald-800">
+                      <th colSpan={6} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-emerald-800 dark:text-emerald-300">
                         Bulan Ini
                       </th>
-                      <th rowSpan={3} className="py-1 px-1 border-r border-blue-200 text-slate-700">
+                      <th rowSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-neutral-700 dark:text-neutral-300">
                         Rata Mgg Ini
                       </th>
-                      <th rowSpan={3} className="py-1 px-1 border-r border-blue-200 text-slate-700">
+                      <th rowSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-neutral-700 dark:text-neutral-300">
                         vs Mgg Lalu
                       </th>
-                      <th colSpan={3} className="py-1 px-1 border-r border-blue-200 text-sky-800">
+                      <th colSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-sky-800 dark:text-sky-300">
                         Potensi Rmh
                       </th>
-                      <th colSpan={3} className="py-1 px-1 border-r border-blue-200 text-purple-800">
+                      <th colSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-purple-800 dark:text-purple-300">
                         RB vs Pelanggan
                       </th>
-                      <th colSpan={3} className="py-1 px-1 border-r border-blue-200 text-amber-800">
+                      <th colSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-amber-800 dark:text-amber-300">
                         Propaganda (PB)
                       </th>
-                      <th colSpan={3} className="py-1 px-1 border-r border-blue-200 text-teal-800">
+                      <th colSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-teal-800 dark:text-teal-300">
                         Sampah Botol
                       </th>
-                      <th colSpan={4} className="py-1 px-1 text-rose-800">
+                      <th colSpan={4} className="py-1 px-1 text-rose-800 dark:text-rose-300">
                         Barang Kembali (BB)
                       </th>
                     </>
                   ) : (
                     <>
-                      <th colSpan={5} className="py-1 px-1 border-r border-blue-200 text-indigo-800">
+                      <th colSpan={5} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-indigo-800 dark:text-indigo-300">
                         Penjualan Hari Ini
                       </th>
-                      <th rowSpan={3} className="py-1 px-1 border-r border-blue-200 text-emerald-800">
+                      <th rowSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-emerald-800 dark:text-emerald-300">
                         Rata Bulan Ini
                       </th>
-                      <th rowSpan={3} className="py-1 px-1 border-r border-blue-200 text-slate-700">
+                      <th rowSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-neutral-700 dark:text-neutral-300">
                         vs Mgg Lalu
                       </th>
-                      <th rowSpan={3} className="py-1 px-1 border-r border-blue-200 text-sky-800">
+                      <th rowSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-sky-800 dark:text-sky-300">
                         Persen Rumah
                       </th>
-                      <th rowSpan={3} className="py-1 px-1 border-r border-blue-200 text-purple-800">
+                      <th rowSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-purple-800 dark:text-purple-300">
                         Persen RB vs PLG
                       </th>
-                      <th colSpan={2} className="py-1 px-1 border-r border-blue-200 text-amber-800">
+                      <th colSpan={2} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-amber-800 dark:text-amber-300">
                         PB Hari Ini
                       </th>
-                      <th rowSpan={3} className="py-1 px-1 border-r border-blue-200 text-teal-800">
+                      <th rowSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-teal-800 dark:text-teal-300">
                         Akm Sampah
                       </th>
-                      <th rowSpan={3} className="py-1 px-1 text-rose-800">
+                      <th rowSpan={3} className="py-1 px-1 text-rose-800 dark:text-rose-300">
                         Akm BB
                       </th>
                     </>
                   )}
                 </tr>
                 {/* Row 1 */}
-                <tr className="border-b border-blue-200">
+                <tr className="border-b border-brand-200 dark:border-brand-800">
                   {/* Penjualan Hari Ini */}
-                  <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-indigo-800 font-bold">
+                  <th rowSpan={2} className="py-0.5 px-1 border-r border-[var(--line)] bd-v-yo font-bold">
                     YO
                   </th>
-                  <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-indigo-800 font-bold">
+                  <th rowSpan={2} className="py-0.5 px-1 border-r border-[var(--line)] bd-v-om font-bold">
                     OM
                   </th>
-                  <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-indigo-800 font-bold">
+                  <th rowSpan={2} className="py-0.5 px-1 border-r border-[var(--line)] bd-v-os font-bold">
                     OS
                   </th>
-                  <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-indigo-800 font-bold">
+                  <th rowSpan={2} className="py-0.5 px-1 border-r border-[var(--line)] bd-v-yt font-bold">
                     YT
                   </th>
                   <th
                     rowSpan={2}
-                    className="py-0.5 px-1 border-r border-blue-200 font-bold text-slate-900 bg-blue-100/70"
+                    className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 font-bold text-neutral-900 dark:text-neutral-100 bg-brand-100/70 dark:bg-brand-900/50"
                   >
                     ALL
                   </th>
@@ -1141,123 +1182,123 @@ export function EvaluasiView({
                       {/* Bulan Ini */}
                       <th
                         rowSpan={2}
-                        className="py-0.5 px-1 border-r border-blue-200 font-bold text-slate-900 bg-blue-100/70"
+                        className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 font-bold text-neutral-900 dark:text-neutral-100 bg-brand-100/70 dark:bg-brand-900/50"
                       >
                         Akm
                       </th>
-                      <th colSpan={5} className="py-0.5 px-1 border-r border-blue-200 text-emerald-800 font-bold">
+                      <th colSpan={5} className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 text-emerald-800 dark:text-emerald-300 font-bold">
                         Rata-Rata (Rt2)
                       </th>
 
                       {/* Potensi Rmh */}
-                      <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-sky-800 font-bold">
+                      <th rowSpan={2} className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 text-sky-800 dark:text-sky-300 font-bold">
                         Hari
                       </th>
-                      <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-sky-800 font-bold">
+                      <th rowSpan={2} className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 text-sky-800 dark:text-sky-300 font-bold">
                         Akm
                       </th>
                       <th
                         rowSpan={2}
-                        className="py-0.5 px-1 border-r border-blue-200 font-bold text-slate-900 bg-blue-100/70"
+                        className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 font-bold text-neutral-900 dark:text-neutral-100 bg-brand-100/70 dark:bg-brand-900/50"
                       >
                         %
                       </th>
 
                       {/* RB vs Pelanggan */}
-                      <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-purple-800 font-bold">
+                      <th rowSpan={2} className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 text-purple-800 dark:text-purple-300 font-bold">
                         Pelanggan
                       </th>
-                      <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-purple-800 font-bold">
+                      <th rowSpan={2} className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 text-purple-800 dark:text-purple-300 font-bold">
                         RB
                       </th>
                       <th
                         rowSpan={2}
-                        className="py-0.5 px-1 border-r border-blue-200 font-bold text-slate-900 bg-blue-100/70"
+                        className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 font-bold text-neutral-900 dark:text-neutral-100 bg-brand-100/70 dark:bg-brand-900/50"
                       >
                         %
                       </th>
 
                       {/* Propaganda Baru */}
-                      <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-amber-800 font-bold">
+                      <th rowSpan={2} className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 text-amber-800 dark:text-amber-300 font-bold">
                         Pagi
                       </th>
-                      <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-amber-800 font-bold">
+                      <th rowSpan={2} className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 text-amber-800 dark:text-amber-300 font-bold">
                         Sore
                       </th>
                       <th
                         rowSpan={2}
-                        className="py-0.5 px-1 border-r border-blue-200 font-bold text-slate-900 bg-blue-100/70"
+                        className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 font-bold text-neutral-900 dark:text-neutral-100 bg-brand-100/70 dark:bg-brand-900/50"
                       >
                         Akm
                       </th>
 
                       {/* Sampah Botol */}
-                      <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-teal-800 font-bold">
+                      <th rowSpan={2} className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 text-teal-800 dark:text-teal-300 font-bold">
                         Hari
                       </th>
-                      <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-teal-800 font-bold">
+                      <th rowSpan={2} className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 text-teal-800 dark:text-teal-300 font-bold">
                         Akm
                       </th>
                       <th
                         rowSpan={2}
-                        className="py-0.5 px-1 border-r border-blue-200 font-bold text-slate-900 bg-blue-100/70"
+                        className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 font-bold text-neutral-900 dark:text-neutral-100 bg-brand-100/70 dark:bg-brand-900/50"
                       >
                         vs 900
                       </th>
 
                       {/* Kembali Botol */}
-                      <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-rose-800 font-bold">
+                      <th rowSpan={2} className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 text-rose-800 dark:text-rose-300 font-bold">
                         Hari
                       </th>
                       <th
                         rowSpan={2}
-                        className="py-0.5 px-1 border-r border-blue-200 font-bold text-slate-900 bg-blue-100/70"
+                        className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 font-bold text-neutral-900 dark:text-neutral-100 bg-brand-100/70 dark:bg-brand-900/50"
                       >
                         %
                       </th>
-                      <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-rose-800 font-bold">
+                      <th rowSpan={2} className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 text-rose-800 dark:text-rose-300 font-bold">
                         Akm
                       </th>
-                      <th rowSpan={2} className="py-0.5 px-1 text-slate-900 font-bold bg-blue-100/70">
+                      <th rowSpan={2} className="py-0.5 px-1 text-neutral-900 dark:text-neutral-100 font-bold bg-brand-100/70 dark:bg-brand-900/50">
                         %
                       </th>
                     </>
                   ) : (
                     <>
-                      <th rowSpan={2} className="py-0.5 px-1 border-r border-blue-200 text-amber-800 font-bold">
+                      <th rowSpan={2} className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 text-amber-800 dark:text-amber-300 font-bold">
                         Pagi
                       </th>
-                      <th rowSpan={2} className="py-0.5 px-1 text-amber-800 font-bold">
+                      <th rowSpan={2} className="py-0.5 px-1 text-amber-800 dark:text-amber-300 font-bold">
                         Sore
                       </th>
                     </>
                   )}
                 </tr>
                 {/* Row 2 */}
-                <tr className="border-b border-blue-200">
+                <tr className="border-b border-brand-200 dark:border-brand-800">
                   {isFullCols && (
                     <>
                       {/* Rata-Rata Bulan Ini */}
-                      <th className="py-0.5 px-1 border-r border-blue-200 text-emerald-800 font-bold">
+                      <th className="py-0.5 px-1 border-r border-[var(--line)] bd-v-yo font-bold">
                         YO
                       </th>
-                      <th className="py-0.5 px-1 border-r border-blue-200 text-emerald-800 font-bold">
+                      <th className="py-0.5 px-1 border-r border-[var(--line)] bd-v-om font-bold">
                         OM
                       </th>
-                      <th className="py-0.5 px-1 border-r border-blue-200 text-emerald-800 font-bold">
+                      <th className="py-0.5 px-1 border-r border-[var(--line)] bd-v-os font-bold">
                         OS
                       </th>
-                      <th className="py-0.5 px-1 border-r border-blue-200 text-emerald-800 font-bold">
+                      <th className="py-0.5 px-1 border-r border-[var(--line)] bd-v-yt font-bold">
                         YT
                       </th>
-                      <th className="py-0.5 px-1 border-r border-blue-200 font-bold text-slate-900 bg-blue-100/70">
+                      <th className="py-0.5 px-1 border-r border-brand-200 dark:border-brand-800 font-bold text-neutral-900 dark:text-neutral-100 bg-brand-100/70 dark:bg-brand-900/50">
                         ALL
                       </th>
                     </>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 bg-white text-slate-800">
+              <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200">
                 {(() => {
                   const maxCols = {
                     c7: -1,
@@ -1294,7 +1335,7 @@ export function EvaluasiView({
                       <tr>
                         <td
                           colSpan={isFullCols ? 32 : visibleCols.length}
-                          className="py-8 text-center text-xs font-semibold text-slate-500"
+                          className="py-8 text-center text-xs font-semibold text-neutral-500 dark:text-neutral-400"
                         >
                           {role === "yl"
                             ? "Belum ada data kunjungan pada periode ini."
@@ -1320,14 +1361,14 @@ export function EvaluasiView({
                     return (
                       <tr
                         key={rIdx}
-                        className={`transition-colors border-b border-slate-200 ${
+                        className={`transition-colors border-b border-neutral-200 dark:border-neutral-800 ${
                           isToday
                             ? "bg-amber-50/90 dark:bg-amber-950/40 font-bold"
                             : isCurrentYl
                             ? "bg-amber-50/80 dark:bg-amber-950/30 font-bold"
                             : isSunday
-                            ? "bg-slate-50/70 text-slate-500"
-                            : "hover:bg-slate-50"
+                            ? "bg-neutral-50/70 dark:bg-neutral-800/70 text-neutral-500 dark:text-neutral-400"
+                            : "hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
                         }`}
                       >
                         {(row || []).map((val: any, cIdx: number) => {
@@ -1358,34 +1399,40 @@ export function EvaluasiView({
                           return (
                             <td
                               key={cIdx}
-                              className={`py-0.5 px-1 border-r border-slate-100 text-center whitespace-nowrap ${
+                              className={`py-0.5 px-1 border-r border-neutral-100 dark:border-neutral-800 text-center whitespace-nowrap ${
                                 cIdx === 1
                                   ? (role === "yl"
                                       ? val === "Min"
-                                        ? "text-rose-600 font-bold"
-                                        : "text-slate-700 font-semibold"
-                                      : "text-left font-sans font-bold text-slate-900 min-w-[70px]")
+                                        ? "text-rose-600 dark:text-rose-400 font-bold"
+                                        : "text-neutral-700 dark:text-neutral-300 font-semibold"
+                                      : "text-left font-sans font-bold text-neutral-900 dark:text-neutral-100 min-w-[70px]")
                                   : cIdx === 0 && role === "yl"
-                                  ? "font-semibold text-slate-800"
+                                  ? "font-semibold text-neutral-800 dark:text-neutral-200"
                                   : "font-sans tabular-nums font-semibold"
-                              } ${isTopPerf ? "bg-emerald-50/50 font-black text-emerald-700" : ""}`}
+                              } ${isTopPerf ? "bg-emerald-50/50 dark:bg-emerald-950/40 font-bold text-emerald-700 dark:text-emerald-300" : ""}`}
                             >
                               {cIdx === 0 && isToday ? (
                                 <span className="flex items-center justify-center gap-1">
                                   <span>{displayVal}</span>
-                                  <span className="text-[9px] bg-red-600 text-white font-black px-1 rounded-sm">
+                                  <span className="text-[9px] bg-red-600 text-white font-bold px-1 rounded-sm">
                                     Hari Ini
                                   </span>
                                 </span>
                               ) : cIdx === 1 && isCurrentYl ? (
                                 <span className="flex items-center gap-1">
                                   <span>{displayVal}</span>
-                                  <span className="text-[9px] bg-red-600 text-white font-black px-1 rounded-sm">
+                                  <span className="text-[9px] bg-red-600 text-white font-bold px-1 rounded-sm">
                                     Anda
                                   </span>
                                 </span>
                               ) : typeof displayVal === "number" ? (
-                                [15, 18, 21, 29, 31].includes(cIdx) ? (
+                                [29, 31].includes(cIdx) ? (
+                                  <span className={`font-bold ${bbColorClass(displayVal)}`}>{displayVal}%</span>
+                                ) : cIdx === 15 && displayVal > 0 ? (
+                                  <span className={`font-bold ${vsPctColorClass(displayVal)}`}>{displayVal}%</span>
+                                ) : [2, 13, 14].includes(cIdx) && displayVal > 0 ? (
+                                  <span className={`font-bold ${rata2ColorClass(displayVal)}`}>{displayVal.toLocaleString("id-ID")}</span>
+                                ) : [15, 18, 21].includes(cIdx) ? (
                                   `${displayVal}%`
                                 ) : cIdx === 27 && displayVal > 0 ? (
                                   `+${displayVal.toLocaleString("id-ID")}`
@@ -1403,7 +1450,7 @@ export function EvaluasiView({
                   });
                 })()}
                 {activeTotalRow && (
-                  <tr className="bg-slate-50 font-black border-t-2 border-slate-300 text-slate-900">
+                  <tr className="bg-neutral-50 dark:bg-neutral-800/40 font-bold border-t-2 border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100">
                     {(activeTotalRow || []).map((val: any, cIdx: number) => {
                       const visibleCols = [0, 1, 3, 4, 5, 6, 7, 13, 15, 18, 21, 22, 23, 26, 30];
                       if (!isFullCols && !visibleCols.includes(cIdx)) return null;
@@ -1411,12 +1458,18 @@ export function EvaluasiView({
                       return (
                         <td
                           key={cIdx}
-                          className={`py-0.5 px-1 border-r border-slate-200 text-center whitespace-nowrap ${
+                          className={`py-0.5 px-1 border-r border-neutral-200 dark:border-neutral-800 text-center whitespace-nowrap ${
                             cIdx === 1 ? "text-left font-sans" : "font-sans tabular-nums"
                           }`}
                         >
                           {typeof displayVal === "number"
-                            ? [15, 18, 21, 29, 31].includes(cIdx)
+                            ? [29, 31].includes(cIdx)
+                              ? <span className={`font-bold ${bbColorClass(displayVal)}`}>{displayVal}%</span>
+                              : cIdx === 15 && displayVal > 0
+                              ? <span className={`font-bold ${vsPctColorClass(displayVal)}`}>{displayVal}%</span>
+                              : [13, 14].includes(cIdx) && displayVal > 0
+                              ? <span className={`font-bold ${rata2ColorClass(displayVal)}`}>{displayVal.toLocaleString("id-ID")}</span>
+                              : [15, 18, 21].includes(cIdx)
                               ? `${displayVal}%`
                               : cIdx === 27 && displayVal > 0
                               ? `+${displayVal.toLocaleString("id-ID")}`
@@ -1433,8 +1486,8 @@ export function EvaluasiView({
 
           {/* Action Footer */}
           {role !== "yl" && (
-            <div className="bg-slate-50 py-1 px-2 text-xs font-bold flex flex-wrap items-center justify-between gap-1 border-t border-slate-200 shrink-0">
-              <div className="flex items-center gap-1 text-[9.5px] text-slate-600">
+            <div className="bg-neutral-50 dark:bg-neutral-800/40 py-1 px-2 text-xs font-bold flex flex-wrap items-center justify-between gap-1 border-t border-neutral-200 dark:border-neutral-800 shrink-0">
+              <div className="flex items-center gap-1 text-[10px] text-neutral-600 dark:text-neutral-400">
                 <span className="inline-block w-2.5 h-2.5 bg-emerald-200 border border-emerald-400 rounded mr-0.5" />
                 Sel hijau = Performa terbaik harian.
               </div>
@@ -1446,201 +1499,201 @@ export function EvaluasiView({
         {role !== "yl" && (
           <>
             {/* 2. PALING ATAS (KANAN): RINGKASAN PRESTASI */}
-            <div className="col-span-1 md:col-span-3 bg-white rounded-2xl p-1.5 sm:p-2 border-2 border-slate-200 shadow-md flex flex-col justify-between h-full text-slate-900">
-          <div className="flex items-center justify-between shrink-0 mb-1 pb-1 border-b border-slate-100">
-            <h3 className="text-[13px] sm:text-[14px] font-black text-slate-900 uppercase tracking-tight flex items-center gap-1">
-              <Award className="w-3 h-3 text-red-600" /> Ringkasan Prestasi
+            <div className="col-span-1 md:col-span-3 bg-white dark:bg-neutral-900 rounded-2xl p-1.5 sm:p-2 border-2 border-neutral-200 dark:border-neutral-800 shadow-md flex flex-col justify-between h-full text-neutral-900 dark:text-neutral-100">
+          <div className="flex items-center justify-between shrink-0 mb-1 pb-1 border-b border-neutral-100 dark:border-neutral-800">
+            <h3 className="text-sm sm:text-[14px] font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-tight flex items-center gap-1.5 min-w-0">
+              <Award className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" /> Ringkasan Prestasi
             </h3>
-            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1 py-0.2 rounded">8 Block</span>
+            <span className="text-[10px] font-bold text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0 ml-2">8 Kategori</span>
           </div>
 
           <div className="grid grid-cols-2 gap-1 flex-1 items-stretch">
             {/* Block 1 */}
-            <div className="bg-white p-1 rounded-md border border-red-200 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-slate-900">
-              <div className="flex items-center justify-between leading-none">
-                <TrendingUp className="w-3 h-3 text-red-600 shrink-0" />
-                <span className="text-[9.5px] font-black uppercase tracking-tight text-red-800 bg-red-100 border border-red-200 px-0.5 py-0 rounded">
+            <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-brand-200 dark:border-brand-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
+              <div className="flex items-center justify-between gap-1 leading-none">
+                <TrendingUp className="w-3 h-3 text-brand-600 dark:text-brand-400 shrink-0" />
+                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-brand-800 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-800 px-0.5 py-0 rounded">
                   Hari Ini
                 </span>
               </div>
-              <p className="text-[11px] font-extrabold text-slate-600 mt-0.5 truncate leading-none">Penjualan</p>
+              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">Penjualan</p>
               {evaluasiBlocks?.block1 ? (
                 <div className="mt-0.5 leading-tight">
-                  <p className="text-[12px] font-black text-slate-950 truncate">
+                  <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
                     {cleanYlName(evaluasiBlocks!.block1.nama)}
                   </p>
-                  <p className="text-[13px] font-black text-red-600">
+                  <p className="text-sm font-black text-neutral-900 dark:text-white font-mono tabular-nums">
                     {evaluasiBlocks!.block1.jualHariIni}{" "}
-                    <span className="text-[10px] font-semibold text-slate-500">btl</span>
+                    <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">btl</span>
                   </p>
                 </div>
               ) : (
-                <p className="text-[11px] text-slate-400 italic">Memuat...</p>
+                <p className="text-[11px] text-neutral-400 italic">Memuat...</p>
               )}
             </div>
 
             {/* Block 2 */}
-            <div className="bg-white p-1 rounded-md border border-amber-200 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-slate-900">
-              <div className="flex items-center justify-between leading-none">
-                <Clock className="w-3 h-3 text-amber-600 shrink-0" />
-                <span className="text-[9.5px] font-black uppercase tracking-tight text-amber-800 bg-amber-100 border border-amber-200 px-0.5 py-0 rounded">
+            <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-amber-200 dark:border-amber-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
+              <div className="flex items-center justify-between gap-1 leading-none">
+                <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 border border-amber-200 dark:border-amber-800 px-0.5 py-0 rounded">
                   Bulan Ini
                 </span>
               </div>
-              <p className="text-[11px] font-extrabold text-slate-600 mt-0.5 truncate leading-none">Rata-Rata</p>
+              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">Rata-Rata</p>
               {evaluasiBlocks?.block2 ? (
                 <div className="mt-0.5 leading-tight">
-                  <p className="text-[12px] font-black text-slate-950 truncate">
+                  <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
                     {cleanYlName(evaluasiBlocks!.block2.nama)}
                   </p>
-                  <p className="text-[13px] font-black text-amber-600">
+                  <p className="text-sm font-black text-neutral-900 dark:text-white font-mono tabular-nums">
                     {Math.trunc(evaluasiBlocks!.block2.rata2BulanBerjalan)}{" "}
-                    <span className="text-[10px] font-semibold text-slate-500">btl/hr</span>
+                    <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">btl/hr</span>
                   </p>
                 </div>
               ) : (
-                <p className="text-[11px] text-slate-400 italic">Memuat...</p>
+                <p className="text-[11px] text-neutral-400 italic">Memuat...</p>
               )}
             </div>
 
             {/* Block 3 */}
-            <div className="bg-white p-1 rounded-md border border-emerald-200 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-slate-900">
-              <div className="flex items-center justify-between leading-none">
-                <Zap className="w-3 h-3 text-emerald-600 shrink-0" />
-                <span className="text-[9.5px] font-black uppercase tracking-tight text-emerald-800 bg-emerald-100 border border-emerald-200 px-0.5 py-0 rounded">
+            <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-emerald-200 dark:border-emerald-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
+              <div className="flex items-center justify-between gap-1 leading-none">
+                <Zap className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 px-0.5 py-0 rounded">
                   vs Mgg
                 </span>
               </div>
-              <p className="text-[11px] font-extrabold text-slate-600 mt-0.5 truncate leading-none">vs Mgg Lalu</p>
+              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">vs Mgg Lalu</p>
               {evaluasiBlocks?.block3 ? (
                 <div className="mt-0.5 leading-tight">
-                  <p className="text-[12px] font-black text-slate-950 truncate">
+                  <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
                     {cleanYlName(evaluasiBlocks!.block3.nama)}
                   </p>
-                  <p className="text-[13px] font-black text-emerald-600">
+                  <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
                     +{Math.trunc(evaluasiBlocks!.block3.vsMingguLaluPct)}%
                   </p>
                 </div>
               ) : (
-                <p className="text-[11px] text-slate-400 italic">Memuat...</p>
+                <p className="text-[11px] text-neutral-400 italic">Memuat...</p>
               )}
             </div>
 
             {/* Block 4 */}
-            <div className="bg-white p-1 rounded-md border border-blue-200 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-slate-900">
-              <div className="flex items-center justify-between leading-none">
-                <Home className="w-3 h-3 text-blue-600 shrink-0" />
-                <span className="text-[9.5px] font-black uppercase tracking-tight text-blue-800 bg-blue-100 border border-blue-200 px-0.5 py-0 rounded">
+            <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-brand-200 dark:border-brand-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
+              <div className="flex items-center justify-between gap-1 leading-none">
+                <Home className="w-3 h-3 text-brand-600 dark:text-brand-400 shrink-0" />
+                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-brand-800 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-800 px-0.5 py-0 rounded">
                   Potensi
                 </span>
               </div>
-              <p className="text-[11px] font-extrabold text-slate-600 mt-0.5 truncate leading-none">% Rumah</p>
+              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">% Rumah</p>
               {evaluasiBlocks?.block4 ? (
                 <div className="mt-0.5 leading-tight">
-                  <p className="text-[12px] font-black text-slate-950 truncate">
+                  <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
                     {cleanYlName(evaluasiBlocks!.block4.nama)}
                   </p>
-                  <p className="text-[13px] font-black text-blue-600">
+                  <p className="text-sm font-black text-brand-600 dark:text-brand-400 font-mono tabular-nums">
                     {Math.trunc(evaluasiBlocks!.block4.persenRumah)}%
                   </p>
                 </div>
               ) : (
-                <p className="text-[11px] text-slate-400 italic">Memuat...</p>
+                <p className="text-[11px] text-neutral-400 italic">Memuat...</p>
               )}
             </div>
 
             {/* Block 5 */}
-            <div className="bg-white p-1 rounded-md border border-purple-200 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-slate-900">
-              <div className="flex items-center justify-between leading-none">
-                <UserCheck className="w-3 h-3 text-purple-600 shrink-0" />
-                <span className="text-[9.5px] font-black uppercase tracking-tight text-purple-800 bg-purple-100 border border-purple-200 px-0.5 py-0 rounded">
+            <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-purple-200 dark:border-purple-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
+              <div className="flex items-center justify-between gap-1 leading-none">
+                <UserCheck className="w-3 h-3 text-purple-600 dark:text-purple-400 shrink-0" />
+                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-purple-800 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/50 border border-purple-200 dark:border-purple-800 px-0.5 py-0 rounded">
                   Kunjungan
                 </span>
               </div>
-              <p className="text-[11px] font-extrabold text-slate-600 mt-0.5 truncate leading-none">% RB/PLG</p>
+              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">% RB/PLG</p>
               {evaluasiBlocks?.block5 ? (
                 <div className="mt-0.5 leading-tight">
-                  <p className="text-[12px] font-black text-slate-950 truncate">
+                  <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
                     {cleanYlName(evaluasiBlocks!.block5.nama)}
                   </p>
-                  <p className="text-[13px] font-black text-purple-600">
+                  <p className="text-sm font-black text-purple-600 dark:text-purple-400 font-mono tabular-nums">
                     {Math.trunc(evaluasiBlocks!.block5.persenRbVsPlg)}%
                   </p>
                 </div>
               ) : (
-                <p className="text-[11px] text-slate-400 italic">Memuat...</p>
+                <p className="text-[11px] text-neutral-400 italic">Memuat...</p>
               )}
             </div>
 
             {/* Block 6 */}
-            <div className="bg-white p-1 rounded-md border border-indigo-200 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-slate-900">
-              <div className="flex items-center justify-between leading-none">
-                <Megaphone className="w-3 h-3 text-indigo-600 shrink-0" />
-                <span className="text-[9.5px] font-black uppercase tracking-tight text-indigo-800 bg-indigo-100 border border-indigo-200 px-0.5 py-0 rounded">
+            <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-indigo-200 dark:border-indigo-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
+              <div className="flex items-center justify-between gap-1 leading-none">
+                <Megaphone className="w-3 h-3 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-indigo-800 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 px-0.5 py-0 rounded">
                   Propaganda
                 </span>
               </div>
-              <p className="text-[11px] font-extrabold text-slate-600 mt-0.5 truncate leading-none">PB Hari Ini</p>
+              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">PB Hari Ini</p>
               {evaluasiBlocks?.block6 ? (
                 <div className="mt-0.5 leading-tight">
-                  <p className="text-[12px] font-black text-slate-950 truncate">
+                  <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
                     {cleanYlName(evaluasiBlocks!.block6.nama)}
                   </p>
-                  <p className="text-[13px] font-black text-indigo-600">
+                  <p className="text-sm font-black text-neutral-900 dark:text-white font-mono tabular-nums">
                     {evaluasiBlocks!.block6.propagandaHariIni}{" "}
-                    <span className="text-[10px] font-semibold text-slate-500">PB</span>
+                    <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">PB</span>
                   </p>
                 </div>
               ) : (
-                <p className="text-[11px] text-slate-400 italic">Memuat...</p>
+                <p className="text-[11px] text-neutral-400 italic">Memuat...</p>
               )}
             </div>
 
             {/* Block 7 */}
-            <div className="bg-white p-1 rounded-md border border-teal-200 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-slate-900">
-              <div className="flex items-center justify-between leading-none">
-                <Trash2 className="w-3 h-3 text-teal-600 shrink-0" />
-                <span className="text-[9.5px] font-black uppercase tracking-tight text-teal-800 bg-teal-100 border border-teal-200 px-0.5 py-0 rounded">
+            <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-teal-200 dark:border-teal-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
+              <div className="flex items-center justify-between gap-1 leading-none">
+                <Trash2 className="w-3 h-3 text-teal-600 dark:text-teal-400 shrink-0" />
+                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-teal-800 dark:text-teal-300 bg-teal-100 dark:bg-teal-900/50 border border-teal-200 dark:border-teal-800 px-0.5 py-0 rounded">
                   Lingkungan
                 </span>
               </div>
-              <p className="text-[11px] font-extrabold text-slate-600 mt-0.5 truncate leading-none">Akm Sampah</p>
+              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">Akm Sampah</p>
               {evaluasiBlocks?.block7 ? (
                 <div className="mt-0.5 leading-tight">
-                  <p className="text-[12px] font-black text-slate-950 truncate">
+                  <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
                     {cleanYlName(evaluasiBlocks!.block7.nama)}
                   </p>
-                  <p className="text-[13px] font-black text-teal-600">
+                  <p className="text-sm font-black text-neutral-900 dark:text-white font-mono tabular-nums">
                     {evaluasiBlocks!.block7.sampahBotol}{" "}
-                    <span className="text-[10px] font-semibold text-slate-500">btl</span>
+                    <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">btl</span>
                   </p>
                 </div>
               ) : (
-                <p className="text-[11px] text-slate-400 italic">Memuat...</p>
+                <p className="text-[11px] text-neutral-400 italic">Memuat...</p>
               )}
             </div>
 
             {/* Block 8 */}
-            <div className="bg-white p-1 rounded-md border border-emerald-200 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-slate-900">
-              <div className="flex items-center justify-between leading-none">
-                <CheckCircle className="w-3 h-3 text-emerald-600 shrink-0" />
-                <span className="text-[9.5px] font-black uppercase tracking-tight text-emerald-800 bg-emerald-100 border border-emerald-200 px-0.5 py-0 rounded">
+            <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-emerald-200 dark:border-emerald-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
+              <div className="flex items-center justify-between gap-1 leading-none">
+                <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 px-0.5 py-0 rounded">
                   Retur
                 </span>
               </div>
-              <p className="text-[11px] font-extrabold text-slate-600 mt-0.5 truncate leading-none">Akm BB</p>
+              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">Akm BB</p>
               {evaluasiBlocks?.block8 ? (
                 <div className="mt-0.5 leading-tight">
-                  <p className="text-[12px] font-black text-slate-950 truncate">
+                  <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
                     {cleanYlName(evaluasiBlocks!.block8.nama)}
                   </p>
-                  <p className="text-[13px] font-black text-emerald-600">
+                  <p className="text-sm font-black text-neutral-900 dark:text-white font-mono tabular-nums">
                     {((evaluasiBlocks!.block8 as any).akmBb ?? evaluasiBlocks!.block8.bb)}{" "}
-                    <span className="text-[10px] font-semibold text-slate-500">btl</span>
+                    <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">btl</span>
                   </p>
                 </div>
               ) : (
-                <p className="text-[11px] text-slate-400 italic">Memuat...</p>
+                <p className="text-[11px] text-neutral-400 italic">Memuat...</p>
               )}
             </div>
           </div>
@@ -1649,87 +1702,87 @@ export function EvaluasiView({
         {/* 3. BARIS KEDUA: PERFORMA TERBAIK & PERFORMA TURUN */}
         <div className="col-span-1 md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-2">
           {/* Top Performer Card */}
-          <div className="bg-white dark:bg-white rounded-xl p-2 sm:p-2.5 border-2 border-emerald-300 shadow-sm text-slate-900 flex flex-col justify-between">
+          <div className="bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl p-2 sm:p-2.5 border-2 border-emerald-300/70 dark:border-emerald-800 shadow-sm text-neutral-900 dark:text-neutral-100 flex flex-col justify-between">
             <div>
-              <h3 className="text-[13px] sm:text-[14px] font-black text-emerald-800 uppercase tracking-tight mb-1 flex items-center gap-1.5">
+              <h3 className="text-sm sm:text-[14px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-tight mb-1 flex items-center gap-1.5">
                 🏆 PERFORMA TERBAIK
               </h3>
               {top ? (
-                <div className="text-[12px] sm:text-[13px] text-slate-800 space-y-0.5 leading-snug">
+                <div className="text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 space-y-0.5 leading-snug">
                   <p>
-                    <strong className="font-black text-slate-950">{cleanYlName(top.nama)}</strong> memimpin
+                    <strong className="font-bold text-neutral-950 dark:text-white">{cleanYlName(top.nama)}</strong> memimpin
                     dengan memenangkan{" "}
-                    <span className="font-black text-emerald-700">{(top as any).winCount || 0} dari 8 kategori</span>.
+                    <span className="font-bold text-emerald-700 dark:text-emerald-300">{(top as any).winCount || 0} dari 8 kategori</span>.
                   </p>
                   {(top as any).wonCategories && (top as any).wonCategories.length > 0 && (
-                    <p className="text-slate-600 text-[12px]">
+                    <p className="text-neutral-600 dark:text-neutral-400 text-xs">
                       Keunggulan di:{" "}
-                      <strong className="font-bold text-emerald-800">{(top as any).wonCategories.join(", ")}</strong>.
+                      <strong className="font-bold text-emerald-800 dark:text-emerald-300">{(top as any).wonCategories.join(", ")}</strong>.
                     </p>
                   )}
                 </div>
               ) : (
-                <p className="text-[12px] text-emerald-700 italic">Memuat data...</p>
+                <p className="text-xs text-emerald-700 dark:text-emerald-300 italic">Memuat data...</p>
               )}
             </div>
-            <div className="text-[11.5px] font-bold text-emerald-900 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 mt-1">
+            <div className="text-[11.5px] font-bold text-emerald-900 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-950/60 px-2 py-1 rounded-md border border-emerald-200 dark:border-emerald-800 mt-1">
               👍 Pertahankan efisiensi kunjungan dan rute di potensi andalan Anda!
             </div>
           </div>
 
           {/* Need Improvement Card */}
-          <div className="bg-white dark:bg-white rounded-xl p-2 sm:p-2.5 border-2 border-rose-300 shadow-sm text-slate-900 flex flex-col justify-between">
+          <div className="bg-rose-50/70 dark:bg-rose-950/30 rounded-xl p-2 sm:p-2.5 border-2 border-rose-300/70 dark:border-rose-800 shadow-sm text-neutral-900 dark:text-neutral-100 flex flex-col justify-between">
             <div>
-              <h3 className="text-[13px] sm:text-[14px] font-black text-rose-800 uppercase tracking-tight mb-1 flex items-center gap-1.5">
+              <h3 className="text-sm sm:text-[14px] font-bold text-rose-800 dark:text-rose-300 uppercase tracking-tight mb-1 flex items-center gap-1.5">
                 ⚠️ PERFORMA TURUN
               </h3>
               {needImprovement ? (
-                <div className="text-[12px] sm:text-[13px] text-slate-800 space-y-0.5 leading-snug">
+                <div className="text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 space-y-0.5 leading-snug">
                   <p>
-                    <strong className="font-black text-slate-950">{cleanYlName(needImprovement.nama)}</strong> berada
+                    <strong className="font-bold text-neutral-950 dark:text-white">{cleanYlName(needImprovement.nama)}</strong> berada
                     di posisi terbawah pada{" "}
-                    <span className="font-black text-rose-700">
+                    <span className="font-bold text-rose-700 dark:text-rose-300">
                       {(needImprovement as any).loseCount || 0} dari 8 kategori
                     </span>
                     .
                   </p>
                   {(needImprovement as any).lostCategories && (needImprovement as any).lostCategories.length > 0 && (
-                    <p className="text-slate-600 text-[10.5px]">
+                    <p className="text-neutral-600 dark:text-neutral-400 text-[11px]">
                       Kelemahan di:{" "}
-                      <strong className="font-bold text-rose-800">
+                      <strong className="font-bold text-rose-800 dark:text-rose-300">
                         {(needImprovement as any).lostCategories.join(", ")}
                       </strong>
                       .
                     </p>
                   )}
                   {highestBB && (
-                    <p className="text-[12px]">
+                    <p className="text-xs">
                       Balik Botol (BB) terbanyak:{" "}
-                      <strong className="font-black text-slate-950">{cleanYlName(highestBB.nama)}</strong> (
+                      <strong className="font-bold text-neutral-950 dark:text-white">{cleanYlName(highestBB.nama)}</strong> (
                       {highestBB.bb} btl).
                     </p>
                   )}
                 </div>
               ) : (
-                <p className="text-[12px] text-rose-700 italic">Memuat data...</p>
+                <p className="text-xs text-rose-700 dark:text-rose-300 italic">Memuat data...</p>
               )}
             </div>
-            <div className="text-[11.5px] font-bold text-rose-900 bg-rose-50 px-2 py-1 rounded-md border border-rose-200 mt-1">
+            <div className="text-[11.5px] font-bold text-rose-900 dark:text-rose-300 bg-rose-100/60 dark:bg-rose-950/60 px-2 py-1 rounded-md border border-rose-200 dark:border-rose-800 mt-1">
               🚨 Tindakan: Review rute drop-off dan sisa stock harian agar botol retur tidak membengkak!
             </div>
           </div>
         </div>
 
         {/* 4. BARIS KETIGA: AI DEEP EVALUATION CARD (Paling Bawah) */}
-        <div className="col-span-1 md:col-span-12 bg-white dark:bg-white rounded-2xl p-3.5 sm:p-4 border-2 border-indigo-200 shadow-md text-slate-900 relative overflow-hidden">
+        <div className="col-span-1 md:col-span-12 bg-indigo-50/70 dark:bg-indigo-950/30 rounded-2xl p-3.5 sm:p-4 border-2 border-indigo-200/80 dark:border-indigo-800 shadow-md text-neutral-900 dark:text-neutral-100 relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-black text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse" /> Analisis & Evaluasi AI Jember 1
+            <h3 className="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-pulse" /> Analisis & Evaluasi AI Jember 1
             </h3>
             <button
               onClick={runAiInsight}
               disabled={isAiLoading}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[9.5px] px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 disabled:opacity-50 cursor-pointer"
             >
               {isAiLoading ? "Sedang Menganalisis..." : "Jalankan Analisis AI"}
             </button>
@@ -1738,17 +1791,17 @@ export function EvaluasiView({
           {isAiLoading ? (
             <div className="flex flex-col items-center justify-center py-5 text-center">
               <div className="w-7 h-7 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-[10px] text-indigo-700 font-bold mt-2">
+              <span className="text-[10px] text-indigo-700 dark:text-indigo-300 font-bold mt-2">
                 Menganalisis data lembar evaluasi harian dengan Gemini...
               </span>
             </div>
           ) : aiInsight ? (
             <div
-              className="text-xs text-slate-700 bg-white rounded-xl p-2.5 border border-indigo-100/50 prose max-w-none shadow-sm leading-relaxed max-h-[280px] overflow-y-auto"
+              className="text-xs text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-900 rounded-xl p-2.5 border border-indigo-100/50 dark:border-indigo-900/50 prose max-w-none shadow-sm leading-relaxed max-h-[280px] overflow-y-auto"
               dangerouslySetInnerHTML={{ __html: aiInsight }}
             />
           ) : (
-            <p className="text-xs text-slate-500 italic">
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 italic">
               Klik tombol di atas untuk memanggil modul kecerdasan buatan Gemini guna menganalisis laporan dropping tim
               secara mendalam.
             </p>

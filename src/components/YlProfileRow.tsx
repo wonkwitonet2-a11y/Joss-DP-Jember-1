@@ -85,8 +85,8 @@ function YlProfileRowInner({
   };
 
   return (
-    <tr className={`hover:bg-amber-50/50 transition-colors ${isResign ? "bg-rose-50/40 text-slate-400" : ""}`}>
-      <td className="p-2.5 text-center text-red-700 font-black text-xs sm:text-sm">{yl.area}</td>
+    <tr className={`hover:bg-amber-50/50 transition-colors ${isResign ? "bg-rose-50/40 dark:bg-rose-950/40 text-neutral-400" : ""}`}>
+      <td className="p-2.5 text-center text-red-700 dark:text-red-300 font-bold text-xs sm:text-sm">{yl.area}</td>
       <td className="p-2.5">
         <input
           type="text"
@@ -96,16 +96,16 @@ function YlProfileRowInner({
             copy[idx].kodeYl = e.target.value;
             setYlList(copy);
           }}
-          className="p-1.5 text-xs bg-slate-50 border border-slate-300 rounded outline-none font-mono w-28 text-slate-900 font-bold focus:border-red-500 focus:bg-white"
+          className="p-1.5 text-xs bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-300 dark:border-neutral-700 rounded outline-none font-mono w-28 text-neutral-900 dark:text-neutral-100 font-bold focus:border-red-500 focus:bg-white dark:focus:bg-neutral-800"
         />
       </td>
       <td className="p-2.5 min-w-[280px]">
         <div className="flex items-center gap-2">
           <div className="relative group shrink-0" title="Klik ikon kamera untuk mengunggah / mengganti foto profil YL">
             {foto ? (
-              <img src={foto} alt={cleanYlName(yl.nama)} className="w-9 h-9 rounded-xl object-cover border-2 border-red-300 shadow-xs" />
+              <img src={foto} alt={cleanYlName(yl.nama)} className="w-9 h-9 rounded-xl object-cover border-2 border-red-300 dark:border-red-700 shadow-xs" />
             ) : (
-              <div className="w-9 h-9 rounded-xl bg-red-100 text-red-700 flex items-center justify-center font-black text-xs border-2 border-dashed border-red-300">
+              <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 flex items-center justify-center font-bold text-xs border-2 border-dashed border-red-300 dark:border-red-700">
                 {cleanYlName(yl.nama).charAt(0).toUpperCase() || "Y"}
               </div>
             )}
@@ -123,7 +123,7 @@ function YlProfileRowInner({
               setYlList(copy);
             }}
             placeholder="Nama Lengkap YL"
-            className={`p-1.5 text-xs sm:text-sm border rounded outline-none font-black w-full min-w-[180px] text-slate-900 focus:border-red-500 focus:bg-white ${isResign ? "bg-rose-100/50 border-rose-200 text-slate-500 line-through" : "bg-slate-50 border-slate-300"}`}
+            className={`p-1.5 text-xs sm:text-sm border rounded outline-none font-bold w-full min-w-[180px] text-neutral-900 dark:text-neutral-100 focus:border-red-500 focus:bg-white dark:focus:bg-neutral-800 ${isResign ? "bg-rose-100/50 dark:bg-rose-900/50 border-rose-200 dark:border-rose-800 text-neutral-500 line-through" : "bg-neutral-50 dark:bg-neutral-800/40 border-neutral-300 dark:border-neutral-700"}`}
           />
         </div>
       </td>
@@ -137,11 +137,10 @@ function YlProfileRowInner({
               copy[idx].tanggalMasuk = e.target.value;
               setYlList(copy);
             }}
-            style={{ colorScheme: "light" }}
-            className="w-full p-1.5 text-xs bg-slate-50 border border-slate-300 rounded outline-none font-bold text-slate-900 focus:border-red-500 focus:bg-white cursor-pointer"
+            className="w-full p-1.5 text-xs bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-300 dark:border-neutral-700 rounded outline-none font-bold text-neutral-900 dark:text-neutral-100 focus:border-red-500 focus:bg-white dark:focus:bg-neutral-800 cursor-pointer"
           />
           {!(yl.tanggalMasuk || yl.tanggalDaftar) && (
-            <span className="absolute left-2.5 top-2 text-[10px] text-slate-400 font-bold pointer-events-none select-none">
+            <span className="absolute left-2.5 top-2 text-[10px] text-neutral-400 font-bold pointer-events-none select-none">
               Pilih Tanggal
             </span>
           )}
@@ -157,7 +156,7 @@ function YlProfileRowInner({
             copy[idx].pin = e.target.value;
             setYlList(copy);
           }}
-          className="p-1.5 text-xs bg-slate-50 border border-slate-300 rounded outline-none text-center font-mono w-20 text-slate-900 font-bold focus:border-red-500 focus:bg-white"
+          className="p-1.5 text-xs bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-300 dark:border-neutral-700 rounded outline-none text-center font-mono w-20 text-neutral-900 dark:text-neutral-100 font-bold focus:border-red-500 focus:bg-white dark:focus:bg-neutral-800"
         />
       </td>
       <td className="p-2.5 text-center">
@@ -170,7 +169,7 @@ function YlProfileRowInner({
             copy[idx].nik = e.target.value;
             setYlList(copy);
           }}
-          className="p-1.5 text-xs bg-slate-50 border border-slate-300 rounded outline-none text-center font-mono w-32 text-slate-900 font-bold focus:border-red-500 focus:bg-white"
+          className="p-1.5 text-xs bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-300 dark:border-neutral-700 rounded outline-none text-center font-mono w-32 text-neutral-900 dark:text-neutral-100 font-bold focus:border-red-500 focus:bg-white dark:focus:bg-neutral-800"
         />
       </td>
       <td className="p-2.5 text-center">
@@ -183,11 +182,10 @@ function YlProfileRowInner({
               copy[idx].tglLahir = e.target.value;
               setYlList(copy);
             }}
-            style={{ colorScheme: "light" }}
-            className="w-full p-1.5 text-xs bg-slate-50 border border-slate-300 rounded outline-none font-bold text-slate-900 focus:border-red-500 focus:bg-white cursor-pointer"
+            className="w-full p-1.5 text-xs bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-300 dark:border-neutral-700 rounded outline-none font-bold text-neutral-900 dark:text-neutral-100 focus:border-red-500 focus:bg-white dark:focus:bg-neutral-800 cursor-pointer"
           />
           {!yl.tglLahir && (
-            <span className="absolute left-2.5 top-2 text-[10px] text-slate-400 font-bold pointer-events-none select-none">
+            <span className="absolute left-2.5 top-2 text-[10px] text-neutral-400 font-bold pointer-events-none select-none">
               Pilih Tanggal
             </span>
           )}
@@ -207,17 +205,17 @@ function YlProfileRowInner({
               }
               setYlList(copy);
             }}
-            className={`px-2 py-1 text-[10px] font-black rounded-lg border transition-all cursor-pointer whitespace-nowrap shadow-xs ${
+            className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer whitespace-nowrap shadow-xs ${
               (yl.ikutJht !== false)
-                ? "bg-emerald-100 border-emerald-300 text-emerald-800 hover:bg-emerald-200"
-                : "bg-slate-100 border-slate-300 text-slate-500 hover:bg-slate-200"
+                ? "bg-emerald-100 dark:bg-emerald-900/50 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200"
+                : "bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
             }`}
             title={(yl.ikutJht !== false) ? "Status: Ikut Program JHT (Klik untuk ubah)" : "Status: Tidak Ikut JHT (Klik untuk ubah)"}
           >
             {(yl.ikutJht !== false) ? "✓ Ikut" : "✕ Tidak"}
           </button>
           <div className="relative">
-            <span className="absolute left-1.5 top-1.5 text-[10px] text-slate-400 font-bold pointer-events-none">Rp</span>
+            <span className="absolute left-1.5 top-1.5 text-[10px] text-neutral-400 font-bold pointer-events-none">Rp</span>
             <input
               type="number"
               step={1000}
@@ -233,15 +231,15 @@ function YlProfileRowInner({
               placeholder="24000"
               className={`pl-6 pr-1.5 py-1 text-xs rounded border outline-none font-mono font-bold w-24 text-right transition-colors ${
                 yl.ikutJht === false
-                  ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-                  : "bg-white border-slate-300 text-slate-900 focus:border-red-500"
+                  ? "bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-800 text-neutral-400 cursor-not-allowed"
+                  : "bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:border-red-500"
               }`}
             />
           </div>
         </div>
       </td>
       <td className="p-2.5 text-center">
-        <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${isResign ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-800"}`}>
+        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${isResign ? "bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300" : "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300"}`}>
           {isResign ? "Resign" : "Aktif"}
         </span>
       </td>
@@ -259,13 +257,13 @@ function YlProfileRowInner({
             setYlList(copy);
             handleSaveYlList(copy);
           }}
-          className={`text-[10px] font-bold border px-2 py-1 rounded transition-colors ${isResign ? "text-emerald-700 bg-emerald-50 border-emerald-300 hover:bg-emerald-100" : "text-amber-800 bg-amber-50 border-amber-300 hover:bg-amber-100"}`}
+          className={`text-[10px] font-bold border px-2 py-1 rounded transition-colors ${isResign ? "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100" : "text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50"}`}
         >
           {isResign ? "Aktifkan" : "Tandai Resign"}
         </button>
         <button
           onClick={() => handleDeleteYl(idx)}
-          className="text-rose-600 hover:text-white hover:bg-rose-600 bg-rose-50 border border-rose-200 text-[10px] font-bold px-2 py-1 rounded transition-all cursor-pointer inline-flex items-center gap-1"
+          className="text-rose-600 dark:text-rose-400 hover:text-white hover:bg-rose-600 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-[10px] font-bold px-2 py-1 rounded transition-all cursor-pointer inline-flex items-center gap-1"
           title="Hapus YL Permanen"
         >
           <Trash2 className="w-3 h-3" />

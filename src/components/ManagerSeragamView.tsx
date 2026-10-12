@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { MenuTitleIcon } from "./AppSidebar";
 import { ChevronLeft, ChevronRight, Upload, Save, Info, Settings, ArrowLeft } from "lucide-react";
 
 const MTHS = [
@@ -10,15 +11,15 @@ const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 
 const UNIFORMS_YL = [
   { id: "yellow", name: "Yakult Mangga", color: "bg-amber-400" },
-  { id: "blue", name: "Yakult Light", color: "bg-blue-600" },
+  { id: "blue", name: "Yakult Light", color: "bg-brand-600" },
   { id: "red", name: "Yes Everyday", color: "bg-red-600" }
 ];
 
 const UNIFORMS_KARYAWAN = [
   { id: "karyawan_yellow", name: "Yakult Mangga", color: "bg-amber-400", desc: "Seragam Yakult Mangga" },
-  { id: "karyawan_blue", name: "Yakult Light", color: "bg-blue-600", desc: "Seragam Yakult Light" },
+  { id: "karyawan_blue", name: "Yakult Light", color: "bg-brand-600", desc: "Seragam Yakult Light" },
   { id: "karyawan_red", name: "CU Merah", color: "bg-red-600", desc: "Seragam CU Merah" },
-  { id: "karyawan_default", name: "Seragam Biasa", color: "bg-slate-400", desc: "Seragam Biasa" }
+  { id: "karyawan_default", name: "Seragam Biasa", color: "bg-neutral-400", desc: "Seragam Biasa" }
 ];
 
 export default function ManagerSeragamView() {
@@ -207,7 +208,7 @@ export default function ManagerSeragamView() {
     reader.readAsDataURL(file);
   };
 
-  if (loading) return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Memuat data...</div>;
+  if (loading) return <div className="p-8 text-center text-neutral-500 dark:text-neutral-400">Memuat data...</div>;
 
   // View Today (Karyawan)
   if (viewMode === "today") {
@@ -262,41 +263,42 @@ export default function ManagerSeragamView() {
     };
 
     return (
-      <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 sm:max-w-md sm:mx-auto sm:border-x sm:border-slate-200 dark:border-slate-700 pb-32">
+      <div className="flex flex-col h-full bg-neutral-50 dark:bg-neutral-950 sm:max-w-md md:max-w-none w-full sm:mx-auto sm:border-x sm:border-neutral-200 dark:border-neutral-700 pb-32">
         <div className="flex items-center justify-between p-4 pb-2">
-          <h1 className="font-bold text-xl text-slate-800 dark:text-slate-100 flex items-center gap-2">
+          <h1 className="font-bold text-xl text-neutral-800 dark:text-neutral-100 flex items-center gap-2">
+            <MenuTitleIcon id="seragam" className="w-6 h-6 text-brand-600 dark:text-brand-400" />
             Jadwal Seragam
           </h1>
           <div className="flex items-center gap-2">
-            <button onClick={handleToday} className="p-2.5 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-colors">
-              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Hari Ini</span>
+            <button onClick={handleToday} className="p-2.5 bg-white dark:bg-neutral-900 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+              <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Hari Ini</span>
             </button>
-            <button onClick={() => setViewMode("setting")} className="p-2.5 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-colors">
-              <Settings className="w-5 h-5 text-slate-700 dark:text-slate-300" />
+            <button onClick={() => setViewMode("setting")} className="p-2.5 bg-white dark:bg-neutral-900 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+              <Settings className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
             </button>
           </div>
         </div>
 
         <div className="px-4 pb-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center justify-between p-2">
-            <button onClick={handlePrev} className="p-2 text-slate-400 hover:text-slate-600 dark:text-slate-400 active:bg-slate-50 rounded-xl">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-800 flex items-center justify-between p-2">
+            <button onClick={handlePrev} className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 dark:text-neutral-400 active:bg-neutral-50 rounded-xl">
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="flex flex-col items-center">
-              <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">
+              <span className="font-bold text-neutral-700 dark:text-neutral-300 text-sm">
                 {DAYS[currentDate.getDay()]}, {todayDay} {MTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
               </span>
               {isToday && <span className="text-[10px] font-bold text-red-500">Hari ini</span>}
             </div>
-            <button onClick={handleNext} className="p-2 text-slate-400 hover:text-slate-600 dark:text-slate-400 active:bg-slate-50 rounded-xl">
+            <button onClick={handleNext} className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 dark:text-neutral-400 active:bg-neutral-50 rounded-xl">
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         <div className="flex-1 px-4 flex flex-col" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-          <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800 p-6 flex flex-col items-center text-center flex-1">
-            <div className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold px-3 py-1 rounded-full mb-6 flex items-center gap-1">
+          <div className="bg-white dark:bg-neutral-900 rounded-[32px] shadow-sm border border-neutral-200 dark:border-neutral-800 p-6 flex flex-col items-center text-center flex-1">
+            <div className="bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 text-xs font-bold px-3 py-1 rounded-full mb-6 flex items-center gap-1">
               👕 Seragam Karyawan Hari Ini
             </div>
             
@@ -304,15 +306,15 @@ export default function ManagerSeragamView() {
               {imageSrc ? (
                 <img src={imageSrc} className="max-w-[80%] max-h-[300px] object-contain drop-shadow-xl" alt={uniformInfo.name} />
               ) : (
-                <div className="w-48 h-48 bg-slate-100 dark:bg-slate-800 rounded-full flex flex-col items-center justify-center text-slate-400">
+                <div className="w-48 h-48 bg-neutral-100 dark:bg-neutral-800 rounded-full flex flex-col items-center justify-center text-neutral-400">
                   <span className="text-4xl mb-2">📸</span>
                   <span className="text-xs">Gambar belum diupload</span>
                 </div>
               )}
             </div>
             
-            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2">{uniformInfo.name}</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-[250px]">{uniformInfo.desc}</p>
+            <h2 className="text-2xl font-bold text-neutral-800 dark:text-neutral-100 mb-2">{uniformInfo.name}</h2>
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed max-w-[250px]">{uniformInfo.desc}</p>
           </div>
         </div>
       </div>
@@ -321,45 +323,45 @@ export default function ManagerSeragamView() {
 
   // View Setting
   return (
-    <div className="p-4 sm:p-8 max-w-4xl mx-auto pb-32">
+    <div className="p-4 sm:p-8 w-full max-w-none mx-auto pb-32">
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => setViewMode("today")} className="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-slate-700 dark:text-slate-300" />
+        <button onClick={() => setViewMode("today")} className="p-2 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+          <ArrowLeft className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
         </button>
-        <h1 className="font-bold text-2xl text-slate-800 dark:text-slate-100">Pengaturan Seragam</h1>
+        <h1 className="font-bold text-2xl text-neutral-800 dark:text-neutral-100">Pengaturan Seragam</h1>
       </div>
 
-      <div className="flex bg-slate-200/50 dark:bg-slate-800 p-1 rounded-xl mb-6">
+      <div className="flex bg-neutral-200/50 dark:bg-neutral-800 p-1 rounded-xl mb-6">
         <button 
           onClick={() => setSettingTab("karyawan")}
-          className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-colors ${settingTab === "karyawan" ? "bg-white dark:bg-slate-900 text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
+          className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-colors ${settingTab === "karyawan" ? "bg-white dark:bg-neutral-900 text-brand-600 dark:text-brand-400 shadow-sm" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
         >
           Seragam Karyawan
         </button>
         <button 
           onClick={() => setSettingTab("yl")}
-          className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-colors ${settingTab === "yl" ? "bg-white dark:bg-slate-900 text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
+          className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-colors ${settingTab === "yl" ? "bg-white dark:bg-neutral-900 text-brand-600 dark:text-brand-400 shadow-sm" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
         >
           Seragam YL
         </button>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-8 overflow-hidden">
-        <div className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4 font-bold text-slate-800 dark:text-slate-100">
+      <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 mb-8 overflow-hidden">
+        <div className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 p-4 font-bold text-neutral-800 dark:text-neutral-100">
           Upload Gambar Seragam {settingTab === "karyawan" ? "Karyawan" : "YL"}
         </div>
         <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {(settingTab === "yl" ? [...UNIFORMS_YL, { id: "default", name: "Pakaian Bebas", color: "bg-slate-400" }] : UNIFORMS_KARYAWAN).map(u => (
-            <div key={u.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 flex flex-col items-center">
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 text-center">{u.name}</p>
-              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-slate-100 dark:bg-white/10 rounded-md mb-3 flex items-center justify-center overflow-hidden">
+          {(settingTab === "yl" ? [...UNIFORMS_YL, { id: "default", name: "Pakaian Bebas", color: "bg-neutral-400" }] : UNIFORMS_KARYAWAN).map(u => (
+            <div key={u.id} className="border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 flex flex-col items-center">
+              <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-2 text-center">{u.name}</p>
+              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-neutral-100 dark:bg-white/10 rounded-md mb-3 flex items-center justify-center overflow-hidden">
                 {images[u.id] ? (
                   <img src={images[u.id]} className="w-full h-full object-contain drop-shadow-md" alt={u.name} />
                 ) : (
-                  <span className="text-slate-400 text-[10px] sm:text-xs">Kosong</span>
+                  <span className="text-neutral-400 text-[10px] sm:text-xs">Kosong</span>
                 )}
               </div>
-              <label className="cursor-pointer bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs py-1.5 px-3 rounded-full flex items-center gap-1 transition-colors">
+              <label className="cursor-pointer bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs py-1.5 px-3 rounded-full flex items-center gap-1 transition-colors">
                 <Upload className="w-3 h-3" /> Upload
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(u.id, e)} />
               </label>
@@ -368,18 +370,18 @@ export default function ManagerSeragamView() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between">
+      <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+        <div className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 p-4 flex items-center justify-between">
           <button 
             onClick={() => {
               if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(y => y-1); }
               else setCurrentMonth(m => m-1);
             }}
-            className="p-2 hover:bg-slate-200 rounded-full"
+            className="p-2 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-full"
           >
-            <ChevronLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+            <ChevronLeft className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
           </button>
-          <h2 className="font-bold text-lg text-slate-800 dark:text-slate-100">
+          <h2 className="font-bold text-lg text-neutral-800 dark:text-neutral-100">
             {MTHS[currentMonth]} {currentYear}
           </h2>
           <button 
@@ -387,14 +389,14 @@ export default function ManagerSeragamView() {
               if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(y => y+1); }
               else setCurrentMonth(m => m+1);
             }}
-            className="p-2 hover:bg-slate-200 rounded-full"
+            className="p-2 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-full"
           >
-            <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+            <ChevronRight className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
           </button>
         </div>
         
         <div className="p-4 sm:p-6 space-y-6">
-          <div className="mb-2 bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3 text-blue-800 dark:text-blue-400">
+          <div className="mb-2 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 rounded-xl p-4 flex gap-3 text-brand-800 dark:text-brand-400">
             <Info className="w-6 h-6 shrink-0" />
             <p className="text-sm">
               <strong>Petunjuk:</strong> Masukkan tanggal (pisahkan koma) untuk jadwal seragam di bulan ini.
@@ -404,7 +406,7 @@ export default function ManagerSeragamView() {
 
           {settingTab === "karyawan" && (
             <>
-              <div className="bg-amber-50/50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-200">
+              <div className="bg-amber-50/50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-200 dark:border-amber-800">
                 <h3 className="font-bold text-amber-800 dark:text-amber-400 mb-2 flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-amber-400 border border-amber-500"></div>
                   Yakult Mangga
@@ -414,13 +416,13 @@ export default function ManagerSeragamView() {
                   value={getDatesStringKaryawan("karyawan_yellow")}
                   onChange={(e) => handleDatesChangeKaryawan("karyawan_yellow", e.target.value)}
                   onBlur={() => handleDatesBlurKaryawan("karyawan_yellow")}
-                  className="w-full bg-white dark:bg-slate-900 border border-amber-300 rounded-lg px-4 py-2.5 text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full bg-white dark:bg-neutral-800 border border-amber-300 dark:border-amber-700 rounded-lg px-4 py-2.5 text-neutral-800 dark:text-neutral-100 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
                   placeholder="Contoh: 1, 8, 15"
                 />
               </div>
-              <div className="bg-blue-50/50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200">
-                <h3 className="font-bold text-blue-800 dark:text-blue-400 mb-2 flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-blue-600 border border-blue-700"></div>
+              <div className="bg-brand-50/50 dark:bg-brand-900/20 p-4 rounded-xl border border-brand-200 dark:border-brand-800">
+                <h3 className="font-bold text-brand-800 dark:text-brand-400 mb-2 flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-brand-600 border border-brand-700"></div>
                   Yakult Light
                 </h3>
                 <input 
@@ -428,11 +430,11 @@ export default function ManagerSeragamView() {
                   value={getDatesStringKaryawan("karyawan_blue")}
                   onChange={(e) => handleDatesChangeKaryawan("karyawan_blue", e.target.value)}
                   onBlur={() => handleDatesBlurKaryawan("karyawan_blue")}
-                  className="w-full bg-white dark:bg-slate-900 border border-blue-300 rounded-lg px-4 py-2.5 text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white dark:bg-neutral-800 border border-brand-300 dark:border-brand-700 rounded-lg px-4 py-2.5 text-neutral-800 dark:text-neutral-100 font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
                   placeholder="Contoh: 2, 9, 16"
                 />
               </div>
-              <div className="bg-red-50/50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200">
+              <div className="bg-red-50/50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200 dark:border-red-800">
                 <h3 className="font-bold text-red-800 dark:text-red-400 mb-2 flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-red-600 border border-red-700"></div>
                   CU Merah
@@ -442,7 +444,7 @@ export default function ManagerSeragamView() {
                   value={getDatesStringKaryawan("karyawan_red")}
                   onChange={(e) => handleDatesChangeKaryawan("karyawan_red", e.target.value)}
                   onBlur={() => handleDatesBlurKaryawan("karyawan_red")}
-                  className="w-full bg-white dark:bg-slate-900 border border-red-300 rounded-lg px-4 py-2.5 text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full bg-white dark:bg-neutral-800 border border-red-300 dark:border-red-700 rounded-lg px-4 py-2.5 text-neutral-800 dark:text-neutral-100 font-medium focus:outline-none focus:ring-2 focus:ring-red-500"
                   placeholder="Contoh: 3, 10, 17"
                 />
               </div>
@@ -451,7 +453,7 @@ export default function ManagerSeragamView() {
 
           {settingTab === "yl" && (
             <>
-              <div className="bg-amber-50/50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-200">
+              <div className="bg-amber-50/50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-200 dark:border-amber-800">
                 <h3 className="font-bold text-amber-800 dark:text-amber-400 mb-2 flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-amber-400 border border-amber-500"></div>
                   Kuning (Yakult Mangga)
@@ -461,13 +463,13 @@ export default function ManagerSeragamView() {
                   value={getDatesStringYL("yellow")}
                   onChange={(e) => handleDatesChangeYL("yellow", e.target.value)}
                   onBlur={() => handleDatesBlurYL("yellow")}
-                  className="w-full bg-white dark:bg-slate-900 border border-amber-300 rounded-lg px-4 py-2.5 text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full bg-white dark:bg-neutral-800 border border-amber-300 dark:border-amber-700 rounded-lg px-4 py-2.5 text-neutral-800 dark:text-neutral-100 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
                   placeholder="Contoh: 1, 8, 15"
                 />
               </div>
-              <div className="bg-blue-50/50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200">
-                <h3 className="font-bold text-blue-800 dark:text-blue-400 mb-2 flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-blue-600 border border-blue-700"></div>
+              <div className="bg-brand-50/50 dark:bg-brand-900/20 p-4 rounded-xl border border-brand-200 dark:border-brand-800">
+                <h3 className="font-bold text-brand-800 dark:text-brand-400 mb-2 flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-brand-600 border border-brand-700"></div>
                   Biru (Yakult Light)
                 </h3>
                 <input 
@@ -475,11 +477,11 @@ export default function ManagerSeragamView() {
                   value={getDatesStringYL("blue")}
                   onChange={(e) => handleDatesChangeYL("blue", e.target.value)}
                   onBlur={() => handleDatesBlurYL("blue")}
-                  className="w-full bg-white dark:bg-slate-900 border border-blue-300 rounded-lg px-4 py-2.5 text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white dark:bg-neutral-800 border border-brand-300 dark:border-brand-700 rounded-lg px-4 py-2.5 text-neutral-800 dark:text-neutral-100 font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
                   placeholder="Contoh: 2, 9, 16"
                 />
               </div>
-              <div className="bg-red-50/50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200">
+              <div className="bg-red-50/50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200 dark:border-red-800">
                 <h3 className="font-bold text-red-800 dark:text-red-400 mb-2 flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-red-600 border border-red-700"></div>
                   Merah (Yes Everyday)
@@ -489,7 +491,7 @@ export default function ManagerSeragamView() {
                   value={getDatesStringYL("red")}
                   onChange={(e) => handleDatesChangeYL("red", e.target.value)}
                   onBlur={() => handleDatesBlurYL("red")}
-                  className="w-full bg-white dark:bg-slate-900 border border-red-300 rounded-lg px-4 py-2.5 text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full bg-white dark:bg-neutral-800 border border-red-300 dark:border-red-700 rounded-lg px-4 py-2.5 text-neutral-800 dark:text-neutral-100 font-medium focus:outline-none focus:ring-2 focus:ring-red-500"
                   placeholder="Contoh: 3, 10, 17"
                 />
               </div>
@@ -497,11 +499,11 @@ export default function ManagerSeragamView() {
           )}
 
         </div>
-        <div className="bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 p-4 flex justify-end">
+        <div className="bg-neutral-50 dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700 p-4 flex justify-end">
           <button
             onClick={save}
             disabled={saving}
-            className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-colors disabled:opacity-50"
+            className="bg-brand-600 hover:bg-brand-700 text-white px-8 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-colors disabled:opacity-50 shadow-md shadow-brand-900/20 cursor-pointer"
           >
             <Save className="w-5 h-5" />
             {saving ? "Menyimpan..." : "Simpan Jadwal"}

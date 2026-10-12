@@ -38,6 +38,11 @@ function BreakdownGridRowInner({
   selectRow,
 }: BreakdownGridRowProps) {
   const area = String(yl.area).substring(0, 3);
+  const displayName = String(yl?.nama || "")
+    .trim()
+    .replace(/^\[\d+\]\s*/, "")
+    .replace(/^\d+(?:\s*[-–—.)/:]\s*|\s+)/, "")
+    .trim();
   const ylPlan = activeGridMap[area] || { pembagiTanggal: 25, days: {} };
 
   // Compute grand totals
@@ -78,27 +83,21 @@ function BreakdownGridRowInner({
     Array.from({ length: 31 }, (_, i) => i + 1)
   );
 
+  const nf = (n: number) => Number(n).toLocaleString("id-ID");
   const items: Array<"yo" | "om" | "os" | "yt"> = ["yo", "om", "os", "yt"];
 
-  const itemColors = {
-    yo: "text-red-700",
-    om: "text-amber-700",
-    os: "text-pink-700",
-    yt: "text-blue-700"
-  };
+  const numCls = (v: number, extra = "") => `bd-td ${extra} ${v ? "" : "bd-td-zero"}`;
+  const diffCls = (v: number) => `bd-td select-text cursor-text ${v >= 0 ? "bd-td-pos" : "bd-td-neg"}`;
+  const fmtDiff = (v: number) => (v >= 0 ? `+${nf(v)}` : nf(v));
 
   return (
-    <tr className="hover:bg-red-50/40 transition-colors divide-x divide-slate-100 optimized-table-row">
-      {/* YL Name Sticky Cell */}
-      <td
-        className="p-2 sticky left-0 bg-white z-20 font-black text-slate-900 truncate min-w-[120px] max-w-[140px] shadow-r border-r border-slate-200 cursor-pointer hover:bg-slate-100 select-none"
-        onClick={() => selectRow?.(rIdx)}
-      >
-        <span className="text-red-600 font-mono mr-1">[{area}]</span>
-        <span>{yl.nama.replace(/^\d+\s*/, "")}</span>
+    <tr className="bd-row optimized-table-row">
+      {/* Nama YL (sticky) */}
+      <td className="bd-td-name bd-td" onClick={() => selectRow?.(rIdx)}>
+        <span>{displayName}</span>
       </td>
 
-      {/* Day inputs with spreadsheet block selection */}
+      {/* Sel input harian (blok seleksi ala spreadsheet) */}
       {daysList.flatMap(day => {
         const dData = ylPlan.days?.[String(day)] || { yo: 0, om: 0, os: 0, yt: 0 };
         const dayTotal = (dData.yo || 0) + (dData.om || 0) + (dData.os || 0) + (dData.yt || 0);
@@ -107,51 +106,44 @@ function BreakdownGridRowInner({
         return items.map((item, itemIdx) => {
           const cIdx = (day - 1) * 4 + itemIdx;
           const cellProps = getCellProps ? getCellProps(rIdx, cIdx) : {};
+          const val = dData[item] || 0;
 
           return (
             <td
               key={`${area}-${day}-${item}`}
               {...cellProps}
-              className={`p-1 text-center font-mono text-[11px] font-black border-r border-slate-200/60 select-none relative ${
-                cellProps.className || ""
-              } ${isUnderTarget && !cellProps.className?.includes("!bg-") ? "bg-red-50/50" : ""}`}
+              className={`bd-td select-none ${val ? "" : "bd-td-zero"} ${
+                isUnderTarget && !cellProps.className?.includes("!bg-") ? "bd-td-warn" : ""
+              } ${cellProps.className || ""}`}
             >
-              <span className={`block truncate ${itemColors[item]}`}>
-                {dData[item] || 0}
-              </span>
+              <span className="block truncate">{nf(val)}</span>
               {renderSelectionHandle && renderSelectionHandle(rIdx, cIdx)}
             </td>
           );
         });
       })}
 
-      {/* AKUMULASI 4 ITEM + TOTAL */}
-      <td className="p-1 text-center font-bold text-red-700 bg-red-50/50 border-l border-slate-200 select-text cursor-text">{totYo}</td>
-      <td className="p-1 text-center font-bold text-amber-700 bg-red-50/50 select-text cursor-text">{totOm}</td>
-      <td className="p-1 text-center font-bold text-pink-700 bg-red-50/50 select-text cursor-text">{totOs}</td>
-      <td className="p-1 text-center font-bold text-blue-700 bg-red-50/50 select-text cursor-text">{totYt}</td>
-      <td className="p-1 text-center font-black text-slate-800 bg-slate-200 select-text cursor-text shadow-sm">{grandTotal}</td>
+      {/* Akumulasi 4 item + total */}
+      <td className={numCls(totYo, "bd-td-sum select-text cursor-text")}>{nf(totYo)}</td>
+      <td className={numCls(totOm, "bd-td-sum select-text cursor-text")}>{nf(totOm)}</td>
+      <td className={numCls(totOs, "bd-td-sum select-text cursor-text")}>{nf(totOs)}</td>
+      <td className={numCls(totYt, "bd-td-sum select-text cursor-text")}>{nf(totYt)}</td>
+      <td className={numCls(grandTotal, "bd-td-total select-text cursor-text")}>{nf(grandTotal)}</td>
 
-      {/* RATA-RATA 4 ITEM + TOTAL */}
-      <td className="p-1 text-center font-bold text-red-700 bg-amber-50/50 border-l border-slate-200 select-text cursor-text">{avgYo}</td>
-      <td className="p-1 text-center font-bold text-amber-700 bg-amber-50/50 select-text cursor-text">{avgOm}</td>
-      <td className="p-1 text-center font-bold text-pink-700 bg-amber-50/50 select-text cursor-text">{avgOs}</td>
-      <td className="p-1 text-center font-bold text-blue-700 bg-amber-50/50 select-text cursor-text">{avgYt}</td>
-      <td className="p-1 text-center font-black text-amber-900 bg-amber-300 select-text cursor-text shadow-sm">{avgTotal}</td>
+      {/* Rata-rata 4 item + total */}
+      <td className={numCls(avgYo, "bd-td-avg select-text cursor-text")}>{nf(avgYo)}</td>
+      <td className={numCls(avgOm, "bd-td-avg select-text cursor-text")}>{nf(avgOm)}</td>
+      <td className={numCls(avgOs, "bd-td-avg select-text cursor-text")}>{nf(avgOs)}</td>
+      <td className={numCls(avgYt, "bd-td-avg select-text cursor-text")}>{nf(avgYt)}</td>
+      <td className="bd-td bd-td-avgt select-text cursor-text">{nf(avgTotal)}</td>
 
-      {/* VALUASI vs TARGET MANAGER */}
-      <td className="p-1 text-center font-bold text-purple-700 bg-purple-50/80 border-l border-slate-200 select-text cursor-text">{targetTotal}</td>
-      <td className={`p-1 text-center font-black select-text cursor-text ${diffTarget >= 0 ? "text-emerald-700 bg-emerald-100/80" : "text-rose-700 bg-rose-100/80"}`}>
-        {diffTarget >= 0 ? `+${diffTarget}` : diffTarget}
-      </td>
-      <td className="p-1 text-center font-bold text-indigo-700 bg-purple-50/80 select-text cursor-text">{blnLaluTotal}</td>
-      <td className={`p-1 text-center font-black select-text cursor-text ${diffLM >= 0 ? "text-emerald-700 bg-emerald-100/80" : "text-rose-700 bg-rose-100/80"}`}>
-        {diffLM >= 0 ? `+${diffLM}` : diffLM}
-      </td>
-      <td className="p-1 text-center font-bold text-teal-700 bg-purple-50/80 select-text cursor-text">{thnLaluTotal}</td>
-      <td className={`p-1 text-center font-black select-text cursor-text ${diffLY >= 0 ? "text-emerald-700 bg-emerald-100/80" : "text-rose-700 bg-rose-100/80"}`}>
-        {diffLY >= 0 ? `+${diffLY}` : diffLY}
-      </td>
+      {/* Target & pembanding */}
+      <td className={numCls(targetTotal, "bd-td-cmp select-text cursor-text")}>{nf(targetTotal)}</td>
+      <td className={diffCls(diffTarget)}>{fmtDiff(diffTarget)}</td>
+      <td className={numCls(blnLaluTotal, "bd-td-cmp select-text cursor-text")}>{nf(blnLaluTotal)}</td>
+      <td className={diffCls(diffLM)}>{fmtDiff(diffLM)}</td>
+      <td className={numCls(thnLaluTotal, "bd-td-cmp select-text cursor-text")}>{nf(thnLaluTotal)}</td>
+      <td className={diffCls(diffLY)}>{fmtDiff(diffLY)}</td>
     </tr>
   );
 }

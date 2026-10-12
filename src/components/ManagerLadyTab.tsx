@@ -1,3 +1,4 @@
+import { MenuTitleIcon } from "./AppSidebar";
 import React from "react";
 import { YlProfileRow } from "./YlProfileRow";
 
@@ -105,26 +106,26 @@ function ManagerLadyTabInner({
   return (
     <div className="space-y-6">
       {/* KELOLA PROFIL & STATUS YL */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-3">
-        <div className="flex items-center justify-between border-l-4 border-red-600 pl-2">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xs font-black text-red-950 uppercase tracking-wider">
-              👥 Kelola Profil & Status Yakult Lady (YL)
+            <h2 className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider">
+              <span className="inline-flex items-center gap-1.5"><MenuTitleIcon id="lady" className="w-4 h-4 text-brand-600 dark:text-brand-400" />Kelola Profil & Status Yakult Lady (YL)</span>
             </h2>
-            <p className="text-[10px] text-slate-500 leading-relaxed font-bold">
+            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-bold">
               Kelola nama lengkap, PIN login, status keaktifan/resign, serta pendaftaran YL baru. Tombol Hapus akan menghapus YL secara permanen dari seluruh sistem.
             </p>
           </div>
-          <span className="text-[10px] font-black bg-red-100 text-red-800 px-2.5 py-1 rounded-lg">
+          <span className="text-[10px] font-bold bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 px-2.5 py-1 rounded-lg border border-brand-200 dark:border-brand-800">
             Total: {ylList.length} YL ({ylList.filter((y) => y.status !== "Resign").length} Aktif)
           </span>
         </div>
 
         {/* Table of YLs */}
-        <div className="overflow-x-auto max-h-[480px] overflow-y-auto border-2 border-slate-300 rounded-xl bg-white shadow-sm">
+        <div className="overflow-x-auto max-h-[480px] overflow-y-auto border-2 border-neutral-300 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-900 shadow-sm">
           <table className="w-full text-left text-xs border-collapse min-w-[850px]">
             <thead>
-              <tr className="bg-slate-900 text-slate-100 font-black uppercase text-xs sticky top-0 z-10 border-b-2 border-slate-800 divide-x divide-slate-700">
+              <tr className="bg-neutral-900 dark:bg-neutral-950 text-neutral-100 font-bold uppercase text-xs sticky top-0 z-10 border-b-2 border-neutral-800 divide-x divide-neutral-700">
                 <th className="p-3 w-20 text-center">Area</th>
                 <th className="p-3 w-28">Kode YL</th>
                 <th className="p-3 min-w-[240px] w-72">Nama Lengkap YL</th>
@@ -137,7 +138,7 @@ function ManagerLadyTabInner({
                 <th className="p-3 text-right min-w-[160px]">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 font-bold">
+            <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800 font-bold">
               {ylList.map((yl: any, idx) => (
                 <YlProfileRow
                   key={idx}
@@ -154,43 +155,43 @@ function ManagerLadyTabInner({
         </div>
 
         {/* Form Input / Mendaftar YL Baru */}
-        <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3 shadow-sm">
-          <span className="text-[11px] font-black text-slate-900 uppercase tracking-wider block border-l-3 border-emerald-600 pl-2">
+        <div className="bg-neutral-50 dark:bg-neutral-800/40 p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 space-y-3 shadow-sm">
+          <span className="text-[11px] font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider block">
             ➕ Mendaftar Yakult Lady (YL) Baru
           </span>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2.5 items-end">
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8 gap-2.5 items-end [&>*]:min-w-0">
             <div>
-              <label className="text-[10px] font-bold text-slate-600 block mb-1">Area</label>
+              <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 block mb-1">Area</label>
               <input
                 type="text"
                 placeholder="mis: 211"
                 value={newYlArea}
                 onChange={(e) => setNewYlArea(e.target.value)}
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold outline-none text-slate-900 placeholder:text-slate-400 focus:border-emerald-500"
+                className="w-full p-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs font-bold outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:border-emerald-500"
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-slate-600 block mb-1">Kode YL</label>
+              <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 block mb-1">Kode YL</label>
               <input
                 type="text"
                 placeholder="mis: YL-211"
                 value={newYlKode}
                 onChange={(e) => setNewYlKode(e.target.value)}
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold outline-none text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 font-mono"
+                className="w-full p-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs font-bold outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:border-emerald-500 font-mono"
               />
             </div>
-            <div className="col-span-2 sm:col-span-1">
-              <label className="text-[10px] font-bold text-slate-600 block mb-1">Nama YL</label>
+            <div className="col-span-1">
+              <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 block mb-1">Nama YL</label>
               <input
                 type="text"
                 placeholder="mis: Rahmawati"
                 value={newYlNama}
                 onChange={(e) => setNewYlNama(e.target.value)}
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold outline-none text-slate-900 placeholder:text-slate-400 focus:border-emerald-500"
+                className="w-full p-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs font-bold outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:border-emerald-500"
               />
             </div>
             <div>
-              <label className="text-[10px] font-black text-slate-700 block mb-1 flex items-center gap-1">
+              <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300 block mb-1 flex items-center gap-1">
                 <span>📅 Tgl Masuk</span>
               </label>
               <div className="relative">
@@ -198,38 +199,38 @@ function ManagerLadyTabInner({
                   type="date"
                   value={newYlTanggalMasuk}
                   onChange={(e) => setNewYlTanggalMasuk(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold outline-none text-slate-900 focus:border-emerald-500 cursor-pointer min-h-[36px]"
+                  className="w-full p-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs font-bold outline-none text-neutral-900 dark:text-neutral-100 focus:border-emerald-500 cursor-pointer min-h-[36px]"
                   style={{ colorScheme: "light" }}
                 />
                 {!newYlTanggalMasuk && (
-                  <span className="absolute left-2.5 top-2.5 text-xs text-slate-400 font-bold pointer-events-none select-none flex items-center gap-1">
+                  <span className="absolute left-2.5 right-8 top-2.5 text-xs text-neutral-400 font-bold pointer-events-none select-none flex items-center gap-1 whitespace-nowrap overflow-hidden text-ellipsis">
                     <span>Pilih Tanggal (YYYY-MM-DD)</span>
                   </span>
                 )}
               </div>
             </div>
             <div>
-              <label className="text-[10px] font-bold text-slate-600 block mb-1">PIN Login</label>
+              <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 block mb-1">PIN Login</label>
               <input
                 type="text"
                 placeholder="mis: 211"
                 value={newYlPin}
                 onChange={(e) => setNewYlPin(e.target.value)}
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold outline-none text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 font-mono"
+                className="w-full p-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs font-bold outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:border-emerald-500 font-mono"
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-slate-600 block mb-1">NIK (opsional)</label>
+              <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 block mb-1">NIK (opsional)</label>
               <input
                 type="text"
                 placeholder="350xxx"
                 value={newYlNik}
                 onChange={(e) => setNewYlNik(e.target.value)}
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold outline-none text-slate-900 placeholder:text-slate-400 focus:border-emerald-500"
+                className="w-full p-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs font-bold outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:border-emerald-500"
               />
             </div>
             <div>
-              <label className="text-[10px] font-black text-slate-700 block mb-1 flex items-center gap-1">
+              <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300 block mb-1 flex items-center gap-1">
                 <span>🎂 Tgl Lahir</span>
               </label>
               <div className="relative">
@@ -237,34 +238,34 @@ function ManagerLadyTabInner({
                   type="date"
                   value={newYlTglLahir}
                   onChange={(e) => setNewYlTglLahir(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold outline-none text-slate-900 focus:border-emerald-500 cursor-pointer min-h-[36px]"
+                  className="w-full p-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs font-bold outline-none text-neutral-900 dark:text-neutral-100 focus:border-emerald-500 cursor-pointer min-h-[36px]"
                   style={{ colorScheme: "light" }}
                 />
                 {!newYlTglLahir && (
-                  <span className="absolute left-2.5 top-2.5 text-xs text-slate-400 font-bold pointer-events-none select-none flex items-center gap-1">
+                  <span className="absolute left-2.5 right-8 top-2.5 text-xs text-neutral-400 font-bold pointer-events-none select-none flex items-center gap-1 whitespace-nowrap overflow-hidden text-ellipsis">
                     <span>Pilih Tanggal (YYYY-MM-DD)</span>
                   </span>
                 )}
               </div>
             </div>
             {/* Input & Toggle Iuran JHT */}
-            <div className="col-span-2 sm:col-span-1">
-              <label className="text-[10px] font-bold text-slate-600 block mb-1">Iuran JHT</label>
-              <div className="flex items-center gap-1.5 bg-white border border-slate-300 rounded-lg px-2 py-1 min-h-[36px]">
+            <div className="col-span-1">
+              <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 block mb-1">Iuran JHT</label>
+              <div className="flex items-center gap-1.5 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg px-2 py-1 min-h-[36px]">
                 <button
                   type="button"
                   onClick={() => setNewYlIkutJht && setNewYlIkutJht(!newYlIkutJht)}
-                  className={`text-[10px] font-black px-2 py-1 rounded-md transition-all cursor-pointer whitespace-nowrap shadow-xs ${
+                  className={`text-[10px] font-bold px-2 py-1 rounded-md transition-all cursor-pointer whitespace-nowrap shadow-xs ${
                     newYlIkutJht
-                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200"
-                      : "bg-slate-100 text-slate-500 border border-slate-300 hover:bg-slate-200"
+                      ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-200"
+                      : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                   }`}
                   title={newYlIkutJht ? "Status: Ikut Program JHT" : "Status: Tidak Ikut JHT"}
                 >
                   {newYlIkutJht ? "✓ Ikut" : "✕ Tidak"}
                 </button>
                 <div className="relative flex-1">
-                  <span className="absolute left-1 top-1 text-[10px] text-slate-400 font-bold pointer-events-none">Rp</span>
+                  <span className="absolute left-1 top-1 text-[10px] text-neutral-400 font-bold pointer-events-none">Rp</span>
                   <input
                     type="number"
                     step={1000}
@@ -274,7 +275,7 @@ function ManagerLadyTabInner({
                     onChange={(e) => setNewYlIuranJht && setNewYlIuranJht(parseInt(e.target.value, 10) || 0)}
                     placeholder="24000"
                     className={`w-full pl-6 pr-1 py-0.5 text-xs font-mono font-bold outline-none text-right rounded ${
-                      !newYlIkutJht ? "text-slate-400 cursor-not-allowed bg-slate-50" : "text-slate-900 bg-white"
+                      !newYlIkutJht ? "text-neutral-400 cursor-not-allowed bg-neutral-50 dark:bg-neutral-800/40" : "text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800"
                     }`}
                   />
                 </div>
@@ -283,7 +284,7 @@ function ManagerLadyTabInner({
           </div>
           <button
             onClick={handleAddYl}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs py-2.5 rounded-xl transition-all shadow cursor-pointer flex items-center justify-center gap-1.5"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow cursor-pointer flex items-center justify-center gap-1.5"
           >
             💾 Simpan Pendaftaran YL Baru
           </button>
@@ -291,52 +292,52 @@ function ManagerLadyTabInner({
 
         <button
           onClick={() => handleSaveYlList(ylList)}
-          className="w-full bg-red-600 hover:bg-red-700 text-white font-black text-xs py-2.5 rounded-xl transition-all cursor-pointer shadow flex items-center justify-center gap-1.5"
+          className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-brand-900/20 flex items-center justify-center gap-1.5"
         >
           💾 Simpan Perubahan Table Profil YL & PIN
         </button>
         {ylSavedMsg && (
-          <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] font-black text-emerald-700 text-center animate-pulse">
+          <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-[11px] font-bold text-emerald-700 dark:text-emerald-300 text-center animate-pulse">
             {ylSavedMsg}
           </div>
         )}
       </div>
 
       {/* ⚙️ PENGATURAN NILAI POTONGAN KOMPENSASI */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-l-4 border-indigo-600 pl-3">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-base text-indigo-600">⚙️</span>
-              <h2 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-tight">
+              <span className="text-base text-brand-600 dark:text-brand-400">⚙️</span>
+              <h2 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white uppercase tracking-tight">
                 PENGATURAN NILAI POTONGAN KOMPENSASI (JKK/JKN, JHT &amp; PPH/PPN)
               </h2>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
               Nilai yang diubah di sini otomatis terhubung ke perhitungan kompensasi di akun Manager dan seluruh akun Yakult Lady.
             </p>
           </div>
-          <span className="inline-flex items-center self-start sm:self-auto bg-indigo-50 text-indigo-700 text-[10px] font-extrabold px-2.5 py-1 rounded-lg border border-indigo-100">
+          <span className="inline-flex items-center self-start sm:self-auto bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 text-[10px] font-bold px-2.5 py-1 rounded-lg border border-brand-100 dark:border-brand-800">
             Terhubung Global
           </span>
         </div>
 
         {/* 1. Iuran JKK / JKM (JKN) */}
-        <div className="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-4 space-y-2">
+        <div className="bg-neutral-50/70 dark:bg-neutral-800/70 border border-neutral-200/90 dark:border-neutral-800/90 rounded-2xl p-4 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block shrink-0" />
-              <span className="text-xs font-black text-slate-800">Iuran JKK / JKM (JKN)</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-brand-600 inline-block shrink-0" />
+              <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Iuran JKK / JKM (JKN)</span>
             </div>
-            <span className="text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-2xs">
+            <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 px-2 py-0.5 rounded-md shadow-2xs">
               BPJS Naker
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 leading-tight">
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">
             Nominal potongan iuran JKK &amp; JKM per bulan untuk seluruh YL.
           </p>
-          <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 flex items-center justify-between focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
-            <span className="text-xs font-bold text-slate-400 select-none">Rp</span>
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 flex items-center justify-between focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
+            <span className="text-xs font-bold text-neutral-400 select-none">Rp</span>
             <input
               type="number"
               step={100}
@@ -346,30 +347,30 @@ function ManagerLadyTabInner({
                 const val = Number(e.target.value) || 0;
                 setCompConfig && setCompConfig((prev: any) => ({ ...prev, jkkJkm: val }));
               }}
-              className="text-right text-sm font-black text-slate-900 outline-none w-full bg-transparent font-mono"
+              className="text-right text-sm font-black text-neutral-900 dark:text-neutral-100 outline-none w-full bg-transparent font-mono"
             />
           </div>
-          <p className="text-[10px] text-slate-400 font-semibold text-right">
+          <p className="text-[10px] text-neutral-400 font-semibold text-right">
             Default sistem: Rp 18.800
           </p>
         </div>
 
         {/* 2. Iuran JHT Standar */}
-        <div className="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-4 space-y-2">
+        <div className="bg-neutral-50/70 dark:bg-neutral-800/70 border border-neutral-200/90 dark:border-neutral-800/90 rounded-2xl p-4 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block shrink-0" />
-              <span className="text-xs font-black text-slate-800">Iuran JHT Standar</span>
+              <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Iuran JHT Standar</span>
             </div>
-            <span className="text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-2xs">
+            <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 px-2 py-0.5 rounded-md shadow-2xs">
               Hari Tua
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 leading-tight">
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">
             Nominal iuran standar bulanan bagi YL yang berstatus ikut JHT.
           </p>
-          <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 flex items-center justify-between focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
-            <span className="text-xs font-bold text-slate-400 select-none">Rp</span>
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 flex items-center justify-between focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
+            <span className="text-xs font-bold text-neutral-400 select-none">Rp</span>
             <input
               type="number"
               step={1000}
@@ -379,29 +380,29 @@ function ManagerLadyTabInner({
                 const val = Number(e.target.value) || 0;
                 setCompConfig && setCompConfig((prev: any) => ({ ...prev, jht: val }));
               }}
-              className="text-right text-sm font-black text-slate-900 outline-none w-full bg-transparent font-mono"
+              className="text-right text-sm font-black text-neutral-900 dark:text-neutral-100 outline-none w-full bg-transparent font-mono"
             />
           </div>
-          <p className="text-[10px] text-slate-400 font-semibold text-right">
+          <p className="text-[10px] text-neutral-400 font-semibold text-right">
             Default sistem: Rp 24.000
           </p>
         </div>
 
         {/* 3. Pajak PPh / PPN (%) */}
-        <div className="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-4 space-y-2">
+        <div className="bg-neutral-50/70 dark:bg-neutral-800/70 border border-neutral-200/90 dark:border-neutral-800/90 rounded-2xl p-4 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block shrink-0" />
-              <span className="text-xs font-black text-slate-800">Pajak PPh / PPN (%)</span>
+              <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Pajak PPh / PPN (%)</span>
             </div>
-            <span className="text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-2xs">
+            <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 px-2 py-0.5 rounded-md shadow-2xs">
               Pajak
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 leading-tight">
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">
             Persentase potongan pajak dari kompensasi bulanan kotor.
           </p>
-          <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 flex items-center justify-end gap-1.5 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 flex items-center justify-end gap-1.5 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
             <input
               type="number"
               step={0.1}
@@ -412,26 +413,26 @@ function ManagerLadyTabInner({
                 const val = parseFloat(e.target.value) || 0;
                 setCompConfig && setCompConfig((prev: any) => ({ ...prev, pphRate: val }));
               }}
-              className="text-right text-sm font-black text-slate-900 outline-none w-24 bg-transparent font-mono"
+              className="text-right text-sm font-black text-neutral-900 dark:text-neutral-100 outline-none w-24 bg-transparent font-mono"
             />
-            <span className="text-xs font-bold text-slate-400 select-none">%</span>
+            <span className="text-xs font-bold text-neutral-400 select-none">%</span>
           </div>
-          <p className="text-[10px] text-slate-400 font-semibold text-right">
+          <p className="text-[10px] text-neutral-400 font-semibold text-right">
             Default sistem: 2.5%
           </p>
         </div>
 
         {/* Ringkasan Potongan Standar per YL */}
-        <div className="bg-indigo-50/60 border border-indigo-200/80 rounded-2xl p-4 space-y-2">
+        <div className="bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-900/80 rounded-2xl p-4 space-y-2">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="text-base">📋</span>
-              <span className="text-xs font-black text-slate-800">
+              <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
                 Ringkasan Potongan Standar per YL:
               </span>
             </div>
-            <div className="bg-white border border-indigo-200 rounded-xl px-3 py-1.5 shadow-2xs self-start sm:self-auto">
-              <span className="text-xs sm:text-sm font-black text-indigo-900 font-mono">
+            <div className="bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-800 rounded-xl px-3 py-1.5 shadow-2xs self-start sm:self-auto">
+              <span className="text-xs sm:text-sm font-black text-indigo-900 dark:text-indigo-300 font-mono">
                 Rp {(currentJkk + currentJht).toLocaleString("id-ID")} + PPh {currentPph.toString().replace(".", ",")}%
               </span>
             </div>
@@ -440,7 +441,7 @@ function ManagerLadyTabInner({
             <button
               type="button"
               onClick={handleResetToDefault}
-              className="text-[11px] font-bold text-slate-500 hover:text-indigo-700 underline cursor-pointer transition-colors"
+              className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 hover:text-indigo-700 underline cursor-pointer transition-colors"
             >
               Reset ke Nilai Default
             </button>
@@ -448,13 +449,13 @@ function ManagerLadyTabInner({
         </div>
 
         {compSavedMsg && (
-          <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs font-black text-emerald-800 text-center animate-pulse">
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-300 text-center animate-pulse">
             {compSavedMsg}
           </div>
         )}
 
         {applyingJhtMsg && (
-          <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs font-black text-emerald-800 text-center">
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-300 text-center">
             {applyingJhtMsg}
           </div>
         )}
@@ -465,7 +466,7 @@ function ManagerLadyTabInner({
             type="button"
             onClick={onSaveCompRates}
             disabled={isSavingComp}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-black text-xs py-3 rounded-xl transition-all shadow cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs py-3 rounded-xl transition-all shadow cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {isSavingComp ? (
               <>
@@ -483,7 +484,7 @@ function ManagerLadyTabInner({
           <button
             type="button"
             onClick={handleApplyJhtToAllYl}
-            className="w-full bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 border border-emerald-300 font-black text-xs py-3 rounded-xl transition-all shadow-2xs cursor-pointer flex items-center justify-center gap-2"
+            className="w-full bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold text-xs py-3 rounded-xl transition-all shadow-2xs cursor-pointer flex items-center justify-center gap-2"
           >
             <span>🔄</span>
             <span>Terapkan JHT (Rp {currentJht.toLocaleString("id-ID")}) ke Semua YL yang Ikut</span>

@@ -53,7 +53,7 @@ const AIChatBot = lazy(() =>
 // dgn koneksi normal, tapi tetap perlu ada agar tidak blank/error).
 function ViewLoadingFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center text-sm text-slate-400">
+    <div className="min-h-screen flex items-center justify-center text-sm text-neutral-400">
       Memuat...
     </div>
   );
@@ -68,7 +68,13 @@ export default function App() {
   // Theme support (light/dark)
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const saved = localStorage.getItem("theme");
-    return (saved === "dark" || saved === "light") ? saved : "light";
+    if (saved === "dark" || saved === "light") return saved;
+    // Belum pernah memilih: ikuti pengaturan gelap/terang HP
+    try {
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    } catch {
+      return "light";
+    }
   });
 
   useEffect(() => {
@@ -77,6 +83,10 @@ export default function App() {
     } else {
       document.documentElement.classList.remove("dark");
     }
+    // Warna status bar HP ikut tema (sama dengan navbar: putih / neutral-900)
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "dark" ? "#171717" : "#ffffff");
     localStorage.setItem("theme", theme);
   }, [theme]);
 
@@ -657,9 +667,9 @@ export default function App() {
 
   if (loading && !session) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
-        <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs font-black text-slate-400 mt-3 uppercase tracking-wider">Memuat Sistem Jember 1...</p>
+      <div className="min-h-[100dvh] bg-neutral-50 dark:bg-neutral-950 flex flex-col items-center justify-center text-neutral-800 dark:text-neutral-100">
+        <div className="w-10 h-10 border-4 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs font-bold text-neutral-500 mt-3 uppercase tracking-wider">Memuat Sistem Jember 1...</p>
       </div>
     );
   }
@@ -667,26 +677,25 @@ export default function App() {
   // LOGIN SCREEN RENDER
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-950 via-slate-950 to-slate-900 p-4 relative overflow-hidden">
-        {/* Subtle decorative particles */}
-        <div className="absolute top-10 left-10 w-40 h-40 bg-red-600/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-40 h-40 bg-rose-600/10 rounded-full blur-3xl" />
-
-        <div className="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border border-red-900/10 relative z-10 transition-all">
-          <div className="flex justify-center mb-3">
-            <JossLogo size={88} animated className="drop-shadow-lg" />
+      <div className="min-h-[100dvh] flex items-center justify-center bg-neutral-100 dark:bg-neutral-950 p-4 relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_50%_36%,rgba(29,79,145,0.07),transparent_58%)]" />
+        <div className="bg-white dark:bg-neutral-900 rounded-[1.75rem] max-w-sm w-full text-center shadow-[0_18px_48px_-20px_rgba(23,37,56,0.28)] border border-neutral-200 dark:border-neutral-800 relative z-10 overflow-hidden">
+          <div className="px-6 pt-7 pb-6 bg-[#0C2D57] text-white">
+            <div className="flex justify-center mb-3">
+              <JossLogo size={76} animated inverted className="drop-shadow-sm" />
+            </div>
+            <h1 className="text-base sm:text-lg font-bold tracking-tight text-white uppercase">
+              JEMBER OPERATION SALES SYSTEM
+            </h1>
+            <p className="text-[11px] text-blue-100 font-semibold uppercase tracking-wide mt-1">
+              {motivasiConfig?.tkuName || "DP Jember 1"}
+            </p>
           </div>
-          <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-800 uppercase">
-            JEMBER OPERATION SALES SYSTEM
-          </h1>
-          <p className="text-[10px] text-red-600 font-bold uppercase tracking-wide mt-1">
-            {motivasiConfig?.tkuName || "DP Jember 1"}
-          </p>
 
-          <div className="mt-6 space-y-4">
+          <div className="p-6 sm:p-7 space-y-4">
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                <Lock className="h-4 w-4 text-slate-400" />
+                <Lock className="h-4 w-4 text-brand-600 dark:text-brand-400" />
               </span>
               <input
                 type="password"
@@ -695,7 +704,7 @@ export default function App() {
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
                 placeholder="Masukkan PIN Anda"
-                className="w-full pl-9 pr-3 py-3 border-2 border-slate-200 rounded-2xl text-center text-xl font-bold tracking-widest outline-none focus:border-red-500 transition-all"
+                className="w-full pl-9 pr-3 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 text-neutral-900 dark:text-neutral-100 rounded-xl text-center text-xl font-bold tracking-widest outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100 dark:focus:ring-brand-900/40 transition-all placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleLogin();
                 }}
@@ -704,20 +713,20 @@ export default function App() {
             </div>
 
             {loginError && (
-              <p className="text-xs text-red-600 font-bold text-center animate-shake">⚠️ {loginError}</p>
+              <p className="text-xs text-rose-600 font-bold text-center animate-shake">{loginError}</p>
             )}
 
             <button
               onClick={handleLogin}
-              className="w-full bg-gradient-to-r from-red-600 to-rose-600 text-white font-black py-3.5 rounded-2xl text-xs uppercase tracking-wider hover:opacity-95 transition-all shadow-md active:scale-95"
+              className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-brand-900/15 active:scale-[0.99] cursor-pointer"
             >
               Masuk ke Aplikasi
             </button>
-          </div>
 
-          <div className="mt-6 flex justify-center items-center gap-1.5 text-[9px] text-slate-400 font-bold uppercase">
-            <KeyRound className="w-3.5 h-3.5" />
-            <span>Sandi & PIN dienkripsi server</span>
+            <div className="pt-1 flex justify-center items-center gap-1.5 text-[10px] text-neutral-500 font-semibold">
+              <KeyRound className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+              <span>Sandi &amp; PIN dienkripsi server</span>
+            </div>
           </div>
         </div>
       </div>
@@ -727,54 +736,58 @@ export default function App() {
   // MANAGER VIEW RENDER
   if (session.role === "manager") {
     return (
-      <Suspense fallback={<ViewLoadingFallback />}>
-        <ManagerView
-          onLogout={handleLogout}
-          ylAccounts={ylAccountNames}
-          onImpersonateYl={handleImpersonateYl}
-          globalMonth={globalMonth}
-          setGlobalMonth={updateGlobalMonth}
-          dashboardData={dashboardData}
-          evaluasiData={evaluasiData}
-          onRefresh={refreshAllData}
-        isRefreshing={loading}
-          motivasiConfig={motivasiConfig}
-          onUpdateMotivasi={handleSaveMotivasiConfig}
-          kontesConfig={kontesConfig}
-          scriptUrl={scriptUrl}
-          onSaveScriptUrl={handleSaveScriptUrl}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-        />
-        <AIChatBot role={session.role} userName={session.name} botName={motivasiConfig?.chatbotName || "AI Jember 1 Pro"} />
-      </Suspense>
+      <div className={`min-h-screen bg-neutral-100/60 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors ${theme === "dark" ? "dark" : ""}`}>
+        <Suspense fallback={<ViewLoadingFallback />}>
+          <ManagerView
+            onLogout={handleLogout}
+            ylAccounts={ylAccountNames}
+            onImpersonateYl={handleImpersonateYl}
+            globalMonth={globalMonth}
+            setGlobalMonth={updateGlobalMonth}
+            dashboardData={dashboardData}
+            evaluasiData={evaluasiData}
+            onRefresh={refreshAllData}
+            isRefreshing={loading}
+            motivasiConfig={motivasiConfig}
+            onUpdateMotivasi={handleSaveMotivasiConfig}
+            kontesConfig={kontesConfig}
+            scriptUrl={scriptUrl}
+            onSaveScriptUrl={handleSaveScriptUrl}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+          <AIChatBot role={session.role} userName={session.name} botName={motivasiConfig?.chatbotName || "AI Jember 1 Pro"} />
+        </Suspense>
+      </div>
     );
   }
 
   // YAKULT LADY VIEW RENDER
   return (
-    <Suspense fallback={<ViewLoadingFallback />}>
-      <YLView
-        ylName={session.name}
-        ylList={ylList}
-        onLogout={handleLogout}
-        onBackToAdmin={session.viewAsFrom === "manager" ? handleBackToAdmin : undefined}
-        globalMonth={globalMonth}
-        setGlobalMonth={updateGlobalMonth}
-        evaluasiData={evaluasiData}
-        onRefresh={refreshAllData}
-        isRefreshing={loading}
-        transactions={transactions}
-        targetYL={targetYL}
-        breakdownRealisasi={breakdownRealisasi}
-        tanggalValid={tanggalValid}
-        onSaveTransaction={handleSaveTransaction}
-        onSaveTargetYL={handleSaveTargetYL}
-        motivasiConfig={motivasiConfig}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
-      <AIChatBot role={session.role} userName={session.name} botName={motivasiConfig?.chatbotName || "AI Jember 1 Pro"} />
-    </Suspense>
+    <div className={`min-h-screen bg-neutral-100/60 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors ${theme === "dark" ? "dark" : ""}`}>
+      <Suspense fallback={<ViewLoadingFallback />}>
+        <YLView
+          ylName={session.name}
+          ylList={ylList}
+          onLogout={handleLogout}
+          onBackToAdmin={session.viewAsFrom === "manager" ? handleBackToAdmin : undefined}
+          globalMonth={globalMonth}
+          setGlobalMonth={updateGlobalMonth}
+          evaluasiData={evaluasiData}
+          onRefresh={refreshAllData}
+          isRefreshing={loading}
+          transactions={transactions}
+          targetYL={targetYL}
+          breakdownRealisasi={breakdownRealisasi}
+          tanggalValid={tanggalValid}
+          onSaveTransaction={handleSaveTransaction}
+          onSaveTargetYL={handleSaveTargetYL}
+          motivasiConfig={motivasiConfig}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
+        <AIChatBot role={session.role} userName={session.name} botName={motivasiConfig?.chatbotName || "AI Jember 1 Pro"} />
+      </Suspense>
+    </div>
   );
 }

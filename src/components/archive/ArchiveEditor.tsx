@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Lock, Save, ArrowLeft, RefreshCw, AlertTriangle, FileBox, Calculator, PenTool, CheckCircle, Plus, Trash2 } from "lucide-react";
+import { Save, ArrowLeft, RefreshCw, FileBox, Trash2 } from "lucide-react";
 import { loadFromSupabase, saveToSupabase, deleteFromSupabase } from "../../lib/supabaseClient";
 import { cleanYlName } from "../../types";
 
@@ -16,7 +16,7 @@ import { GridSelectionToolbar } from "../GridSelectionToolbar";
 import { SpreadsheetInputBar } from "../SpreadsheetInputBar";
 import { ClipboardFallbackModal } from "../ClipboardFallbackModal";
 import { useSimpleGrid } from "../useSimpleGrid";
-import { formatTruncated, formatPercentTruncated, truncateDecimal } from "../../utils/numberFormat";
+import { formatTruncated } from "../../utils/numberFormat";
 
 
 // Custom Mock Fetch Handler
@@ -52,40 +52,43 @@ function createMockHandler(snapshotRef, setSnapshot) {
         .sort()
         .reverse();
 
-      for (const prevKey of allSavedDates) {
-        const dayData = s.lhppPdm[prevKey];
-        if (!dayData || typeof dayData !== "object") continue;
-        let hasAdded = false;
-        Object.keys(dayData).forEach((ylKey) => {
-          const hi = dayData[ylKey]?.pdmHariIni;
-          if (!prevPdmMap[ylKey] && hi && (hi.yo > 0 || hi.om > 0 || hi.os > 0 || hi.yt > 0)) {
-            prevPdmMap[ylKey] = {
-              yo: Number(hi.yo || 0),
-              om: Number(hi.om || 0),
-              os: Number(hi.os || 0),
-              yt: Number(hi.yt || 0)
-            };
-            hasAdded = true;
-          }
-        });
-        if (hasAdded && !prevSourceDate) prevSourceDate = prevKey;
-      }
-
       if (allSavedDates.length > 0) {
-        const nearestDate = allSavedDates[0];
-        const nearestData = s.lhppPdm[nearestDate] || {};
-        Object.keys(nearestData).forEach((ylKey) => {
-          if (!prevPdmMap[ylKey] && nearestData[ylKey]?.pdmHariIni) {
-            const hi = nearestData[ylKey].pdmHariIni;
-            prevPdmMap[ylKey] = {
-              yo: Number(hi.yo || 0),
-              om: Number(hi.om || 0),
-              os: Number(hi.os || 0),
-              yt: Number(hi.yt || 0)
+        prevSourceDate = allSavedDates[0];
+        const prevDayData = s.lhppPdm[prevSourceDate] || {};
+
+        Object.keys(prevDayData).forEach((k) => {
+          const entry = prevDayData[k];
+          if (entry && entry.pdmHariIni) {
+            const pdm = {
+              yo: Number(entry.pdmHariIni.yo || 0),
+              om: Number(entry.pdmHariIni.om || 0),
+              os: Number(entry.pdmHariIni.os || 0),
+              yt: Number(entry.pdmHariIni.yt || 0)
             };
+            prevPdmMap[k] = pdm;
+            const cleanK = cleanYlName(k);
+            if (cleanK) prevPdmMap[cleanK] = pdm;
           }
         });
-        if (!prevSourceDate) prevSourceDate = nearestDate;
+
+        for (let i = 1; i < allSavedDates.length; i++) {
+          const olderDate = allSavedDates[i];
+          const olderData = s.lhppPdm[olderDate] || {};
+          Object.keys(olderData).forEach((k) => {
+            const cleanK = cleanYlName(k);
+            const hasKey = prevPdmMap[k] || (cleanK && prevPdmMap[cleanK]);
+            if (!hasKey && olderData[k]?.pdmHariIni) {
+              const pdm = {
+                yo: Number(olderData[k].pdmHariIni.yo || 0),
+                om: Number(olderData[k].pdmHariIni.om || 0),
+                os: Number(olderData[k].pdmHariIni.os || 0),
+                yt: Number(olderData[k].pdmHariIni.yt || 0)
+              };
+              prevPdmMap[k] = pdm;
+              if (cleanK) prevPdmMap[cleanK] = pdm;
+            }
+          });
+        }
       }
       
       const currentPdm = (s.lhppPdm && s.lhppPdm[dateKey]) ? s.lhppPdm[dateKey] : null;
@@ -520,36 +523,12 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
      if (!selectedMonth) return;
      setShowDeleteModal(true);
   };
-
-  
-  const [gridSelection, setGridSelection] = useState<any>(null);
-  const [isGridDragging, setIsGridDragging] = useState(false);
-  const [isFillDragging, setIsFillDragging] = useState(false);
-  const [fillHoverCell, setFillHoverCell] = useState<any>(null);
+  const [] = useState<any>(null);
   const [archiveGridMode, setArchiveGridMode] = useState<"BD" | "R">("R");
-  const [isBreakdownMenuOpen, setIsBreakdownMenuOpen] = useState(false);
-  const [breakdownMenuPos, setBreakdownMenuPos] = useState<{ x: number; y: number } | null>(null);
-  const [breakdownClipboardModal, setBreakdownClipboardModal] = useState<{ mode: "copy" | "paste"; text: string } | null>(null);
-  const [copiedText, setCopiedText] = useState("");
-  const touchStartRef = useRef<any>(null);
+  const [] = useState<{ mode: "copy" | "paste"; text: string } | null>(null);
 
   const activeGridMap = archiveGridMode === "BD" ? (snapshot?.breakdownPlanMap || {}) : (snapshot?.breakdownRealisasiMap || {});
   const activeTargetYLMap = snapshot?.targetYLMap || {};
-
-  const handleBreakdownCellChange = (area: any, day: any, item: any, val: any) => {
-     setSnapshot(prev => {
-        if (!prev) return prev;
-        const next = { ...prev };
-        const mapKey = archiveGridMode === "BD" ? "breakdownPlanMap" : "breakdownRealisasiMap";
-        if (!next[mapKey]) next[mapKey] = {};
-        const areaStr = String(area).substring(0, 3);
-        if (!next[mapKey][areaStr]) next[mapKey][areaStr] = { pembagiTanggal: 25, days: {} };
-        if (!next[mapKey][areaStr].days) next[mapKey][areaStr].days = {};
-        if (!next[mapKey][areaStr].days[String(day)]) next[mapKey][areaStr].days[String(day)] = { yo: 0, om: 0, os: 0, yt: 0 };
-        next[mapKey][areaStr].days[String(day)][item] = Number(val) || 0;
-        return next;
-     });
-  };
 
   const handleUpdateTargetYLMap = (updater: any) => {
      setSnapshot(prev => {
@@ -790,277 +769,6 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
     };
   }, [ylList, activeTargetYLMap, pembagiAktif, monthlyGridTotals]);
 
-  const handleClearSelectedGridCells = () => {
-    if (!gridSelection) return;
-    const minR = Math.min(gridSelection.startR, gridSelection.endR);
-    const maxR = Math.max(gridSelection.startR, gridSelection.endR);
-    const minC = Math.min(gridSelection.startC, gridSelection.endC);
-    const maxC = Math.max(gridSelection.startC, gridSelection.endC);
-
-    const activeYLs = (ylList || []).filter((y: any) => y.status !== "nonaktif");
-    const items: Array<"yo" | "om" | "os" | "yt"> = ["yo", "om", "os", "yt"];
-
-    setSnapshot(prev => {
-      if (!prev) return prev;
-      const next = { ...prev };
-      const mapKey = archiveGridMode === "BD" ? "breakdownPlanMap" : "breakdownRealisasiMap";
-      if (!next[mapKey]) next[mapKey] = {};
-      const updatedMap = { ...next[mapKey] };
-
-      for (let r = minR; r <= maxR; r++) {
-        if (!activeYLs[r]) continue;
-        const area = String(activeYLs[r].area).substring(0, 3);
-        const ylPlan = updatedMap[area] ? { ...updatedMap[area] } : { pembagiTanggal: 25, days: {} };
-        const days = { ...ylPlan.days };
-
-        for (let c = minC; c <= maxC; c++) {
-          const day = Math.floor(c / 4) + 1;
-          const item = items[c % 4];
-          const dayData = days[String(day)] ? { ...days[String(day)] } : { yo: 0, om: 0, os: 0, yt: 0 };
-          dayData[item] = 0;
-          days[String(day)] = dayData;
-        }
-        ylPlan.days = days;
-        updatedMap[area] = ylPlan;
-      }
-
-      next[mapKey] = updatedMap;
-      return next;
-    });
-  };
-
-  const handleSelectAllGridCells = () => {
-    const activeYLs = (ylList || []).filter((y: any) => y.status !== "nonaktif");
-    if (activeYLs.length === 0) return;
-    setGridSelection({
-      startR: 0,
-      startC: 0,
-      endR: activeYLs.length - 1,
-      endC: 123
-    });
-  };
-
-  const handleCopyGridCells = () => {
-    const activeYLs = (ylList || []).filter((y: any) => y.status !== "nonaktif");
-    let sel = gridSelection;
-    if (!sel && activeYLs.length > 0) {
-      sel = { startR: 0, startC: 0, endR: activeYLs.length - 1, endC: 123 };
-      setGridSelection(sel);
-    }
-    if (!sel) return;
-
-    const minR = Math.min(sel.startR, sel.endR);
-    const maxR = Math.max(sel.startR, sel.endR);
-    const minC = Math.min(sel.startC, sel.endC);
-    const maxC = Math.max(sel.startC, sel.endC);
-
-    const items: Array<"yo" | "om" | "os" | "yt"> = ["yo", "om", "os", "yt"];
-    const rowsText: string[] = [];
-
-    for (let r = minR; r <= maxR; r++) {
-      if (!activeYLs[r]) continue;
-      const area = String(activeYLs[r].area).substring(0, 3);
-      const ylPlan = activeGridMap[area] || { days: {} };
-      const colTexts: string[] = [];
-
-      for (let c = minC; c <= maxC; c++) {
-        const day = Math.floor(c / 4) + 1;
-        const item = items[c % 4];
-        const val = ylPlan.days?.[String(day)]?.[item] || 0;
-        colTexts.push(String(val));
-      }
-      rowsText.push(colTexts.join("\t"));
-    }
-
-    const clipboardContent = rowsText.join("\n");
-    setCopiedText(clipboardContent);
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(clipboardContent).catch(() => {
-        setBreakdownClipboardModal({ mode: "copy", text: clipboardContent });
-      });
-    } else {
-      setBreakdownClipboardModal({ mode: "copy", text: clipboardContent });
-    }
-  };
-
-  const handleMobilePasteClick = async () => {
-    try {
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        const text = await navigator.clipboard.readText();
-        if (text && text.trim().length > 0) {
-          handlePasteIntoGrid(text);
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn("Direct clipboard read unavailable:", err);
-    }
-    if (copiedText && copiedText.trim().length > 0) {
-      handlePasteIntoGrid(copiedText);
-      return;
-    }
-    setBreakdownClipboardModal({ mode: "paste", text: "" });
-  };
-
-  const handlePasteIntoGrid = (pastedText: string, targetStartCell?: { r: number; c: number }) => {
-    if (!pastedText) return;
-    const activeYLs = (ylList || []).filter((y: any) => y.status !== "nonaktif");
-    if (activeYLs.length === 0) return;
-
-    let startR = 0;
-    let startC = 0;
-    let selHeight = 1;
-    let selWidth = 1;
-
-    if (targetStartCell) {
-      startR = targetStartCell.r;
-      startC = targetStartCell.c;
-      if (gridSelection) {
-        selHeight = Math.abs(gridSelection.endR - gridSelection.startR) + 1;
-        selWidth = Math.abs(gridSelection.endC - gridSelection.startC) + 1;
-      }
-    } else if (gridSelection) {
-      startR = Math.min(gridSelection.startR, gridSelection.endR);
-      startC = Math.min(gridSelection.startC, gridSelection.endC);
-      selHeight = Math.abs(gridSelection.endR - gridSelection.startR) + 1;
-      selWidth = Math.abs(gridSelection.endC - gridSelection.startC) + 1;
-    }
-
-    const rawLines = pastedText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-    if (rawLines.length > 1 && rawLines[rawLines.length - 1] === "") {
-      rawLines.pop();
-    }
-    if (rawLines.length === 0) return;
-
-    const parsedMatrix: number[][] = rawLines.map(rowStr => {
-      const cells = rowStr.split("\t");
-      return cells.map(valStr => {
-        let cleanStr = valStr.replace(/^[^\d-]+/, "");
-        if (cleanStr.includes(",") && cleanStr.includes(".")) {
-          cleanStr = cleanStr.split(",")[0].replace(/\./g, "");
-        } else if (cleanStr.includes(".")) {
-          const parts = cleanStr.split(".");
-          if (parts.length > 1 && parts[parts.length - 1].length === 3) {
-            cleanStr = parts.join("");
-          } else {
-            cleanStr = parts[0];
-          }
-        } else if (cleanStr.includes(",")) {
-          cleanStr = cleanStr.split(",")[0];
-        }
-        const cleanNum = parseInt(cleanStr.replace(/[^0-9-]/g, ""), 10);
-        return Math.max(0, cleanNum || 0);
-      });
-    });
-
-    const pastedHeight = parsedMatrix.length;
-    const pastedWidth = Math.max(...parsedMatrix.map(row => row.length));
-
-    const targetHeight = Math.max(pastedHeight, selHeight);
-    const targetWidth = Math.max(pastedWidth, selWidth);
-
-    const items: Array<"yo" | "om" | "os" | "yt"> = ["yo", "om", "os", "yt"];
-
-    let maxPastedR = startR;
-    let maxPastedC = startC;
-
-    setSnapshot(prev => {
-      if (!prev) return prev;
-      const next = { ...prev };
-      const mapKey = archiveGridMode === "BD" ? "breakdownPlanMap" : "breakdownRealisasiMap";
-      if (!next[mapKey]) next[mapKey] = {};
-      const copy = { ...next[mapKey] };
-
-      for (let r = 0; r < targetHeight; r++) {
-        const targetR = startR + r;
-        if (targetR >= activeYLs.length) break;
-        maxPastedR = Math.max(maxPastedR, targetR);
-
-        const area = String(activeYLs[targetR].area).substring(0, 3);
-        const ylObj = copy[area] ? { ...copy[area] } : { pembagiTanggal: 25, days: {} };
-        const daysObj = { ...ylObj.days };
-
-        const pastedR = r % pastedHeight;
-        const srcRow = parsedMatrix[pastedR] || [0];
-        const rowLen = srcRow.length;
-
-        for (let c = 0; c < targetWidth; c++) {
-          const targetC = startC + c;
-          if (targetC >= 124) break;
-          maxPastedC = Math.max(maxPastedC, targetC);
-
-          const pastedC = c % rowLen;
-          const val = srcRow[pastedC] ?? 0;
-
-          const day = Math.floor(targetC / 4) + 1;
-          const item = items[targetC % 4];
-
-          const dayObj = daysObj[String(day)] ? { ...daysObj[String(day)] } : { yo: 0, om: 0, os: 0, yt: 0 };
-          dayObj[item] = val;
-          daysObj[String(day)] = dayObj;
-        }
-
-        ylObj.days = daysObj;
-        copy[area] = ylObj;
-      }
-
-      next[mapKey] = copy;
-      return next;
-    });
-
-    setGridSelection({
-      startR,
-      startC,
-      endR: maxPastedR,
-      endC: maxPastedC
-    });
-  };
-
-  const handleTouchMoveGrid = (e: any) => {
-    if (!e.touches || e.touches.length === 0) return;
-    const touch = e.touches[0];
-
-    if (touchStartRef.current) {
-      const dx = Math.abs(touch.clientX - touchStartRef.current.clientX);
-      const dy = Math.abs(touch.clientY - touchStartRef.current.clientY);
-      if (dx > 8 || dy > 8) {
-        touchStartRef.current.hasMoved = true;
-        if (!isGridDragging && !isFillDragging) {
-          // Hanya aktifkan drag seleksi jika sentuhan berawal dari sel yang sudah terpilih (klik kolom lalu ditarik)
-          if (touchStartRef.current.isInsideSelection) {
-            setIsGridDragging(true);
-          } else {
-            // User sedang menggeser/scroll tabel - jangan ngeblok
-            return;
-          }
-        }
-      }
-    }
-
-    if (!isGridDragging && !isFillDragging) return;
-
-    if (e.cancelable) {
-      e.preventDefault();
-    }
-    const rawTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (!rawTarget) return;
-    const targetEl = (rawTarget instanceof Element ? rawTarget : (rawTarget as any)?.parentElement) as HTMLElement | null;
-    if (!targetEl || typeof targetEl.closest !== "function") return;
-    const tdEl = targetEl.closest("td[data-r]");
-    if (tdEl) {
-      const r = parseInt(tdEl.getAttribute("data-r") || "-1", 10);
-      const c = parseInt(tdEl.getAttribute("data-c") || "-1", 10);
-      if (r >= 0 && c >= 0) {
-        if (isFillDragging) {
-          setFillHoverCell({ r, c });
-        } else {
-          setGridSelection(prev => prev ? { ...prev, endR: r, endC: c } : { startR: r, startC: c, endR: r, endC: c });
-        }
-      }
-    }
-  };
-
   // Helper for grids
   
   const currentMonthTotal = useCallback((perYL: any, key: any) => {
@@ -1109,22 +817,22 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
 
   if (!auth) {
      return (
-       <div className="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-4">
-         <div className="bg-white rounded-3xl p-6 max-w-sm w-full text-center">
-            <div className="bg-indigo-100 text-indigo-700 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+       <div className="fixed inset-0 z-[100] bg-neutral-900 dark:bg-neutral-950 flex items-center justify-center p-4">
+         <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 max-w-sm w-full text-center">
+            <div className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <FileBox className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-black text-slate-800">Archive Editor</h2>
-            <p className="text-xs text-slate-500 mb-6">Masukkan PIN Manager untuk mengakses editor arsip historis.</p>
+            <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-200">Archive Editor</h2>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-6">Masukkan PIN Manager untuk mengakses editor arsip historis.</p>
             <input 
               type="password" 
               value={pin}
               onChange={e => setPin(e.target.value)}
-              className="w-full text-center text-2xl font-black tracking-widest border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-indigo-500 mb-4"
+              className="w-full text-center text-2xl font-bold tracking-widest border-2 border-neutral-200 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-indigo-500 mb-4"
               placeholder="******"
             />
             <div className="flex gap-2">
-              <button onClick={onClose} className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs">BATAL</button>
+              <button onClick={onClose} className="flex-1 py-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold rounded-xl text-xs">BATAL</button>
               <button onClick={handleLogin} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl text-xs">MASUK</button>
             </div>
          </div>
@@ -1133,7 +841,7 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-50 overflow-y-auto overflow-x-hidden">
+    <div className="fixed inset-0 z-[100] bg-neutral-50 dark:bg-neutral-800/40 overflow-y-auto overflow-x-hidden">
       <header className="bg-gradient-to-r from-indigo-900 to-indigo-800 text-white p-3 sm:p-4 sticky top-0 z-50 shadow-md">
          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
             <div className="flex items-center justify-between gap-3 w-full md:w-auto">
@@ -1142,7 +850,7 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                   <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div className="min-w-0">
-                  <h1 className="font-black text-sm sm:text-lg flex items-center gap-1.5 sm:gap-2 tracking-wide">
+                  <h1 className="font-bold text-sm sm:text-lg flex items-center gap-1.5 sm:gap-2 tracking-wide">
                     <FileBox className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-300 shrink-0" />
                     <span className="truncate">ARCHIVE EDITOR</span>
                   </h1>
@@ -1176,13 +884,13 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
       </header>
 
       {saveMsg && (
-        <div className="bg-indigo-100 text-indigo-800 text-center py-2 text-xs font-bold sticky top-[72px] z-40 border-b border-indigo-200">
+        <div className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 text-center py-2 text-xs font-bold sticky top-[72px] z-40 border-b border-indigo-200 dark:border-indigo-800">
           {saveMsg}
         </div>
       )}
 
       {!snapshot && !loading && (
-        <div className="flex flex-col items-center justify-center p-12 sm:p-20 text-slate-400 text-center">
+        <div className="flex flex-col items-center justify-center p-12 sm:p-20 text-neutral-400 text-center">
           <FileBox className="w-12 h-12 sm:w-16 sm:h-16 mb-4 opacity-50" />
           <p className="font-bold text-sm sm:text-base">Pilih bulan dan klik tombol Refresh untuk memuat arsip.</p>
         </div>
@@ -1206,7 +914,7 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                   key={t.id}
                   onClick={() => setActiveTab(t.id)}
                   className={`p-2.5 sm:p-3 text-left rounded-xl text-xs font-bold flex items-center gap-1.5 sm:gap-2 shrink-0 transition-all ${
-                    activeTab === t.id ? "bg-indigo-600 text-white shadow-md" : "bg-white text-slate-600 hover:bg-slate-100"
+                    activeTab === t.id ? "bg-indigo-600 text-white shadow-md" : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                   }`}
                 >
                   <span className="text-base">{t.icon}</span>
@@ -1228,13 +936,13 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
               )}
               {activeTab === "evaluasi" && (
                 <div className="space-y-4">
-                  <div className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                  <div className="bg-white dark:bg-neutral-900 p-3 sm:p-4 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-700">Tampilkan Evaluasi:</span>
+                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Tampilkan Evaluasi:</span>
                       <select
                         value={archiveEvalYl}
                         onChange={(e) => setArchiveEvalYl(e.target.value)}
-                        className="text-xs font-bold bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="text-xs font-bold bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-300 dark:border-neutral-700 rounded-lg px-2.5 py-1.5 text-neutral-800 dark:text-neutral-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                       >
                         <option value="ALL">🏢 Semua Tim (Mirror Sheet Table)</option>
                         {(ylList || []).filter((y: any) => y.status !== "nonaktif").map((yl: any) => (
@@ -1244,7 +952,7 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                         ))}
                       </select>
                     </div>
-                    <div className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">
+                    <div className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 rounded-md">
                       📅 Periode Arsip: {selectedMonth}
                     </div>
                   </div>
@@ -1284,9 +992,9 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
               {activeTab === "plg_pjl" && (
                 
                 <div>
-                   <div className="flex items-center justify-between mb-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                     <p className="text-xs font-bold text-slate-600">
-                       💡 Mode Edit Aktif: Anda dapat klik kolom "AKM" untuk mengetik manual, atau <strong className="text-sky-600">Paste (Ctrl+V)</strong> sekumpulan data dari Spreadsheet (Excel/Google Sheets) ke sel AKM RUMAH YO dsb.
+                   <div className="flex items-center justify-between mb-4 bg-white dark:bg-neutral-900 p-4 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800">
+                     <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400">
+                       💡 Mode Edit Aktif: Anda dapat klik kolom "AKM" untuk mengetik manual, atau <strong className="text-sky-600 dark:text-sky-400">Paste (Ctrl+V)</strong> sekumpulan data dari Spreadsheet (Excel/Google Sheets) ke sel AKM RUMAH YO dsb.
                      </p>
                    </div>
                    <PlgPjlView 
@@ -1474,11 +1182,11 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
 
               )}
               {activeTab === "target" && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm overflow-x-auto border border-slate-200 space-y-4">
-                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 shadow-sm overflow-x-auto border border-neutral-200 dark:border-neutral-800 space-y-4">
+                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 dark:border-neutral-800 pb-3">
                      <div>
-                       <h2 className="text-sm font-black text-slate-900">Target Yakult Lady (ARSIP {selectedMonth})</h2>
-                       <p className="text-[11px] text-slate-500">Angka Target, Bulan Lalu, dan Tahun Lalu untuk 10 YL mendukung desimal 2 digit.</p>
+                       <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">Target Yakult Lady (ARSIP {selectedMonth})</h2>
+                       <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Angka Target, Bulan Lalu, dan Tahun Lalu untuk 10 YL mendukung desimal 2 digit.</p>
                      </div>
                      <div className="flex flex-wrap items-center gap-2">
                        <button
@@ -1523,7 +1231,7 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                              setLoading(false);
                            }
                          }}
-                         className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs px-3 py-1.5 rounded-xl transition shadow flex items-center gap-1.5 cursor-pointer"
+                         className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition shadow flex items-center gap-1.5 cursor-pointer"
                        >
                          <span>📥</span>
                          <span>Tarik Realisasi dari Arsip (Bulan Lalu & Tahun Lalu)</span>
@@ -1549,7 +1257,7 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                              };
                            });
                          }}
-                         className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs px-3 py-1.5 rounded-xl transition shadow flex items-center gap-1.5 cursor-pointer"
+                         className="bg-neutral-800 hover:bg-neutral-900 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition shadow flex items-center gap-1.5 cursor-pointer"
                        >
                          <span>⚡</span>
                          <span>Hitung Tim dari Total YL (Truncate)</span>
@@ -1557,24 +1265,24 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                      </div>
                    </div>
                    
-                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                   <div className="bg-neutral-50 dark:bg-neutral-800/40 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 space-y-4">
                      <div className="flex items-center justify-between">
                        <div>
-                         <h3 className="text-xs font-black text-slate-800 uppercase">Target Tim & Realisasi (Dengan Varian Produk)</h3>
-                         <p className="text-[10.5px] text-slate-500 font-medium">Input target dan realisasi per varian (YO, OM, OS, YT) serta total untuk integrasi otomatis Record TKU</p>
+                         <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase">Target Tim & Realisasi (Dengan Varian Produk)</h3>
+                         <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">Input target dan realisasi per varian (YO, OM, OS, YT) serta total untuk integrasi otomatis Record TKU</p>
                        </div>
                      </div>
 
                      {/* 1. Target Bulan Ini */}
-                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                       <div className="text-[11px] font-black text-emerald-800 uppercase mb-2 flex items-center justify-between">
+                     <div className="bg-white dark:bg-neutral-900 p-3 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                       <div className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase mb-2 flex items-center justify-between">
                          <span>1. Target Bulan Ini (Rata2 Harian)</span>
-                         <span className="text-[10px] text-slate-400 font-normal">Otomatis hitung total dari varian jika diisi</span>
+                         <span className="text-[10px] text-neutral-400 font-normal">Otomatis hitung total dari varian jika diisi</span>
                        </div>
                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                          <div>
-                           <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">Target YO</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-bold text-slate-900 border border-slate-300 rounded bg-slate-50"
+                           <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-0.5">Target YO</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-50 dark:bg-neutral-800/40"
                              value={snapshot.targetTKU?.target_yo ?? ""}
                              placeholder="0"
                              onChange={(e) => {
@@ -1591,8 +1299,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            />
                          </div>
                          <div>
-                           <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">Target OM</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-bold text-slate-900 border border-slate-300 rounded bg-slate-50"
+                           <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-0.5">Target OM</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-50 dark:bg-neutral-800/40"
                              value={snapshot.targetTKU?.target_om ?? ""}
                              placeholder="0"
                              onChange={(e) => {
@@ -1609,8 +1317,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            />
                          </div>
                          <div>
-                           <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">Target OS</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-bold text-slate-900 border border-slate-300 rounded bg-slate-50"
+                           <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-0.5">Target OS</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-50 dark:bg-neutral-800/40"
                              value={snapshot.targetTKU?.target_os ?? ""}
                              placeholder="0"
                              onChange={(e) => {
@@ -1627,8 +1335,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            />
                          </div>
                          <div>
-                           <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">Target YT</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-bold text-slate-900 border border-slate-300 rounded bg-slate-50"
+                           <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-0.5">Target YT</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-50 dark:bg-neutral-800/40"
                              value={snapshot.targetTKU?.target_yt ?? ""}
                              placeholder="0"
                              onChange={(e) => {
@@ -1645,8 +1353,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            />
                          </div>
                          <div>
-                           <label className="text-[9.5px] font-black text-emerald-700 block mb-0.5">Target TOTAL</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-black text-emerald-800 border border-emerald-300 rounded bg-emerald-50/50"
+                           <label className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 block mb-0.5">Target TOTAL</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 rounded bg-emerald-50/50 dark:bg-emerald-950/40"
                              value={snapshot.targetTKU?.target !== undefined ? Math.trunc(snapshot.targetTKU.target) : 0}
                              onChange={(e) => setSnapshot(prev => ({
                                ...prev,
@@ -1658,15 +1366,15 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                      </div>
 
                      {/* 2. Realisasi Tahun Lalu */}
-                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                       <div className="text-[11px] font-black text-blue-800 uppercase mb-2 flex items-center justify-between">
+                     <div className="bg-white dark:bg-neutral-900 p-3 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                       <div className="text-[11px] font-bold text-brand-800 dark:text-brand-300 uppercase mb-2 flex items-center justify-between">
                          <span>2. Realisasi Tahun Lalu (Bulan Sama Tahun Lalu)</span>
-                         <span className="text-[10px] text-slate-400 font-normal">Otomatis hitung total dari varian jika diisi</span>
+                         <span className="text-[10px] text-neutral-400 font-normal">Otomatis hitung total dari varian jika diisi</span>
                        </div>
                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                          <div>
-                           <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">Thn Lalu YO</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-bold text-slate-900 border border-slate-300 rounded bg-slate-50"
+                           <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-0.5">Thn Lalu YO</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-50 dark:bg-neutral-800/40"
                              value={snapshot.targetTKU?.thn_lalu_yo ?? ""}
                              placeholder="0"
                              onChange={(e) => {
@@ -1683,8 +1391,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            />
                          </div>
                          <div>
-                           <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">Thn Lalu OM</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-bold text-slate-900 border border-slate-300 rounded bg-slate-50"
+                           <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-0.5">Thn Lalu OM</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-50 dark:bg-neutral-800/40"
                              value={snapshot.targetTKU?.thn_lalu_om ?? ""}
                              placeholder="0"
                              onChange={(e) => {
@@ -1701,8 +1409,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            />
                          </div>
                          <div>
-                           <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">Thn Lalu OS</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-bold text-slate-900 border border-slate-300 rounded bg-slate-50"
+                           <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-0.5">Thn Lalu OS</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-50 dark:bg-neutral-800/40"
                              value={snapshot.targetTKU?.thn_lalu_os ?? ""}
                              placeholder="0"
                              onChange={(e) => {
@@ -1719,8 +1427,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            />
                          </div>
                          <div>
-                           <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">Thn Lalu YT</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-bold text-slate-900 border border-slate-300 rounded bg-slate-50"
+                           <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-0.5">Thn Lalu YT</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-50 dark:bg-neutral-800/40"
                              value={snapshot.targetTKU?.thn_lalu_yt ?? ""}
                              placeholder="0"
                              onChange={(e) => {
@@ -1737,8 +1445,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            />
                          </div>
                          <div>
-                           <label className="text-[9.5px] font-black text-blue-700 block mb-0.5">Thn Lalu TOTAL</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-black text-blue-800 border border-blue-300 rounded bg-blue-50/50"
+                           <label className="text-[10px] font-bold text-brand-700 dark:text-brand-300 block mb-0.5">Thn Lalu TOTAL</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-brand-800 dark:text-brand-300 border border-brand-300 dark:border-brand-700 rounded bg-brand-50/50 dark:bg-brand-950/40"
                              value={snapshot.targetTKU?.thn_lalu !== undefined ? Math.trunc(snapshot.targetTKU.thn_lalu) : 0}
                              onChange={(e) => setSnapshot(prev => ({
                                ...prev,
@@ -1750,15 +1458,15 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                      </div>
 
                      {/* 3. Realisasi Bulan Lalu */}
-                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                       <div className="text-[11px] font-black text-slate-700 uppercase mb-2 flex items-center justify-between">
+                     <div className="bg-white dark:bg-neutral-900 p-3 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                       <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 uppercase mb-2 flex items-center justify-between">
                          <span>3. Realisasi Bulan Lalu</span>
-                         <span className="text-[10px] text-slate-400 font-normal">Otomatis hitung total dari varian jika diisi</span>
+                         <span className="text-[10px] text-neutral-400 font-normal">Otomatis hitung total dari varian jika diisi</span>
                        </div>
                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                          <div>
-                           <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">Bln Lalu YO</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-bold text-slate-900 border border-slate-300 rounded bg-slate-50"
+                           <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-0.5">Bln Lalu YO</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-50 dark:bg-neutral-800/40"
                              value={snapshot.targetTKU?.bln_lalu_yo ?? ""}
                              placeholder="0"
                              onChange={(e) => {
@@ -1775,8 +1483,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            />
                          </div>
                          <div>
-                           <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">Bln Lalu OM</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-bold text-slate-900 border border-slate-300 rounded bg-slate-50"
+                           <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-0.5">Bln Lalu OM</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-50 dark:bg-neutral-800/40"
                              value={snapshot.targetTKU?.bln_lalu_om ?? ""}
                              placeholder="0"
                              onChange={(e) => {
@@ -1793,8 +1501,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            />
                          </div>
                          <div>
-                           <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">Bln Lalu OS</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-bold text-slate-900 border border-slate-300 rounded bg-slate-50"
+                           <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-0.5">Bln Lalu OS</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-50 dark:bg-neutral-800/40"
                              value={snapshot.targetTKU?.bln_lalu_os ?? ""}
                              placeholder="0"
                              onChange={(e) => {
@@ -1811,8 +1519,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            />
                          </div>
                          <div>
-                           <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">Bln Lalu YT</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-bold text-slate-900 border border-slate-300 rounded bg-slate-50"
+                           <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 block mb-0.5">Bln Lalu YT</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-50 dark:bg-neutral-800/40"
                              value={snapshot.targetTKU?.bln_lalu_yt ?? ""}
                              placeholder="0"
                              onChange={(e) => {
@@ -1829,8 +1537,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            />
                          </div>
                          <div>
-                           <label className="text-[9.5px] font-black text-slate-700 block mb-0.5">Bln Lalu TOTAL</label>
-                           <input type="number" className="w-full p-1.5 text-xs font-black text-slate-900 border border-slate-300 rounded bg-slate-100"
+                           <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300 block mb-0.5">Bln Lalu TOTAL</label>
+                           <input type="number" className="w-full p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded bg-neutral-100 dark:bg-neutral-800"
                              value={snapshot.targetTKU?.bln_lalu !== undefined ? Math.trunc(snapshot.targetTKU.bln_lalu) : 0}
                              onChange={(e) => setSnapshot(prev => ({
                                ...prev,
@@ -1845,13 +1553,13 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                    <table className="w-full border-collapse text-xs">
                      <thead>
                        <tr>
-                         <th className="p-2 bg-slate-900 text-white sticky left-0 z-10 text-left">Yakult Lady</th>
-                         <th className="p-2 bg-slate-800 text-slate-200 border-l border-slate-700 text-center">Target Rata-Rata</th>
-                         <th className="p-2 bg-slate-800 text-slate-200 border-l border-slate-700 text-center">Realisasi Bln Lalu</th>
-                         <th className="p-2 bg-slate-800 text-slate-200 border-l border-slate-700 text-center">Realisasi Thn Lalu</th>
+                         <th className="p-2 bg-neutral-900 dark:bg-neutral-950 text-white sticky left-0 z-10 text-left">Yakult Lady</th>
+                         <th className="p-2 bg-neutral-800 text-neutral-200 border-l border-neutral-700 text-center">Target Rata-Rata</th>
+                         <th className="p-2 bg-neutral-800 text-neutral-200 border-l border-neutral-700 text-center">Realisasi Bln Lalu</th>
+                         <th className="p-2 bg-neutral-800 text-neutral-200 border-l border-neutral-700 text-center">Realisasi Thn Lalu</th>
                        </tr>
                      </thead>
-                     <tbody className="divide-y divide-slate-200">
+                     <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                        {ylList.filter(y => y.status !== "nonaktif").map((yl, idx) => (
                          <TargetManagerRow
                             key={yl.area}
@@ -1867,22 +1575,22 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                          />
                        ))}
                      </tbody>
-                     <tfoot className="bg-slate-100 text-slate-800 text-[11px] font-black uppercase shadow-[inset_0_1px_0_rgba(0,0,0,0.1)]">
+                     <tfoot className="bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-[11px] font-bold uppercase shadow-[inset_0_1px_0_rgba(0,0,0,0.1)]">
                        <tr>
-                         <td className="p-2.5 text-right border-r-2 border-slate-300 sticky left-0 bg-slate-100">TOTAL</td>
-                         <td className="p-1.5 text-center border-r border-slate-300 text-xs sm:text-sm">
+                         <td className="p-2.5 text-right border-r-2 border-neutral-300 dark:border-neutral-700 sticky left-0 bg-neutral-100 dark:bg-neutral-800">TOTAL</td>
+                         <td className="p-1.5 text-center border-r border-neutral-300 dark:border-neutral-700 text-xs sm:text-sm">
                            {ylList
                              .filter((y) => y.status !== "nonaktif")
                              .reduce((sum, yl) => sum + (Number(activeTargetYLMap[yl.area]?.target) || 0), 0)
                              .toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                          </td>
-                         <td className="p-1.5 text-center border-r border-slate-300 text-xs sm:text-sm">
+                         <td className="p-1.5 text-center border-r border-neutral-300 dark:border-neutral-700 text-xs sm:text-sm">
                            {ylList
                              .filter((y) => y.status !== "nonaktif")
                              .reduce((sum, yl) => sum + (Number(activeTargetYLMap[yl.area]?.bln_lalu) || 0), 0)
                              .toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                          </td>
-                         <td className="p-1.5 text-center border-r border-slate-300 text-xs sm:text-sm">
+                         <td className="p-1.5 text-center border-r border-neutral-300 dark:border-neutral-700 text-xs sm:text-sm">
                            {ylList
                              .filter((y) => y.status !== "nonaktif")
                              .reduce((sum, yl) => sum + (Number(activeTargetYLMap[yl.area]?.thn_lalu) || 0), 0)
@@ -1927,25 +1635,25 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                 </div>
               )}
               {activeTab === "bd_realisasi" && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm overflow-x-auto border border-slate-200">
+                <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 shadow-sm overflow-x-auto border border-neutral-200 dark:border-neutral-800">
                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                      <div className="flex items-center gap-2">
-                       <h2 className="text-sm font-black text-slate-900">
+                       <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
                          {archiveGridMode === "BD" ? "Breakdown Target / Plan (ARSIP)" : "Breakdown Realisasi (ARSIP)"}
                        </h2>
-                       <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">
+                       <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 px-2 py-0.5 rounded-full font-bold">
                          Bulan: {selectedMonth}
                        </span>
                      </div>
 
                      <div className="flex flex-wrap items-center gap-2">
                        {/* Sub-mode Switcher: BD vs Realisasi */}
-                       <div className="flex bg-slate-100 p-0.5 rounded-lg gap-0.5">
+                       <div className="flex bg-neutral-100 dark:bg-neutral-800 p-0.5 rounded-lg gap-0.5">
                          <button
                            type="button"
                            onClick={() => setArchiveGridMode("BD")}
-                           className={`px-2.5 py-1 text-[11px] font-extrabold rounded-md transition-all cursor-pointer ${
-                             archiveGridMode === "BD" ? "bg-red-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
+                           className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
+                             archiveGridMode === "BD" ? "bg-red-600 text-white shadow-sm" : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
                            }`}
                          >
                            Breakdown (BD)
@@ -1953,8 +1661,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                          <button
                            type="button"
                            onClick={() => setArchiveGridMode("R")}
-                           className={`px-2.5 py-1 text-[11px] font-extrabold rounded-md transition-all cursor-pointer ${
-                             archiveGridMode === "R" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
+                           className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
+                             archiveGridMode === "R" ? "bg-emerald-600 text-white shadow-sm" : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
                            }`}
                          >
                            Realisasi (R)
@@ -1962,8 +1670,8 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                        </div>
 
                        {/* Input Pembagi Tanggal */}
-                       <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg">
-                         <span className="text-[10px] font-bold text-slate-700">Pembagi:</span>
+                       <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 px-2 py-1 rounded-lg">
+                         <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Pembagi:</span>
                          <input
                            type="number"
                            min={1}
@@ -1971,27 +1679,27 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            value={pembagiAktif}
                            onFocus={(e) => e.target.select()}
                            onChange={(e) => handleGlobalPembagiChange(e.target.value)}
-                           className="w-10 p-0.5 text-xs font-extrabold text-center bg-white border border-slate-300 rounded-md text-slate-900 outline-none"
+                           className="w-10 p-0.5 text-xs font-bold text-center bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-md text-neutral-900 dark:text-neutral-100 outline-none"
                          />
                        </div>
 
                        {/* Indikator vs Target / BL / TL */}
-                       <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap">
-                         <div className="flex items-center gap-1">
-                           <span className="text-slate-500">vs Tgt:</span>
-                           <span className={monthlyGridStats.pctTgt >= 100 ? "text-emerald-600 font-extrabold" : "text-rose-600 font-extrabold"}>
+                       <div className="flex items-center gap-1.5 flex-wrap">
+                         <div className="flex items-center gap-1 bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 px-2 py-0.5 rounded-lg text-[10px] font-bold shadow-2xs">
+                           <span className="text-violet-800 dark:text-violet-300 font-bold">vs Tgt:</span>
+                           <span className={monthlyGridStats.pctTgt >= 100 ? "text-emerald-700 dark:text-emerald-300 font-bold" : "text-rose-700 dark:text-rose-300 font-bold"}>
                              {formatTruncated(monthlyGridStats.pctTgt, 1, false)}%
                            </span>
                          </div>
-                         <div className="flex items-center gap-1">
-                           <span className="text-slate-500">vs BL:</span>
-                           <span className={monthlyGridStats.pctBL >= 100 ? "text-emerald-600 font-extrabold" : "text-rose-600 font-extrabold"}>
+                         <div className="flex items-center gap-1 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 px-2 py-0.5 rounded-lg text-[10px] font-bold shadow-2xs">
+                           <span className="text-sky-800 dark:text-sky-300 font-bold">vs BL:</span>
+                           <span className={monthlyGridStats.pctBL >= 100 ? "text-emerald-700 dark:text-emerald-300 font-bold" : "text-rose-700 dark:text-rose-300 font-bold"}>
                              {formatTruncated(monthlyGridStats.pctBL, 1, false)}%
                            </span>
                          </div>
-                         <div className="flex items-center gap-1">
-                           <span className="text-slate-500">vs TL:</span>
-                           <span className={monthlyGridStats.pctTL >= 100 ? "text-emerald-600 font-extrabold" : "text-rose-600 font-extrabold"}>
+                         <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-lg text-[10px] font-bold shadow-2xs">
+                           <span className="text-amber-850 font-bold">vs TL:</span>
+                           <span className={monthlyGridStats.pctTL >= 100 ? "text-emerald-700 dark:text-emerald-300 font-bold" : "text-rose-700 dark:text-rose-300 font-bold"}>
                              {formatTruncated(monthlyGridStats.pctTL, 1, false)}%
                            </span>
                          </div>
@@ -2001,7 +1709,7 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                        <button
                          type="button"
                          onClick={handleBreakdownSelectAllNew}
-                         className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                         className="px-2 py-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
                        >
                          Pilih Semua
                        </button>
@@ -2010,7 +1718,7 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                          <button
                            type="button"
                            onClick={handleBreakdownGridClear}
-                           className="px-2 py-1 bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold rounded-lg hover:bg-rose-100 transition-all cursor-pointer"
+                           className="px-2 py-1 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-[10px] font-bold rounded-lg hover:bg-rose-100 transition-all cursor-pointer"
                          >
                            Hapus Sel
                          </button>
@@ -2021,51 +1729,51 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                    <table className="w-full border-collapse text-xs select-none">
                      <thead>
                        <tr>
-                          <th className="p-2 bg-slate-900 text-slate-200 sticky left-0 z-20">Yakult Lady</th>
+                          <th className="p-2 bg-neutral-900 dark:bg-neutral-950 text-neutral-200 sticky left-0 z-20">Yakult Lady</th>
                           {Array.from({length: 31}, (_, i) => i+1).map(d => (
-                            <th key={d} colSpan={4} className="p-1 border-l border-b border-slate-700 bg-slate-900 text-slate-200 min-w-[160px]">{d}</th>
+                            <th key={d} colSpan={4} className="p-1 border-l border-b border-neutral-700 bg-neutral-900 dark:bg-neutral-950 text-neutral-200 min-w-[160px]">{d}</th>
                           ))}
-                          <th colSpan={5} className="p-1 text-center border-l border-b border-slate-700 bg-slate-900 text-slate-200 font-bold min-w-[210px]">
+                          <th colSpan={5} className="p-1 text-center border-l border-b border-neutral-700 bg-neutral-900 dark:bg-neutral-950 text-neutral-200 font-bold min-w-[210px]">
                             TOTAL 4 ITEM + TOTAL
                           </th>
-                          <th colSpan={5} className="p-1 text-center border-l border-b border-slate-700 bg-amber-950 text-amber-200 font-bold min-w-[210px]">
+                          <th colSpan={5} className="p-1 text-center border-l border-b border-neutral-700 bg-amber-950 text-amber-200 font-bold min-w-[210px]">
                             RATA-RATA HARIAN
                           </th>
-                          <th colSpan={6} className="p-1 text-center border-l border-b border-slate-700 bg-purple-950 text-purple-200 font-bold min-w-[290px]">
+                          <th colSpan={6} className="p-1 text-center border-l border-b border-neutral-700 bg-purple-950 text-purple-200 font-bold min-w-[290px]">
                             TARGET & PEMBANDING
                           </th>
                        </tr>
                        <tr>
-                          <th className="p-1 sticky left-0 bg-slate-900 z-20"></th>
+                          <th className="p-1 sticky left-0 bg-neutral-900 dark:bg-neutral-950 z-20"></th>
                           {Array.from({length: 31}, (_, i) => i+1).map(d => (
                             <React.Fragment key={d}>
-                              <th className="p-1 text-center border-l border-b border-slate-800 text-red-400 bg-slate-900/90 text-[9px] min-w-[40px]">YO</th>
-                              <th className="p-1 text-center border-l border-b border-slate-800 text-amber-400 bg-slate-900/90 text-[9px] min-w-[40px]">OM</th>
-                              <th className="p-1 text-center border-l border-b border-slate-800 text-pink-400 bg-slate-900/90 text-[9px] min-w-[40px]">OS</th>
-                              <th className="p-1 text-center border-l border-b border-slate-800 text-blue-400 bg-slate-900/90 text-[9px] min-w-[40px]">YT</th>
+                              <th className="p-1 text-center border-l border-b border-neutral-800 text-red-400 bg-neutral-900/90 text-[9px] min-w-[40px]">YO</th>
+                              <th className="p-1 text-center border-l border-b border-neutral-800 text-amber-400 bg-neutral-900/90 text-[9px] min-w-[40px]">OM</th>
+                              <th className="p-1 text-center border-l border-b border-neutral-800 text-pink-400 bg-neutral-900/90 text-[9px] min-w-[40px]">OS</th>
+                              <th className="p-1 text-center border-l border-b border-neutral-800 text-brand-400 bg-neutral-900/90 text-[9px] min-w-[40px]">YT</th>
                             </React.Fragment>
                           ))}
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-red-400 bg-slate-900/90 text-[9px] min-w-[42px]">YO</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-amber-400 bg-slate-900/90 text-[9px] min-w-[42px]">OM</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-pink-400 bg-slate-900/90 text-[9px] min-w-[42px]">OS</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-blue-400 bg-slate-900/90 text-[9px] min-w-[42px]">YT</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-slate-100 bg-slate-800 text-[9px] min-w-[48px]">TOTAL</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-red-400 bg-neutral-900/90 text-[9px] min-w-[42px]">YO</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-amber-400 bg-neutral-900/90 text-[9px] min-w-[42px]">OM</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-pink-400 bg-neutral-900/90 text-[9px] min-w-[42px]">OS</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-brand-400 bg-neutral-900/90 text-[9px] min-w-[42px]">YT</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-neutral-100 bg-neutral-800 text-[9px] min-w-[48px]">TOTAL</th>
 
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-red-400 bg-amber-950/90 text-[9px] min-w-[42px]">YO</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-amber-400 bg-amber-950/90 text-[9px] min-w-[42px]">OM</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-pink-400 bg-amber-950/90 text-[9px] min-w-[42px]">OS</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-blue-400 bg-amber-950/90 text-[9px] min-w-[42px]">YT</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-amber-300 bg-amber-900 text-[9px] min-w-[48px]">RATA</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-red-400 bg-amber-950/90 text-[9px] min-w-[42px]">YO</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-amber-400 bg-amber-950/90 text-[9px] min-w-[42px]">OM</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-pink-400 bg-amber-950/90 text-[9px] min-w-[42px]">OS</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-brand-400 bg-amber-950/90 text-[9px] min-w-[42px]">YT</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-amber-300 bg-amber-900 text-[9px] min-w-[48px]">RATA</th>
 
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-purple-300 bg-purple-950/90 text-[9px] min-w-[48px]">Target</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-emerald-300 bg-purple-950/90 text-[9px] min-w-[48px]">Sel. Tgt</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-indigo-300 bg-purple-950/90 text-[9px] min-w-[48px]">Bln Lalu</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-emerald-300 bg-purple-950/90 text-[9px] min-w-[48px]">Sel. BL</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-teal-300 bg-purple-950/90 text-[9px] min-w-[48px]">Thn Lalu</th>
-                          <th className="p-1 text-center border-l border-b border-slate-800 text-emerald-300 bg-purple-950/90 text-[9px] min-w-[48px]">Sel. TL</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-purple-300 bg-purple-950/90 text-[9px] min-w-[48px]">Target</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-emerald-300 bg-purple-950/90 text-[9px] min-w-[48px]">Sel. Tgt</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-indigo-300 bg-purple-950/90 text-[9px] min-w-[48px]">Bln Lalu</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-emerald-300 bg-purple-950/90 text-[9px] min-w-[48px]">Sel. BL</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-teal-300 bg-purple-950/90 text-[9px] min-w-[48px]">Thn Lalu</th>
+                          <th className="p-1 text-center border-l border-b border-neutral-800 text-emerald-300 bg-purple-950/90 text-[9px] min-w-[48px]">Sel. TL</th>
                        </tr>
                      </thead>
-                     <tbody className="divide-y divide-slate-200">
+                     <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                        {ylList.filter(y => y.status !== "nonaktif").map((yl, idx) => (
                          <BreakdownGridRow
                             key={yl.area}
@@ -2080,27 +1788,27 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                          />
                        ))}
                      </tbody>
-                     <tfoot className="bg-slate-50 text-slate-800 font-black border-t-2 border-slate-300 shadow-[0_-1px_0_0_#cbd5e1]">
-                       <tr className="text-[11px] divide-x divide-slate-200">
-                         <td className="p-2.5 sticky left-0 bg-slate-50 z-20 font-black text-slate-800 text-left whitespace-nowrap shadow-[1px_0_0_0_#e2e8f0]">
+                     <tfoot className="bg-neutral-50 dark:bg-neutral-800/40 text-neutral-800 dark:text-neutral-200 font-bold border-t-2 border-neutral-300 dark:border-neutral-700 shadow-[0_-1px_0_0_#d4d4d4]">
+                       <tr className="text-[11px] divide-x divide-neutral-200 dark:divide-neutral-800">
+                         <td className="p-2.5 sticky left-0 bg-neutral-50 dark:bg-neutral-800/40 z-20 font-bold text-neutral-800 dark:text-neutral-200 text-left whitespace-nowrap shadow-[1px_0_0_0_#e5e5e5]">
                            TOTAL HARIAN
                          </td>
                          {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
                            const data = dailyGridTotals[d] || { yo: 0, om: 0, os: 0, yt: 0 };
                            return (
                              <React.Fragment key={d}>
-                               <td className="p-1 text-center text-red-700 font-black bg-slate-50/90">{data.yo}</td>
-                               <td className="p-1 text-center text-amber-700 font-black bg-slate-50/90">{data.om}</td>
-                               <td className="p-1 text-center text-pink-700 font-black bg-slate-50/90">{data.os}</td>
-                               <td className="p-1 text-center text-blue-700 font-black bg-slate-50/90">{data.yt}</td>
+                               <td className="p-1 text-center text-red-700 dark:text-red-300 font-bold bg-neutral-50/90 dark:bg-neutral-800/90">{data.yo}</td>
+                               <td className="p-1 text-center text-amber-700 dark:text-amber-300 font-bold bg-neutral-50/90 dark:bg-neutral-800/90">{data.om}</td>
+                               <td className="p-1 text-center text-pink-700 dark:text-pink-300 font-bold bg-neutral-50/90 dark:bg-neutral-800/90">{data.os}</td>
+                               <td className="p-1 text-center text-brand-700 dark:text-brand-300 font-bold bg-neutral-50/90 dark:bg-neutral-800/90">{data.yt}</td>
                              </React.Fragment>
                            );
                          })}
-                         <td className="p-1 text-center font-bold text-red-800 bg-red-100/60">{monthlyGridTotals.yo}</td>
-                         <td className="p-1 text-center font-bold text-amber-800 bg-red-100/60">{monthlyGridTotals.om}</td>
-                         <td className="p-1 text-center font-bold text-pink-800 bg-red-100/60">{monthlyGridTotals.os}</td>
-                         <td className="p-1 text-center font-bold text-blue-800 bg-red-100/60">{monthlyGridTotals.yt}</td>
-                         <td className="p-1 text-center font-black text-slate-800 bg-slate-200">{monthlyGridTotals.total}</td>
+                         <td className="p-1 text-center font-bold text-red-800 dark:text-red-300 bg-red-100/60 dark:bg-red-900/50">{monthlyGridTotals.yo}</td>
+                         <td className="p-1 text-center font-bold text-amber-800 dark:text-amber-300 bg-red-100/60 dark:bg-red-900/50">{monthlyGridTotals.om}</td>
+                         <td className="p-1 text-center font-bold text-pink-800 dark:text-pink-300 bg-red-100/60 dark:bg-red-900/50">{monthlyGridTotals.os}</td>
+                         <td className="p-1 text-center font-bold text-brand-800 dark:text-brand-300 bg-red-100/60 dark:bg-red-900/50">{monthlyGridTotals.yt}</td>
+                         <td className="p-1 text-center font-bold text-neutral-800 dark:text-neutral-200 bg-neutral-200 dark:bg-neutral-700">{monthlyGridTotals.total}</td>
 
                          {(() => {
                            const pembagi = pembagiAktif;
@@ -2111,11 +1819,11 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            const rsum = ryo + rom + ros + ryt;
                            return (
                              <React.Fragment>
-                               <td className="p-1 text-center font-bold text-red-800 bg-amber-100/60">{ryo}</td>
-                               <td className="p-1 text-center font-bold text-amber-800 bg-amber-100/60">{rom}</td>
-                               <td className="p-1 text-center font-bold text-pink-800 bg-amber-100/60">{ros}</td>
-                               <td className="p-1 text-center font-bold text-blue-800 bg-amber-100/60">{ryt}</td>
-                               <td className="p-1 text-center font-black text-amber-900 bg-amber-300">{rsum}</td>
+                               <td className="p-1 text-center font-bold text-red-800 dark:text-red-300 bg-amber-100/60 dark:bg-amber-900/50">{ryo}</td>
+                               <td className="p-1 text-center font-bold text-amber-800 dark:text-amber-300 bg-amber-100/60 dark:bg-amber-900/50">{rom}</td>
+                               <td className="p-1 text-center font-bold text-pink-800 dark:text-pink-300 bg-amber-100/60 dark:bg-amber-900/50">{ros}</td>
+                               <td className="p-1 text-center font-bold text-brand-800 dark:text-brand-300 bg-amber-100/60 dark:bg-amber-900/50">{ryt}</td>
+                               <td className="p-1 text-center font-bold text-amber-900 dark:text-amber-300 bg-amber-300">{rsum}</td>
                              </React.Fragment>
                            );
                          })()}
@@ -2131,16 +1839,16 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            const dTL = grandTotal - totalTL;
                            return (
                              <React.Fragment>
-                               <td className="p-1 text-center font-bold text-purple-800 bg-purple-100/60">{totalTarget}</td>
-                               <td className={`p-1 text-center font-black ${dTarget >= 0 ? "text-emerald-700 bg-emerald-100/80" : "text-rose-700 bg-rose-100/80"}`}>
+                               <td className="p-1 text-center font-bold text-purple-800 dark:text-purple-300 bg-purple-100/60 dark:bg-purple-900/50">{totalTarget}</td>
+                               <td className={`p-1 text-center font-bold ${dTarget >= 0 ? "text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-900/50" : "text-rose-700 dark:text-rose-300 bg-rose-100/80 dark:bg-rose-900/50"}`}>
                                  {dTarget >= 0 ? `+${dTarget}` : dTarget}
                                </td>
-                               <td className="p-1 text-center font-bold text-indigo-800 bg-purple-100/60">{totalBL}</td>
-                               <td className={`p-1 text-center font-black ${dBL >= 0 ? "text-emerald-700 bg-emerald-100/80" : "text-rose-700 bg-rose-100/80"}`}>
+                               <td className="p-1 text-center font-bold text-indigo-800 dark:text-indigo-300 bg-purple-100/60 dark:bg-purple-900/50">{totalBL}</td>
+                               <td className={`p-1 text-center font-bold ${dBL >= 0 ? "text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-900/50" : "text-rose-700 dark:text-rose-300 bg-rose-100/80 dark:bg-rose-900/50"}`}>
                                  {dBL >= 0 ? `+${dBL}` : dBL}
                                </td>
-                               <td className="p-1 text-center font-bold text-teal-800 bg-purple-100/60">{totalTL}</td>
-                               <td className={`p-1 text-center font-black ${dTL >= 0 ? "text-emerald-700 bg-emerald-100/80" : "text-rose-700 bg-rose-100/80"}`}>
+                               <td className="p-1 text-center font-bold text-teal-800 dark:text-teal-300 bg-purple-100/60 dark:bg-purple-900/50">{totalTL}</td>
+                               <td className={`p-1 text-center font-bold ${dTL >= 0 ? "text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-900/50" : "text-rose-700 dark:text-rose-300 bg-rose-100/80 dark:bg-rose-900/50"}`}>
                                  {dTL >= 0 ? `+${dTL}` : dTL}
                                </td>
                              </React.Fragment>
@@ -2148,20 +1856,20 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                          })()}
                        </tr>
 
-                       <tr className="bg-slate-200 text-slate-800 font-black text-[11px] uppercase divide-x divide-slate-300">
-                         <td className="p-2.5 sticky left-0 bg-slate-300 z-20 text-left font-black tracking-wide text-slate-900 shadow-[1px_0_0_0_#cbd5e1]">
+                       <tr className="bg-neutral-200 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 font-bold text-[11px] uppercase divide-x divide-neutral-300">
+                         <td className="p-2.5 sticky left-0 bg-neutral-300 dark:bg-neutral-600 z-20 text-left font-bold tracking-wide text-neutral-900 dark:text-neutral-100 shadow-[1px_0_0_0_#d4d4d4]">
                            TOTAL ALL VARIAN
                          </td>
                          {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
                            const data = dailyGridTotals[d] || { yo: 0, om: 0, os: 0, yt: 0 };
                            const sum = data.yo + data.om + data.os + data.yt;
                            return (
-                             <td key={d} colSpan={4} className="p-1 text-center bg-slate-200 font-black text-slate-800">
+                             <td key={d} colSpan={4} className="p-1 text-center bg-neutral-200 dark:bg-neutral-700 font-bold text-neutral-800 dark:text-neutral-200">
                                {sum} btl
                              </td>
                            );
                          })}
-                         <td colSpan={5} className="p-1 text-center font-black text-slate-900 bg-slate-300">
+                         <td colSpan={5} className="p-1 text-center font-bold text-neutral-900 dark:text-neutral-100 bg-neutral-300 dark:bg-neutral-600">
                            {monthlyGridTotals.total} btl
                          </td>
                          {(() => {
@@ -2172,12 +1880,12 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                            const ryt = Math.trunc(monthlyGridTotals.yt / pembagi);
                            const rsum = ryo + rom + ros + ryt;
                            return (
-                             <td colSpan={5} className="p-1 text-center font-black text-slate-900 bg-slate-300/90">
+                             <td colSpan={5} className="p-1 text-center font-bold text-neutral-900 dark:text-neutral-100 bg-neutral-300/90 dark:bg-neutral-600/90">
                                {rsum} btl
                              </td>
                            );
                          })()}
-                         <td colSpan={6} className="bg-slate-300/80"></td>
+                         <td colSpan={6} className="bg-neutral-300/80 dark:bg-neutral-600/80"></td>
                        </tr>
                      </tfoot>
                    </table>
@@ -2221,12 +1929,12 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
               )}
               {activeTab === "rata2" && (
                 <div className="space-y-4">
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 flex items-center justify-between">
+                  <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 text-xs text-emerald-900 dark:text-emerald-300 flex items-center justify-between">
                     <span className="font-bold flex items-center gap-1.5">
                       <span>📈</span>
                       <span>Rekap Rata-Rata Penjualan Arsip ({selectedMonth}): Terisi otomatis & terhubung dengan data snapshot.</span>
                     </span>
-                    <span className="text-[10px] bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded-md font-extrabold">
+                    <span className="text-[10px] bg-emerald-200 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-md font-bold">
                       Arsip Aktif
                     </span>
                   </div>
@@ -2234,7 +1942,7 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
                 </div>
               )}
               {activeTab === "sales_record_tku" && (
-                <React.Suspense fallback={<div className="p-8 text-center font-bold text-slate-500">Memuat...</div>}>
+                <React.Suspense fallback={<div className="p-8 text-center font-bold text-neutral-500 dark:text-neutral-400">Memuat...</div>}>
                   <SalesRecordTKU key={selectedMonth} defaultYear={selectedMonth ? selectedMonth.split('-')[0] : undefined} defaultMonthIndex={selectedMonth ? parseInt(selectedMonth.split('-')[1], 10) - 1 : undefined} />
                 </React.Suspense>
               )}
@@ -2244,26 +1952,26 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
 
       {/* Modal Konfirmasi Hapus Arsip Supabase */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 space-y-4">
+        <div className="fixed inset-0 bg-neutral-950/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 dark:border-rose-800 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 text-2xl shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center text-rose-600 dark:text-rose-400 text-2xl shrink-0">
                 <Trash2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base font-black text-slate-900 leading-tight">Konfirmasi Hapus Arsip Cloud</h3>
-                <p className="text-xs text-rose-600 font-bold">Database Supabase Permanen</p>
+                <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 leading-tight">Konfirmasi Hapus Arsip Cloud</h3>
+                <p className="text-xs text-rose-600 dark:text-rose-400 font-bold">Database Supabase Permanen</p>
               </div>
             </div>
 
-            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-xs text-rose-950 space-y-2">
+            <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl p-3.5 text-xs text-rose-950 dark:text-rose-200 space-y-2">
               <p>
                 Apakah Anda yakin ingin <strong>MENGHAPUS PERMANEN</strong> seluruh arsip data bulan:
               </p>
-              <div className="text-center py-2 px-3 bg-white rounded-lg border border-rose-300 font-mono font-black text-sm text-rose-700">
+              <div className="text-center py-2 px-3 bg-white dark:bg-neutral-900 rounded-lg border border-rose-300 dark:border-rose-700 font-mono font-black text-sm text-rose-700 dark:text-rose-300">
                 📅 BULAN {selectedMonth}
               </div>
-              <p className="text-[11px] text-rose-800 leading-relaxed">
+              <p className="text-[11px] text-rose-800 dark:text-rose-300 leading-relaxed">
                 ⚠️ Tindakan ini akan menghapus snapshot arsip bulan tersebut langsung dari cloud database Supabase. Tindakan ini <strong>tidak dapat dibatalkan</strong>!
               </p>
             </div>
@@ -2271,13 +1979,13 @@ export function ArchiveEditor({ onClose, motivasiConfig, ylList }) {
             <div className="flex items-center gap-2 pt-2">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer"
+                className="flex-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-bold text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer"
               >
                 Batal
               </button>
               <button
                 onClick={executeDeleteFromSupabase}
-                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Ya, Hapus Permanen</span>

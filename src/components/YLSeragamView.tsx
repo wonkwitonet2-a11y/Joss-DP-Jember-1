@@ -89,7 +89,7 @@ export default function YLSeragamView({ onBack }: { onBack?: () => void }) {
   const isToday = currentDate.toDateString() === new Date().toDateString();
 
   return (
-    <div className="flex flex-col sm:max-w-md sm:mx-auto bg-[#Fdfbf7] dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden my-2">
+    <div className="flex flex-col sm:max-w-md md:max-w-none w-full sm:mx-auto bg-[#Fdfbf7] dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden my-2">
       <div className="flex items-center justify-between p-4 pb-2">
         <h1 className="font-bold text-xl text-slate-800 dark:text-slate-100 flex items-center gap-2">
           Pakai Apa Ya? 👗

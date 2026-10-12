@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft, ChevronDown, ChevronUp, HelpCircle, Heart, Plus, Sun, Info, Target, Settings, Zap, Droplet, Star, Smile, BookOpen } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, HelpCircle, Heart, Plus, Sun, Settings, Droplet, Star, BookOpen } from "lucide-react";
 
 type PKCategory = {
   id: string;
@@ -126,7 +126,7 @@ const CATEGORIES: PKCategory[] = [
     id: "yakult_mangga",
     title: "Yakult Rasa Mangga",
     tags: ["Baru"],
-    gridColor: "bg-[#d893a3]", // A muted pinkish tone matching the grid
+    gridColor: "bg-[#d893a3]",
     headerColor: "bg-gradient-to-br from-amber-400 to-amber-500",
     icon: <Droplet className="w-16 h-16 absolute -bottom-4 -right-4 opacity-20" />,
     subtitle: "Segar & Bernutrisi",
@@ -182,14 +182,14 @@ export default function ProductKnowledgeView({ theme, onBack }: { theme?: string
 
   if (activeCategory) {
     return (
-      <div className="flex flex-col h-full bg-slate-50 relative z-[100]">
+      <div className="flex flex-col h-full bg-neutral-50 dark:bg-neutral-950 relative z-0">
         {/* Header */}
         <div className={`p-6 ${activeCategory.headerColor} text-white flex-shrink-0 relative overflow-hidden shadow-md`}>
           <div className="absolute right-0 top-0 opacity-10 scale-150 transform translate-x-4 -translate-y-4">
             {activeCategory.icon}
           </div>
           <div className="flex items-center gap-4 relative z-10">
-            <button onClick={() => { setSelectedCategory(null); setExpandedId(null); }} className="p-2 hover:bg-white/20 rounded-full transition-colors -ml-2">
+            <button onClick={() => { setSelectedCategory(null); setExpandedId(null); }} className="p-2 hover:bg-white/20 rounded-full transition-colors -ml-2 cursor-pointer">
               <ArrowLeft className="w-6 h-6" />
             </button>
             <h1 className="text-xl font-bold">{activeCategory.title}</h1>
@@ -198,50 +198,48 @@ export default function ProductKnowledgeView({ theme, onBack }: { theme?: string
             <div className="inline-block bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold mb-3">
               {activeCategory.tags.join(" • ")}
             </div>
-            <h2 className="text-2xl font-black mb-1">{activeCategory.subtitle}</h2>
+            <h2 className="text-2xl font-bold mb-1">{activeCategory.subtitle}</h2>
             <p className="text-white/80 text-sm">{activeCategory.description}</p>
           </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 pb-32">
-          <div className="space-y-3 max-w-lg mx-auto">
+          <div className="space-y-3 max-w-lg md:max-w-none mx-auto">
             {activeCategory.questions.map((q, idx) => {
               const isExpanded = expandedId === idx;
               
-              // Only for Yakult Stroberi, we do a flip card style, but since it's an accordion in others, 
-              // let's just use accordion for all to be simple, but with colorful numbers
               const numColors = [
-                "text-red-600 bg-red-100",
-                "text-blue-600 bg-blue-100",
-                "text-emerald-600 bg-emerald-100",
-                "text-purple-600 bg-purple-100",
-                "text-amber-600 bg-amber-100",
-                "text-pink-600 bg-pink-100",
-                "text-rose-600 bg-rose-100",
-                "text-sky-600 bg-sky-100",
+                "text-blue-600 bg-blue-100 dark:bg-blue-950/60 dark:text-blue-400",
+                "text-sky-600 bg-sky-100 dark:bg-sky-950/60 dark:text-sky-400",
+                "text-emerald-600 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-400",
+                "text-purple-600 bg-purple-100 dark:bg-purple-950/60 dark:text-purple-400",
+                "text-amber-600 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-400",
+                "text-teal-600 bg-teal-100 dark:bg-teal-950/60 dark:text-teal-400",
+                "text-indigo-600 bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-400",
+                "text-rose-600 bg-rose-100 dark:bg-rose-950/60 dark:text-rose-400",
               ];
               const badgeColor = numColors[idx % numColors.length];
 
               return (
-                <div key={idx} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden transition-all duration-200">
+                <div key={idx} className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200/80 dark:border-neutral-800 overflow-hidden transition-all duration-200">
                   <button 
                     onClick={() => setExpandedId(isExpanded ? null : idx)}
-                    className="w-full text-left p-4 flex items-start gap-3 focus:outline-none"
+                    className="w-full text-left p-4 flex items-start gap-3 focus:outline-none cursor-pointer"
                   >
-                    <div className={`w-8 h-8 rounded-lg ${badgeColor} flex items-center justify-center font-bold text-sm shrink-0`}>
+                    <div className={`w-8 h-8 rounded-lg ${badgeColor} flex items-center justify-center font-bold font-mono tabular-nums text-sm shrink-0`}>
                       {idx + 1}
                     </div>
                     <div className="flex-1 pt-1">
-                      <p className="font-semibold text-slate-800 text-[15px] pr-2">{q.q}</p>
+                      <p className="font-semibold text-neutral-800 dark:text-neutral-100 text-[15px] pr-2">{q.q}</p>
                     </div>
                     <div className="shrink-0 pt-1">
                       {isExpanded ? (
-                        <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                           <ChevronUp className="w-4 h-4" />
                         </div>
                       ) : (
-                        <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-400 flex items-center justify-center">
                           <ChevronDown className="w-4 h-4" />
                         </div>
                       )}
@@ -250,8 +248,8 @@ export default function ProductKnowledgeView({ theme, onBack }: { theme?: string
                   {isExpanded && (
                     <div className="px-4 pb-4 pt-1">
                       <div className="pl-11 relative">
-                        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-blue-500 rounded-full" />
-                        <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-brand-500 rounded-full" />
+                        <p className="text-neutral-600 dark:text-neutral-300 text-sm leading-relaxed whitespace-pre-wrap">
                           {q.a}
                         </p>
                       </div>
@@ -267,27 +265,30 @@ export default function ProductKnowledgeView({ theme, onBack }: { theme?: string
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 relative z-[100]">
-      <div className="bg-rose-500 text-white p-4 flex items-center gap-3 shadow-md flex-shrink-0">
+    <div className="flex flex-col h-full bg-neutral-50 dark:bg-neutral-950 relative z-0">
+      <div className="bg-brand-900 dark:bg-brand-950 border-b border-brand-800 text-white p-4 md:p-5 flex items-center gap-3 shadow-md flex-shrink-0">
         {onBack && (
-          <button onClick={onBack} className="p-2 hover:bg-white/20 rounded-full transition-colors -ml-2">
+          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors -ml-2 cursor-pointer">
             <ArrowLeft className="w-6 h-6" />
           </button>
         )}
-        <h1 className="text-lg font-bold">Product Knowledge</h1>
+        <div className="flex items-center gap-2">
+          <BookOpen className="w-5 h-5 text-sky-300" />
+          <h1 className="text-lg font-bold tracking-wide uppercase">Product Knowledge</h1>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 pb-32">
-        <div className="grid grid-cols-2 gap-3 max-w-lg mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 max-w-lg md:max-w-none mx-auto">
           {CATEGORIES.map((c) => (
             <button
               key={c.id}
               onClick={() => setSelectedCategory(c.id)}
-              className={`${c.gridColor} rounded-2xl p-4 text-left relative overflow-hidden shadow-sm hover:shadow-md hover:scale-[1.02] transition-all aspect-[4/5] flex flex-col justify-center focus:outline-none`}
+              className={`${c.gridColor} rounded-2xl p-4 text-left relative overflow-hidden shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all aspect-[5/4] md:aspect-[4/3] flex flex-col justify-center focus:outline-none cursor-pointer`}
             >
               {c.icon}
               <div className="relative z-10 flex-1 flex flex-col justify-center">
-                <h3 className="text-white font-bold text-[17px] leading-tight mb-3">
+                <h3 className="text-white font-bold text-[17px] md:text-[19px] leading-tight mb-3">
                   {c.title}
                 </h3>
                 <div className="flex flex-wrap gap-1.5 mt-auto">
