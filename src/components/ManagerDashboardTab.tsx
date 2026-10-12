@@ -349,6 +349,11 @@ function ManagerDashboardTabInner({
     switch (index) {
       case 0: { // 1. Gabungan: Total Penjualan, Rata2 Tim, Capaian vs Perbandingan, Ringkasan Operasional
         const bbTimPct = ((dashboardData?.bbTimRaw || 0) / ((dashboardData?.totalPenjualan || 0) + (dashboardData?.bbTimRaw || 0) || 1)) * 100;
+        const akmDays = dashboardData?.hariAktif || 0;
+        const akmVsTarget = (dashboardData?.totalPenjualan || 0) - ((dashboardData?.targetTim?.target || 0) * akmDays);
+        const akmVsBulanLalu = (dashboardData?.totalPenjualan || 0) - ((dashboardData?.targetTim?.bulanLalu || 0) * akmDays);
+        const akmVsTahunLalu = (dashboardData?.totalPenjualan || 0) - ((dashboardData?.targetTim?.tahunLalu || 0) * akmDays);
+        const formatAkmDifference = (value: number) => `${value > 0 ? "+" : ""}${formatTruncated(value)} btl`;
         return (
           <div className={`bd-card relative text-neutral-900 dark:text-neutral-100 ${isFullscreen ? "w-full p-2 sm:p-4 border-0 shadow-none flex flex-col justify-start gap-3 sm:gap-5 my-0" : "p-3 sm:p-5 space-y-3 sm:space-y-4 overflow-hidden"}`}>
             {!isFullscreen && (
@@ -405,21 +410,36 @@ function ManagerDashboardTabInner({
               <div className="grid grid-cols-3 gap-1 sm:gap-2">
                 <div className={`bd-subcard text-center ${isFullscreen ? "p-1 sm:p-1.5" : "p-1.5 sm:p-3"}`}>
                   <span className="bd-label block">vs Target</span>
-                  <span className={`${isFullscreen ? "text-xs sm:text-base" : "text-base sm:text-xl"} font-black ${vsPctColorClass(dashboardData?.vsTarget || 0)} font-mono tabular-nums mt-0.5 block`}>
-                    {Math.trunc(dashboardData?.vsTarget || 0)}%
-                  </span>
+                  <div className="mt-0.5">
+                    <span className={`${isFullscreen ? "text-xs sm:text-base" : "text-base sm:text-xl"} font-black ${vsPctColorClass(dashboardData?.vsTarget || 0)} font-mono tabular-nums block`}>
+                      {Math.trunc(dashboardData?.vsTarget || 0)}%
+                    </span>
+                    <span className={`${isFullscreen ? "text-[9px] sm:text-[10px]" : "text-[10px] sm:text-xs"} font-bold ${vsPctColorClass(dashboardData?.vsTarget || 0)} font-mono tabular-nums block whitespace-nowrap`}>
+                      {formatAkmDifference(akmVsTarget)}
+                    </span>
+                  </div>
                 </div>
                 <div className={`bd-subcard text-center ${isFullscreen ? "p-1 sm:p-1.5" : "p-1.5 sm:p-3"}`}>
                   <span className="bd-label block">vs Bulan Lalu</span>
-                  <span className={`${isFullscreen ? "text-xs sm:text-base" : "text-base sm:text-xl"} font-black ${vsPctColorClass(dashboardData?.vsBulanLalu || 0)} font-mono tabular-nums mt-0.5 block`}>
-                    {Math.trunc(dashboardData?.vsBulanLalu || 0)}%
-                  </span>
+                  <div className="mt-0.5">
+                    <span className={`${isFullscreen ? "text-xs sm:text-base" : "text-base sm:text-xl"} font-black ${vsPctColorClass(dashboardData?.vsBulanLalu || 0)} font-mono tabular-nums block`}>
+                      {Math.trunc(dashboardData?.vsBulanLalu || 0)}%
+                    </span>
+                    <span className={`${isFullscreen ? "text-[9px] sm:text-[10px]" : "text-[10px] sm:text-xs"} font-bold ${vsPctColorClass(dashboardData?.vsBulanLalu || 0)} font-mono tabular-nums block whitespace-nowrap`}>
+                      {formatAkmDifference(akmVsBulanLalu)}
+                    </span>
+                  </div>
                 </div>
                 <div className={`bd-subcard text-center ${isFullscreen ? "p-1 sm:p-1.5" : "p-1.5 sm:p-3"}`}>
                   <span className="bd-label block">vs Tahun Lalu</span>
-                  <span className={`${isFullscreen ? "text-xs sm:text-base" : "text-base sm:text-xl"} font-black ${vsPctColorClass(dashboardData?.vsTahunLalu || 0)} font-mono tabular-nums mt-0.5 block`}>
-                    {Math.trunc(dashboardData?.vsTahunLalu || 0)}%
-                  </span>
+                  <div className="mt-0.5">
+                    <span className={`${isFullscreen ? "text-xs sm:text-base" : "text-base sm:text-xl"} font-black ${vsPctColorClass(dashboardData?.vsTahunLalu || 0)} font-mono tabular-nums block`}>
+                      {Math.trunc(dashboardData?.vsTahunLalu || 0)}%
+                    </span>
+                    <span className={`${isFullscreen ? "text-[9px] sm:text-[10px]" : "text-[10px] sm:text-xs"} font-bold ${vsPctColorClass(dashboardData?.vsTahunLalu || 0)} font-mono tabular-nums block whitespace-nowrap`}>
+                      {formatAkmDifference(akmVsTahunLalu)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -443,10 +463,16 @@ function ManagerDashboardTabInner({
                   </span>
                 </div>
                 <div className={`bd-subcard text-center ${isFullscreen ? "p-1 sm:p-1.5" : "p-1.5 sm:p-3"}`}>
-                  <span className="bd-label block">BB Tim</span>
-                  <span className={`${isFullscreen ? "text-xs sm:text-sm" : "text-sm sm:text-base"} font-black ${bbColorClass(bbTimPct)} font-mono tabular-nums mt-0.5 block`}>
-                    {formatPercentTruncated(bbTimPct, 1)}
-                  </span>
+                  <span className="bd-label block">AKM BB (btl) / BB %</span>
+                  <div className={`${isFullscreen ? "text-[10px] sm:text-xs" : "text-xs sm:text-sm"} flex items-baseline justify-center gap-1 font-black font-mono tabular-nums mt-0.5 whitespace-nowrap`}>
+                    <span className={bbColorClass(bbTimPct)}>
+                      {formatTruncated(dashboardData?.bbTimRaw || 0)}
+                    </span>
+                    <span className="text-neutral-400 dark:text-neutral-500">/</span>
+                    <span className={bbColorClass(bbTimPct)}>
+                      {formatPercentTruncated(bbTimPct, 1)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
