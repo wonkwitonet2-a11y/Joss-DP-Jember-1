@@ -442,3 +442,107 @@ html.dark button[class~="bg-fuchsia-700"] {
 :is(h1, h2, h3, .bd-title) :is(svg, .lucide):not(:where(.slide-theme-light, .slide-theme-dark) *) {
   color: var(--accent) !important;
 }
+
+
+/* ==========================================================================
+   EVALUASI — kartu Performa Terbaik, Performa Turun & Analisis AI
+   Warna solid & kontras tinggi (tidak transparan) untuk mode terang dan gelap.
+   ========================================================================== */
+.ev-card {
+  --ev-bg: #ecfdf5; --ev-border: #34d399; --ev-title: #065f46;
+  --ev-text: #0f172a; --ev-muted: #334155; --ev-name: #020617; --ev-accent: #047857;
+  --ev-note-bg: #d1fae5; --ev-note-text: #064e3b; --ev-note-border: #6ee7b7;
+  background: var(--ev-bg); color: var(--ev-text);
+  border: 2px solid var(--ev-border); border-radius: 0.875rem;
+  padding: 0.75rem 0.875rem; box-shadow: var(--shadow-card);
+  display: flex; flex-direction: column; justify-content: space-between; gap: 0.5rem;
+}
+.ev-card.ev-bad {
+  --ev-bg: #fff1f2; --ev-border: #fb7185; --ev-title: #9f1239;
+  --ev-accent: #be123c;
+  --ev-note-bg: #ffe4e6; --ev-note-text: #881337; --ev-note-border: #fda4af;
+}
+.ev-card.ev-ai {
+  --ev-bg: #eef2ff; --ev-border: #818cf8; --ev-title: #312e81; --ev-accent: #4338ca;
+  display: block;
+}
+.ev-title {
+  display: flex; align-items: center; gap: 0.375rem; margin: 0 0 0.375rem;
+  font-size: 0.9375rem; line-height: 1.25rem; font-weight: 800;
+  letter-spacing: 0.01em; text-transform: uppercase; color: var(--ev-title) !important;
+}
+.ev-body { font-size: 0.875rem; line-height: 1.45; color: var(--ev-text) !important; }
+.ev-body > * + * { margin-top: 0.25rem; }
+.ev-muted { font-size: 0.8125rem; line-height: 1.45; color: var(--ev-muted) !important; }
+.ev-name { font-weight: 800; color: var(--ev-name) !important; }
+.ev-accent { font-weight: 800; color: var(--ev-accent) !important; }
+.ev-note {
+  font-size: 0.8125rem; line-height: 1.4; font-weight: 700;
+  background: var(--ev-note-bg); color: var(--ev-note-text) !important;
+  border: 1px solid var(--ev-note-border); border-radius: 0.5rem; padding: 0.375rem 0.625rem;
+}
+.ev-ai-loading { font-size: 0.75rem; font-weight: 700; color: var(--ev-accent) !important; }
+
+/* Isi analisis AI (HTML dari server) */
+.ev-ai-body {
+  background: #ffffff; color: #1e293b; border: 1px solid #c7d2fe;
+  border-radius: 0.75rem; padding: 0.75rem 0.875rem;
+  font-size: 0.8125rem; line-height: 1.6;
+}
+.ev-ai-body, .ev-ai-body :is(p, li, span, div, td, th) { color: #1e293b !important; }
+.ev-ai-body :is(b, strong) { color: #0f172a !important; font-weight: 800; }
+.ev-ai-body :is(h1, h2, h3, h4) { color: var(--ev-title) !important; font-weight: 800; margin: 0.5rem 0 0.25rem; }
+.ev-ai-body :is(p, ul, ol) { margin: 0 0 0.5rem; }
+.ev-ai-body ul { list-style: disc; padding-left: 1.25rem; }
+.ev-ai-body ol { list-style: decimal; padding-left: 1.25rem; }
+.ev-ai-body li { margin-bottom: 0.25rem; }
+.ev-ai-body a { color: var(--ev-accent) !important; text-decoration: underline; }
+.ev-ai-body .text-slate-500, .ev-ai-body .text-neutral-500 { color: #475569 !important; }
+
+html.dark .ev-card {
+  --ev-bg: #0b3b2e; --ev-border: #34d399; --ev-title: #a7f3d0;
+  --ev-text: #f1f5f9; --ev-muted: #cbd5e1; --ev-name: #ffffff; --ev-accent: #6ee7b7;
+  --ev-note-bg: #064e3b; --ev-note-text: #d1fae5; --ev-note-border: #10b981;
+}
+html.dark .ev-card.ev-bad {
+  --ev-bg: #4a1022; --ev-border: #fb7185; --ev-title: #fecdd3;
+  --ev-accent: #fda4af;
+  --ev-note-bg: #6b1630; --ev-note-text: #ffe4e6; --ev-note-border: #e11d48;
+}
+html.dark .ev-card.ev-ai {
+  --ev-bg: #1e1b4b; --ev-border: #818cf8; --ev-title: #c7d2fe; --ev-accent: #a5b4fc;
+}
+html.dark .ev-ai-body {
+  background: #0f172a; color: #e2e8f0; border-color: #4338ca;
+}
+html.dark .ev-ai-body, html.dark .ev-ai-body :is(p, li, span, div, td, th) { color: #e2e8f0 !important; }
+html.dark .ev-ai-body :is(b, strong) { color: #ffffff !important; }
+html.dark .ev-ai-body .text-slate-500, html.dark .ev-ai-body .text-neutral-500 { color: #94a3b8 !important; }
+
+
+/* Pop up Acak Testimoni (dibuka dari header tabel Evaluasi) */
+.testi-overlay {
+  position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center;
+  padding: 0.75rem; background: rgba(2, 6, 23, 0.6);
+}
+.testi-dialog {
+  width: 100%; max-width: 26rem; max-height: 100%; overflow-y: auto;
+  background: #ffffff; color: #0f172a; border: 2px solid #34d399; border-radius: 0.875rem;
+  padding: 0.75rem 0.875rem; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+}
+.testi-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.375rem; }
+.testi-label { font-size: 0.6875rem; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; color: #047857 !important; }
+.testi-close { cursor: pointer; border: 0; background: transparent; padding: 0.125rem; border-radius: 0.375rem; color: #475569 !important; }
+.testi-text { font-size: 0.875rem; line-height: 1.5; color: #0f172a !important; }
+.testi-actions { display: flex; gap: 0.5rem; margin-top: 0.625rem; }
+.testi-btn {
+  display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.75rem; font-weight: 800;
+  padding: 0.35rem 0.7rem; border-radius: 0.5rem; border: 1px solid #6ee7b7; background: #ecfdf5; color: #065f46 !important;
+}
+.testi-btn-primary { background: #047857; border-color: #047857; color: #ffffff !important; }
+html.dark .testi-dialog { background: #0f172a; color: #f1f5f9; border-color: #10b981; }
+html.dark .testi-label { color: #6ee7b7 !important; }
+html.dark .testi-close { color: #cbd5e1 !important; }
+html.dark .testi-text { color: #f1f5f9 !important; }
+html.dark .testi-btn { background: #064e3b; border-color: #10b981; color: #d1fae5 !important; }
+html.dark .testi-btn-primary { background: #10b981; border-color: #10b981; color: #022c22 !important; }

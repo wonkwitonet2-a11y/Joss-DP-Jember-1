@@ -495,6 +495,50 @@ function LhppRealisasiViewInner({
     }
   };
 
+  // Simpan HANYA 1 YL (dari card Input Cepat). Server hanya menyentuh YL yang dikirim,
+  // jadi data YL lain di tanggal yang sama tidak berubah.
+  const handleSaveSingleYl = async (idx: number) => {
+    if (isSaving) return;
+    const r = computedRows[idx];
+    if (!r) return;
+    setIsSaving(true);
+    setMsg(`⏳ Menyimpan ${cleanYlName(r.nama)}...`);
+    try {
+      const formattedDate = `${selectedMonth}-${String(selectedDay).padStart(2, "0")}`;
+      const payload = {
+        month: selectedMonth,
+        day: selectedDay,
+        tanggal: formattedDate,
+        rows: [{
+          area: r.area,
+          nama: r.nama,
+          pdmSebelum: r.pdmSebelum,
+          isManualPdmSebelum: !!r.isManualPdmSebelum,
+          bb: r.bb,
+          pdmHariIni: r.pdmHariIni,
+          terjual: r.terjual
+        }]
+      };
+      const res = await safeFetchJson<{ ok: boolean; message?: string; error?: string }>("/api/saveLhppPdm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res && res.ok) {
+        setMsg(`✅ Data ${cleanYlName(r.nama)} tersimpan`);
+        setTimeout(() => setMsg(""), 4000);
+        window.dispatchEvent(new Event("lhpp_saved"));
+      } else {
+        setMsg(`⚠️ ${res?.error || "Gagal menyimpan data YL."}`);
+      }
+    } catch (err) {
+      console.error("Failed to save single YL LHPP:", err);
+      setMsg("❌ Gagal menyimpan. Periksa koneksi jaringan.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDayChange = async (newDay: number) => {
     if (isLoading || isSaving) return;
     if (newDay === selectedDay) return;
@@ -1292,8 +1336,18 @@ function LhppRealisasiViewInner({
             {/* Footer Action */}
             <div className="flex items-center justify-between gap-2 pt-0.5">
               <span className="text-[10px] text-neutral-400 italic">
-                *Tersambung ke tabel LHPP. Tekan Simpan di bawah tabel untuk menyimpan
+                *Ganti YL tidak otomatis menyimpan. Tekan "Simpan YL" untuk menyimpan YL ini saja.
               </span>
+              <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleSaveSingleYl(safeIdx)}
+                disabled={isSaving || isLoading}
+                className="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 active:scale-95 disabled:opacity-50 text-white font-bold text-[11px] sm:text-xs rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              >
+                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                <span>Simpan YL</span>
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -1309,6 +1363,7 @@ function LhppRealisasiViewInner({
                 <span>Lanjut YL</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
+              </div>
             </div>
           </div>
         );

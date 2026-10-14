@@ -4325,7 +4325,9 @@ app.get("/api/getEvaluasi", async (req, res) => {
     persenRbVsPlg: r[21],
     propagandaHariIni: r[22] + r[23],
     sampahBotol: r[26],
-    bb: r[28]
+    bb: r[28],
+    akmBb: r[30],
+    persenBbAkm: r[31]
   }));
 
   res.json({

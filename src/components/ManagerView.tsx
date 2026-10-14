@@ -8,7 +8,7 @@ import { useSimpleGrid } from "./useSimpleGrid";
 import { downloadBlob } from "../utils/fileDownloader";
 import { Sparkles, CheckCircle, Pin, ArrowLeft } from "lucide-react";
 import { NumberInput } from "./NumberInput";
-import { BreakdownGridRow } from "./BreakdownGridRow";
+import { BreakdownGridRow, getWeekRanges } from "./BreakdownGridRow";
 import { TargetManagerRow } from "./TargetManagerRow";
 import { AppNavbar } from "./AppNavbar";
 import { AppSidebar, MenuTitleIcon } from "./AppSidebar";
@@ -188,22 +188,63 @@ function PembagiInput({ value, onCommit }: { value: number; onCommit: (n: number
 const nf = (n: number) => Number(n).toLocaleString("id-ID");
 
 // Kartu komparasi Breakdown (seragam: label, chip selisih, persen, meta)
-function BdCompareCard({ icon, label, color, diff, pct, metaLabel, metaValue }: {
-  icon: string; label: string; color: string; diff: number; pct: number; metaLabel: string; metaValue: number;
+// Kompensasi bersih per YL — rumus SAMA dengan "Estimasi Rincian Kompensasi Bulanan per YL"
+// di tab Target & Kompensasi: kotor = total botol × tarif tier (berdasar rata-rata harian),
+// bersih = kotor − PPh − JKK/JKM − JHT.
+function calcKompenBersih(total: number, pembagi: number, yl: any, compConfig: any): number {
+  if (!(total > 0) || !(pembagi > 0)) return 0;
+  const avg = Math.trunc(total / pembagi);
+  const tiers = (compConfig?.tiers && compConfig.tiers.length > 0)
+    ? [...compConfig.tiers].sort((a: any, b: any) => b.threshold - a.threshold)
+    : [
+        { threshold: 350, rate: 432 }, { threshold: 330, rate: 428 }, { threshold: 300, rate: 424 },
+        { threshold: 280, rate: 417 }, { threshold: 250, rate: 409 }, { threshold: 200, rate: 374 },
+        { threshold: 0, rate: 338 },
+      ];
+  let rate = 338;
+  for (const t of tiers) {
+    if (avg >= t.threshold) { rate = t.rate; break; }
+  }
+  const kotor = Math.floor(total * rate);
+  const pphRate = (compConfig?.pphRate !== undefined && compConfig?.pphRate !== null) ? Number(compConfig.pphRate) : 2.5;
+  const pph = Math.floor(kotor * (pphRate / 100));
+  const jkk = (compConfig?.jkkJkm !== undefined && compConfig?.jkkJkm !== null) ? Number(compConfig.jkkJkm) : 18800;
+  const ikutJht = yl ? yl.ikutJht !== false : true;
+  const jhtNominal = yl && typeof yl.iuranJht === "number" ? yl.iuranJht : (compConfig?.jht !== undefined ? compConfig.jht : 24000);
+  const jht = ikutJht ? jhtNominal : 0;
+  return Math.max(0, kotor - pph - jkk - jht);
+}
+
+// Kartu pembanding ringkas: judul + selisih, persen besar + bar progres, lalu dua angka tanpa label
+// (kiri = nilai pembanding, kanan = sisa botol; tanda +/− dan warna yang menjelaskan maknanya).
+function BdCompareCard({ label, color, diff, pct, total, sisa }: {
+  label: string; color: string; diff: number; pct: number; total: number; sisa: number;
 }) {
+  const tone = pct >= 100 ? "ok" : pct >= 90 ? "warn" : "bad";
+  const toneText = `var(--${tone}-text)`;
+  const toneBar = `var(--${tone})`;
+  const nfx = (n: number) => Math.abs(n).toLocaleString("id-ID");
   return (
     <div className="bd-subcard bd-stat" style={{ borderLeft: `3px solid ${color}` }}>
       <div className="flex items-center justify-between gap-2">
-        <span className="bd-label truncate"><span>{icon}</span> {label}</span>
+        <span className="bd-label truncate">{label}</span>
         <span className={`bd-chip ${diff >= 0 ? "bd-chip-ok" : "bd-chip-bad"}`}>
-          {diff >= 0 ? "+" : ""}{diff.toLocaleString("id-ID")}
+          {diff >= 0 ? "+" : "−"}{nfx(diff)}
         </span>
       </div>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className={`bd-stat-pct ${pct >= 100 ? "bd-ok-text" : "bd-bad-text"}`}>
+      <div>
+        <span className="bd-stat-pct" style={{ color: toneText }}>
           {formatTruncated(pct, 1, false)}%
         </span>
-        <span className="bd-stat-meta truncate">{metaLabel}: {metaValue.toLocaleString("id-ID")}</span>
+        <div style={{ height: 4, borderRadius: 999, background: "var(--bg-inset)", overflow: "hidden", marginTop: 4 }}>
+          <div style={{ width: `${Math.max(0, Math.min(100, pct))}%`, height: "100%", background: toneBar, borderRadius: 999 }} />
+        </div>
+      </div>
+      <div className="flex items-baseline justify-between gap-2 bd-num" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+        <span style={{ color: "var(--ink-muted)" }}>{total.toLocaleString("id-ID")}</span>
+        <span style={{ color: sisa > 0 ? "var(--bad-text)" : "var(--ok-text)" }}>
+          {sisa > 0 ? "−" : "+"}{nfx(sisa)}
+        </span>
       </div>
     </div>
   );
@@ -1001,6 +1042,26 @@ export function ManagerView({
   const activeYLsList = useMemo(() => ylList.filter(y => y.status !== "Resign"), [ylList]);
 
   // Total Harian (gabungan semua YL per tanggal) — dipakai baris footer "TOTAL HARIAN" di tabel Breakdown/Realisasi
+  // Pilihan tampilan: "M1".."M6" (Senin–Minggu) atau "all" (Bulan Utuh)
+  const [bdSel, setBdSel] = useState<string>("");
+  const bdWeeks = useMemo(() => getWeekRanges(globalMonth), [globalMonth]);
+  const bdDefaultSel = useMemo(() => {
+    const now = new Date();
+    const cur = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    if (globalMonth === cur) {
+      const w = bdWeeks.find((x) => now.getDate() >= x.start && now.getDate() <= x.end);
+      if (w) return w.label;
+    }
+    return bdWeeks[0]?.label || "all";
+  }, [globalMonth, bdWeeks]);
+  const bdSelEff = bdSel === "all" || bdWeeks.some((w) => w.label === bdSel) ? bdSel : bdDefaultSel;
+  const bdIsWeek = bdSelEff !== "all";
+  const bdWeek = bdIsWeek ? bdWeeks.find((w) => w.label === bdSelEff) || bdWeeks[0] : null;
+  const bdDays = useMemo(
+    () => bdWeek ? Array.from({ length: bdWeek.end - bdWeek.start + 1 }, (_, i) => bdWeek.start + i) : Array.from({ length: 31 }, (_, i) => i + 1),
+    [bdWeek]
+  );
+
   const dailyGridTotals = useMemo(() => {
     const totals: Record<number, { yo: number; om: number; os: number; yt: number }> = {};
     for (let day = 1; day <= 31; day++) {
@@ -1622,6 +1683,24 @@ export function ManagerView({
       grandTotal, pembagi
     };
   }, [activeYLsList, activeTargetYLMap, activeGridMap, monthlyGridTotals]);
+
+  // Kompensasi bersih per YL (mengikuti mode aktif: Breakdown atau Realisasi) + total tim
+  const kompenBersihByArea = useMemo(() => {
+    const pembagi = getEffectivePembagi(activeGridMap);
+    const map: Record<string, number> = {};
+    let sum = 0;
+    ylList.filter((y: any) => y.status !== "nonaktif").forEach((yl: any) => {
+      const area = String(yl.area).substring(0, 3);
+      let total = 0;
+      Object.values(activeGridMap?.[area]?.days || {}).forEach((d: any) => {
+        total += (Number(d?.yo) || 0) + (Number(d?.om) || 0) + (Number(d?.os) || 0) + (Number(d?.yt) || 0);
+      });
+      const v = calcKompenBersih(total, pembagi, yl, compConfig);
+      map[area] = v;
+      sum += v;
+    });
+    return { map, sum };
+  }, [ylList, activeGridMap, compConfig]);
 
   // Informasi dan deteksi tanggal-tanggal yang sudah terealisasi pada bulan aktif
   const realizedDaysInfo = useMemo(() => {
@@ -3557,6 +3636,13 @@ export function ManagerView({
                     <button role="tab" data-active={gridSubMode === "R"} onClick={() => setGridSubMode("R")}>Realisasi (R)</button>
                   </div>
 
+                  <div className="bd-seg" role="tablist" style={{ overflowX: "auto", maxWidth: "100%" }}>
+                    {bdWeeks.map((w) => (
+                      <button key={w.label} role="tab" data-active={bdSelEff === w.label} onClick={() => setBdSel(w.label)}>{w.label}</button>
+                    ))}
+                    <button role="tab" data-active={bdSelEff === "all"} onClick={() => setBdSel("all")}>Bulan Utuh</button>
+                  </div>
+
                   <div className="bd-field">
                     <span className="bd-label">{gridSubMode === "BD" ? "Pembagi BD" : "Pembagi Realisasi"}</span>
                     <PembagiInput
@@ -3587,44 +3673,22 @@ export function ManagerView({
 
               {/* Kartu komparasi — struktur & ukuran seragam */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-                <BdCompareCard icon="🎯" label="vs Target" color="var(--accent-ring)"
+                <BdCompareCard label="Target" color="var(--accent-ring)"
                   diff={monthlyGridStats.diffTarget} pct={monthlyGridStats.pctTgt}
-                  metaLabel="Tgt" metaValue={monthlyGridStats.totalTarget} />
-                <BdCompareCard icon="📅" label="vs Bln Lalu" color="var(--info)"
+                  total={monthlyGridStats.totalTarget} sisa={realizedDaysInfo.sisaTarget} />
+                <BdCompareCard label="Bulan Lalu" color="var(--info)"
                   diff={monthlyGridStats.diffBL} pct={monthlyGridStats.pctBL}
-                  metaLabel="BL" metaValue={monthlyGridStats.totalBL} />
-                <BdCompareCard icon="📈" label="vs Thn Lalu" color="var(--warn)"
+                  total={monthlyGridStats.totalBL} sisa={realizedDaysInfo.sisaBL} />
+                <BdCompareCard label="Tahun Lalu" color="var(--warn)"
                   diff={monthlyGridStats.diffTL} pct={monthlyGridStats.pctTL}
-                  metaLabel="TL" metaValue={monthlyGridStats.totalTL} />
+                  total={monthlyGridStats.totalTL} sisa={realizedDaysInfo.sisaTL} />
 
                 <div className="bd-subcard bd-stat" style={{ borderLeft: "3px solid var(--ok)" }}>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="bd-label truncate"><span>⚡</span> Realisasi & Sisa</span>
-                    <span className="bd-chip bd-chip-ok">{realizedDaysInfo.realizedDays.length} Hari Rls</span>
-                  </div>
-                  <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1.5">
-                    <div className="flex flex-col min-w-0 shrink-0">
-                      <span className="bd-stat-pct whitespace-nowrap" style={{ color: "var(--ink)" }}>
-                        {realizedDaysInfo.totRealizedSales.toLocaleString("id-ID")}
-                      </span>
-                      <span className="bd-stat-meta whitespace-nowrap">
-                        {monthlyGridStats.totalTarget > 0 ? `${formatTruncated((realizedDaysInfo.totRealizedSales / monthlyGridStats.totalTarget) * 100, 1, false)}% Tgt` : "Realisasi"}
-                      </span>
-                    </div>
-                    <div className="flex flex-col text-right bd-num text-xs font-semibold leading-snug shrink-0 whitespace-nowrap">
-                      {[
-                        { k: "Sisa Tgt", v: realizedDaysInfo.sisaTarget },
-                        { k: "Sisa BL", v: realizedDaysInfo.sisaBL },
-                        { k: "Sisa TL", v: realizedDaysInfo.sisaTL },
-                      ].map(({ k, v }) => (
-                        <div key={k} className="flex items-center justify-end gap-1.5">
-                          <span className="font-sans font-medium" style={{ color: "var(--ink-muted)" }}>{k}:</span>
-                          <span className={v > 0 ? "bd-bad-text" : "bd-ok-text"}>
-                            {v > 0 ? v.toLocaleString("id-ID") : `+${Math.abs(v).toLocaleString("id-ID")}`}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                  <span className="bd-label truncate">Realisasi</span>
+                  <div className="flex-1 flex items-center">
+                    <span className="bd-stat-pct whitespace-nowrap" style={{ color: "var(--ink)", fontSize: "1.5rem", lineHeight: "2rem" }}>
+                      {realizedDaysInfo.totRealizedSales.toLocaleString("id-ID")}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -3634,18 +3698,6 @@ export function ManagerView({
               )}
             </div>
 
-            {/* Legenda */}
-            <div className="bd-subcard p-3 flex flex-col gap-2 text-xs" style={{ color: "var(--ink-2)" }}>
-              <div className="flex items-start gap-2">
-                <span className="bd-dot" style={{ background: "var(--ok)" }} />
-                <span><b className="bd-ok-text">Header hijau "Riil"</b> = tanggal sudah terealisasi (data penjualan nyata)</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="bd-dot" style={{ background: "var(--accent-ring)" }} />
-                <span><b style={{ color: "var(--ink)" }}>Header biru</b> = target rencana sisa hari</span>
-              </div>
-            </div>
-
             {/* Tabel */}
             <div className="bd-card overflow-hidden">
               <div className="bd-table-wrap">
@@ -3653,7 +3705,7 @@ export function ManagerView({
                   <thead>
                     <tr>
                       <th rowSpan={2} className="bd-th-name">Yakult Lady</th>
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
+                      {bdDays.map((d) => {
                         const isRealized = realizedDaysInfo.realizedDays.includes(d);
                         return (
                           <th key={d} colSpan={4} className={`bd-grp ${isRealized ? "bd-grp-real" : "bd-grp-plan"}`} style={{ minWidth: 160 }}>
@@ -3664,12 +3716,14 @@ export function ManagerView({
                           </th>
                         );
                       })}
-                      <th colSpan={5} className="bd-grp bd-grp-sum">Total 4 Item</th>
+                      {bdIsWeek && <th colSpan={5} className="bd-grp bd-grp-sum">Akm {bdWeek?.label} (Mingguan)</th>}
+                      <th colSpan={5} className="bd-grp bd-grp-sum">{bdIsWeek ? "Akm Bulanan" : "Total 4 Item"}</th>
                       <th colSpan={5} className="bd-grp bd-grp-avg">Rata-rata Harian</th>
                       <th colSpan={6} className="bd-grp bd-grp-cmp">Target & Pembanding</th>
+                      <th className="bd-grp bd-grp-komp" style={{ minWidth: 110 }}>Kompensasi</th>
                     </tr>
                     <tr>
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                      {bdDays.map((d) => (
                         <React.Fragment key={d}>
                           <th className="bd-v bd-v-yo">YO</th>
                           <th className="bd-v bd-v-om">OM</th>
@@ -3677,6 +3731,15 @@ export function ManagerView({
                           <th className="bd-v bd-v-yt">YT</th>
                         </React.Fragment>
                       ))}
+                      {bdIsWeek && (
+                        <>
+                          <th className="bd-v bd-v-yo">YO</th>
+                          <th className="bd-v bd-v-om">OM</th>
+                          <th className="bd-v bd-v-os">OS</th>
+                          <th className="bd-v bd-v-yt">YT</th>
+                          <th className="bd-th-sub" style={{ color: "var(--ink)" }}>Total</th>
+                        </>
+                      )}
                       <th className="bd-v bd-v-yo">YO</th>
                       <th className="bd-v bd-v-om">OM</th>
                       <th className="bd-v bd-v-os">OS</th>
@@ -3693,6 +3756,7 @@ export function ManagerView({
                       <th className="bd-th-sub">Sel. BL</th>
                       <th className="bd-th-sub">Thn Lalu</th>
                       <th className="bd-th-sub">Sel. TL</th>
+                      <th className="bd-th-sub" style={{ color: "var(--ok-text)" }}>Bersih (Rp)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3704,16 +3768,20 @@ export function ManagerView({
                         activeGridMap={activeGridMap}
                         targetYLMap={targetYLMap}
                         breakdownDateRange="1-31"
+                        rangeStart={bdWeek?.start}
+                        rangeEnd={bdWeek?.end}
+                        showWeekAkm={bdIsWeek}
                         getCellProps={getBreakdownCellProps}
                         renderSelectionHandle={renderBreakdownSelectionHandle}
                         selectRow={selectBreakdownRow}
+                        kompenBersih={kompenBersihByArea.map[String(yl.area).substring(0, 3)] ?? 0}
                       />
                     ))}
                   </tbody>
                   <tfoot className="bd-tfoot">
                     <tr>
-                      <td className="bd-td-name bd-td">Total Harian</td>
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
+                      <td className="bd-td-name bd-td">{bdIsWeek ? `Total ${bdWeek?.label}` : "Total Harian"}</td>
+                      {bdDays.map((d) => {
                         const data = dailyGridTotals[d] || { yo: 0, om: 0, os: 0, yt: 0 };
                         return (
                           <React.Fragment key={d}>
@@ -3723,6 +3791,22 @@ export function ManagerView({
                           </React.Fragment>
                         );
                       })}
+                      {bdIsWeek && (() => {
+                        const acc = { yo: 0, om: 0, os: 0, yt: 0 };
+                        bdDays.forEach((d) => {
+                          const t = dailyGridTotals[d];
+                          if (t) { acc.yo += t.yo; acc.om += t.om; acc.os += t.os; acc.yt += t.yt; }
+                        });
+                        return (
+                          <>
+                            <td className="bd-td">{nf(acc.yo)}</td>
+                            <td className="bd-td">{nf(acc.om)}</td>
+                            <td className="bd-td">{nf(acc.os)}</td>
+                            <td className="bd-td">{nf(acc.yt)}</td>
+                            <td className="bd-td">{nf(acc.yo + acc.om + acc.os + acc.yt)}</td>
+                          </>
+                        );
+                      })()}
                       <td className="bd-td">{nf(monthlyGridTotals.yo)}</td>
                       <td className="bd-td">{nf(monthlyGridTotals.om)}</td>
                       <td className="bd-td">{nf(monthlyGridTotals.os)}</td>
@@ -3774,17 +3858,26 @@ export function ManagerView({
                           </React.Fragment>
                         );
                       })()}
+                      <td className="bd-td bd-td-komp">{nf(kompenBersihByArea.sum)}</td>
                     </tr>
 
                     <tr className="bd-tfoot-all">
                       <td className="bd-td-name bd-td">Total All Varian</td>
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
+                      {bdDays.map((d) => {
                         const data = dailyGridTotals[d] || { yo: 0, om: 0, os: 0, yt: 0 };
                         const sum = data.yo + data.om + data.os + data.yt;
                         return (
                           <td key={d} colSpan={4} className="bd-td">{nf(sum)} btl</td>
                         );
                       })}
+                      {bdIsWeek && (() => {
+                        let sum = 0;
+                        bdDays.forEach((d) => {
+                          const t = dailyGridTotals[d];
+                          if (t) sum += t.yo + t.om + t.os + t.yt;
+                        });
+                        return <td colSpan={5} className="bd-td">{nf(sum)} btl</td>;
+                      })()}
                       <td colSpan={5} className="bd-td">
                         {nf(monthlyGridTotals.yo + monthlyGridTotals.om + monthlyGridTotals.os + monthlyGridTotals.yt)} btl
                       </td>
@@ -3796,6 +3889,7 @@ export function ManagerView({
                         return <td colSpan={5} className="bd-td">{nf(rsum)} btl</td>;
                       })()}
                       <td colSpan={6} className="bd-td"></td>
+                      <td className="bd-td"></td>
                     </tr>
                   </tfoot>
                 </table>

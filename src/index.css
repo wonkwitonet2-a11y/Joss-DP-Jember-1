@@ -644,6 +644,7 @@ html.dark .bd-btn:hover { background: var(--brand-500, #2f6bb5); filter: brightn
 .bd-grp-sum  { background: var(--bg-hover) !important;    color: var(--ink) !important; }
 .bd-grp-avg  { background: var(--warn-soft) !important;   color: var(--warn-text) !important; }
 .bd-grp-cmp  { background: var(--info-soft) !important;   color: var(--info-text) !important; }
+.bd-grp-komp { background: var(--ok-soft) !important;     color: var(--ok-text) !important; }
 .bd-badge-ok { font-size: 0.625rem; font-weight: 700; padding: 0 5px; border-radius: 5px; background: var(--ok); color: #fff; letter-spacing: .02em; text-transform: none; }
 html.dark .bd-badge-ok { background: var(--ok-soft); color: var(--ok-text); border: 1px solid var(--ok-line); }
 .bd-v { min-width: 2.5rem; font-weight: 700 !important; }
@@ -662,6 +663,7 @@ html.dark { --variant-yo: #f87171; --variant-om: #fbbf24; --variant-os: #f472b6;
 .bd-td-avg  { background: var(--bg-inset); font-weight: 600; }
 .bd-td-avgt { background: var(--warn-soft); font-weight: 700; color: var(--warn-text); }
 .bd-td-cmp  { background: var(--bg-inset); font-weight: 600; }
+.bd-td-komp { background: var(--ok-soft); color: var(--ok-text); font-weight: 700; }
 .bd-td-pos  { background: var(--ok-soft);  color: var(--ok-text);  font-weight: 700; }
 .bd-td-neg  { background: var(--bad-soft); color: var(--bad-text); font-weight: 700; }
 .bd-td-name { position: sticky; left: 0; z-index: 20; background: var(--bg-card); color: var(--ink); font-family: var(--font-sans); font-size: 0.8125rem; font-weight: 600; text-align: left; padding: 0.4rem 0.75rem; min-width: 9rem; max-width: 11rem; overflow: hidden; text-overflow: ellipsis; border-left: 0 !important; border-right: 1px solid var(--line); cursor: pointer; user-select: none; }
@@ -674,6 +676,7 @@ html.dark { --variant-yo: #f87171; --variant-om: #fbbf24; --variant-os: #f472b6;
 .bd-tfoot .bd-td-name { background: var(--bg-header); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; font-size: 0.75rem; cursor: default; }
 .bd-tfoot .bd-td-pos { background: var(--ok-soft); color: var(--ok-text); }
 .bd-tfoot .bd-td-neg { background: var(--bad-soft); color: var(--bad-text); }
+.bd-tfoot .bd-td-komp { background: var(--ok-soft); color: var(--ok-text); }
 .bd-tfoot .bd-td-avgt { background: var(--warn-soft); color: var(--warn-text); }
 .bd-tfoot-all .bd-td { background: var(--bg-hover) !important; color: var(--ink); font-weight: 700; }
 .bd-tfoot-all .bd-td-name { background: var(--bg-hover) !important; }

@@ -1,5 +1,6 @@
 import { MenuTitleIcon } from "./AppSidebar";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { bbColorClass, vsPctColorClass, rata2ColorClass } from "../utils/numberFormat";
 import {
   Maximize2,
@@ -14,13 +15,90 @@ import {
   Award,
   TrendingUp,
   Sparkles,
+  Dices,
+  X,
+  Copy,
   ChevronLeft,
-  RefreshCw
+  RefreshCw,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { cleanYlName, Transaction } from "../types";
 import { safeFetchJson, parseJsonResponse } from "../lib/safeFetch";
 import { getFallbackEvaluasiData } from "../lib/fallbackData";
 import { loadFromSupabase, getSupabaseDebugInfo } from "../lib/supabaseClient";
+
+// Nama depan YL: "Ria Resti W" -> "Ria"
+const firstName = (full: string): string => (full || "").trim().split(/\s+/)[0] || "";
+
+// Kolom Area & Nama YL (tabel manager) tetap di kiri saat tabel digulir ke samping.
+// Lebar kolom Area dikunci supaya offset kolom Nama (left-[46px]) selalu pas.
+const STICKY_NAMA_CLS = "sticky left-[46px] shadow-[inset_-1px_0_0_rgba(128,128,128,0.4)]";
+const stickyCellCls = (cIdx: number, role: string, bgCls: string): string =>
+  role !== "yl" && cIdx <= 1
+    ? `sticky z-[5] ${bgCls} ${cIdx === 0 ? "left-0 w-[46px] min-w-[46px] max-w-[46px]" : "left-[46px] shadow-[inset_-1px_0_0_rgba(128,128,128,0.4)]"}`
+    : "";
+
+/**
+ * Menampilkan daftar nama (nama depan) dipisah koma, mengalir ke samping dan turun
+ * baris saat penuh. Urutan nama diatur ulang (first-fit decreasing) berdasarkan lebar
+ * teks yang diukur, supaya jumlah baris di card sesedikit mungkin.
+ */
+const PackedNames: React.FC<{ names: string[] }> = ({ names }) => {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+
+  const firsts = useMemo(() => names.map(firstName).filter(Boolean), [names]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    setWidth(el.clientWidth);
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setWidth(el.clientWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const lines = useMemo(() => {
+    if (!width || firsts.length <= 1) return null;
+    const ctx = document.createElement("canvas").getContext("2d");
+    if (!ctx) return null;
+    const fs = ref.current ? getComputedStyle(ref.current) : null;
+    ctx.font = fs ? `${fs.fontWeight} ${fs.fontSize} ${fs.fontFamily}` : "700 12px sans-serif";
+    const gap = ctx.measureText(" ").width;
+    // lebar tiap item termasuk koma di belakangnya
+    const items = firsts.map((n) => ({ n, w: ctx.measureText(n + ",").width }));
+    const sorted = [...items].sort((a, b) => b.w - a.w);
+    const rows: { items: typeof items; used: number }[] = [];
+    for (const it of sorted) {
+      const row = rows.find((r) => r.used + gap + it.w <= width);
+      if (row) {
+        row.items.push(it);
+        row.used += gap + it.w;
+      } else {
+        rows.push({ items: [it], used: it.w });
+      }
+    }
+    return rows.map((r) => r.items.map((i) => i.n));
+  }, [width, firsts]);
+
+  // Koma di akhir tiap nama, kecuali nama paling terakhir
+  const lastRow = lines ? lines.length - 1 : -1;
+
+  return (
+    <div ref={ref} className="text-xs font-bold text-neutral-950 dark:text-white leading-tight">
+      {lines
+        ? lines.map((row, i) => (
+            <div key={i} className="whitespace-nowrap">
+              {row.map((n, j) => (i === lastRow && j === row.length - 1 ? n : n + ",")).join(" ")}
+            </div>
+          ))
+        : firsts.join(", ")}
+    </div>
+  );
+};
+
 
 export interface EvaluasiViewProps {
   evaluasiData?: any;
@@ -50,6 +128,8 @@ export function EvaluasiView({
   const [isFullscreenEval, setIsFullscreenEval] = useState<boolean>(false);
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
   const [aiInsight, setAiInsight] = useState<string>("");
+  const [testimoni, setTestimoni] = useState<{ label: string; text: string } | null>(null);
+  const [testimoniCopied, setTestimoniCopied] = useState(false);
   const [isFetching, setIsFetching] = useState<boolean>(false);
   const [prevMonthArchive, setPrevMonthArchive] = useState<any>(null);
   // Diagnostik: alasan SPESIFIK kenapa tiap sumber (API/Supabase/localStorage)
@@ -263,6 +343,7 @@ export function EvaluasiView({
         const sampahBotol = typeof row[26] === "number" ? row[26] : parseFloat(row[26]) || 0;
         const bb = typeof row[28] === "number" ? row[28] : parseFloat(row[28]) || 0;
         const akmBb = typeof row[30] === "number" ? row[30] : parseFloat(row[30]) || 0;
+        const persenBbAkm = typeof row[31] === "number" ? row[31] : parseFloat(row[31]) || 0;
 
         return {
           area,
@@ -276,11 +357,12 @@ export function EvaluasiView({
           sampahBotol,
           bb,
           akmBb,
+          persenBbAkm,
           propagandaVs900: null
         };
       });
     }
-    return (activeEvaluasiData.analisis || []).map((a: any) => ({ ...a, akmBb: a.akmBb ?? a.bb ?? 0 }));
+    return (activeEvaluasiData.analisis || []).map((a: any) => ({ ...a, akmBb: a.akmBb ?? a.bb ?? 0, persenBbAkm: a.persenBbAkm ?? 0 }));
   }, [activeEvaluasiData]);
 
   // Compute daily evaluation rows per visit date for YL role
@@ -811,7 +893,7 @@ export function EvaluasiView({
   // Find overall highest performing and needy YL
   const evaluasiHighlights = useMemo(() => {
     const list = normalizedAnalisis;
-    if (!list || list.length === 0) return { top: null, needImprovement: null, highestBB: null };
+    if (!list || list.length === 0) return { top: null, needImprovement: null, highestBB: null, categoryWinners: [] as { key: string; label: string; winners: string[]; value: number }[] };
 
     const EVAL_CATEGORIES = [
       { key: "jualHariIni", label: "Tabel Penjualan Hari Ini", type: "max", requirePositive: true },
@@ -821,7 +903,7 @@ export function EvaluasiView({
       { key: "persenRbVsPlg", label: "Persen RB vs PLG", type: "max", requirePositive: true },
       { key: "propagandaHariIni", label: "PB Hari Ini", type: "max", requirePositive: true },
       { key: "sampahBotol", label: "Akm Sampah", type: "max", requirePositive: true },
-      { key: "akmBb", label: "Akm BB", type: "min", requirePositive: false }
+      { key: "persenBbAkm", label: "% BB", type: "min", requirePositive: false }
     ];
 
     const categoryStats = EVAL_CATEGORIES.map((cat) => {
@@ -913,18 +995,28 @@ export function EvaluasiView({
         }
       : null;
 
-    const sortedBB = [...list].sort((a, b) => (b.akmBb ?? b.bb) - (a.akmBb ?? a.bb));
-    const bbVal = sortedBB[0]?.akmBb ?? sortedBB[0]?.bb ?? 0;
-    const allBBs = sortedBB.filter((x) => (x.akmBb ?? x.bb) === bbVal);
+    const sortedBB = [...list].sort((a, b) => (b.persenBbAkm ?? 0) - (a.persenBbAkm ?? 0));
+    const bbVal = sortedBB[0]?.persenBbAkm ?? 0;
+    const allBBs = sortedBB.filter((x) => (x.persenBbAkm ?? 0) === bbVal);
     const highestBB = sortedBB[0]
       ? {
           ...sortedBB[0],
           nama: allBBs.map((x) => cleanYlName(x.nama)).join(", "),
-          bb: bbVal
+          persenBbAkm: bbVal
         }
       : null;
 
-    return { top, needImprovement, highestBB };
+    // Pemenang tiap kategori (untuk tombol Acak Testimoni)
+    const categoryWinners = categoryStats.map((stat) => ({
+      key: stat.key,
+      label: stat.label,
+      value: stat.bestVal ?? 0,
+      winners: list
+        .filter((yl: any) => stat.isWinner(((yl as any)[stat.key] as number) || 0))
+        .map((yl: any) => cleanYlName(yl.nama)),
+    }));
+
+    return { top, needImprovement, highestBB, categoryWinners };
   }, [normalizedAnalisis]);
 
   const evaluasiBlocks = useMemo(() => {
@@ -934,7 +1026,7 @@ export function EvaluasiView({
     const getTop = (key: keyof (typeof list)[0], ascending = false) => {
       if (list.length === 0) return null;
       let validList = list;
-      if (key !== "akmBb") {
+      if (key !== "persenBbAkm") {
         validList = list.filter((item) => (item[key] as number) > 0);
       }
       if (validList.length === 0) return null;
@@ -948,6 +1040,8 @@ export function EvaluasiView({
       return {
         ...sorted[0],
         nama: joinedNames,
+        names: allTops.map((i) => cleanYlName(i.nama)),
+        allTied: allTops.length === list.length,
         [key]: topVal
       };
     };
@@ -959,12 +1053,111 @@ export function EvaluasiView({
     const block5 = getTop("persenRbVsPlg");
     const block6 = getTop("propagandaHariIni");
     const block7 = getTop("sampahBotol");
-    const block8 = getTop("akmBb", true); // lowest Akm BB (minimum retur)
+    const block8 = getTop("persenBbAkm", true); // % BB terendah (retur paling kecil)
 
     return { block1, block2, block3, block4, block5, block6, block7, block8 };
   }, [normalizedAnalisis]);
 
-  const { top, needImprovement, highestBB } = evaluasiHighlights;
+  const { top, needImprovement, highestBB, categoryWinners } = evaluasiHighlights;
+
+  // Acak 1 dari 8 kategori lalu susun testimoni untuk pemenangnya
+  const handleAcakTestimoni = () => {
+    const fmtNum = (v: number) => Math.trunc(v).toLocaleString("id-ID");
+    const fmtPct = (v: number) => v.toFixed(1).replace(".", ",") + "%";
+    const META: Record<string, { fmt: (v: number) => string; tpl: ((n: string, v: string) => string)[] }> = {
+      jualHariIni: {
+        fmt: (v) => fmtNum(v) + " botol",
+        tpl: [
+          (n, v) => `Hari ini ${n} jadi bintang penjualan dengan ${v}. Semangat dan kerja kerasnya terlihat nyata di lapangan. Terima kasih, luar biasa!`,
+          (n, v) => `Penjualan tertinggi hari ini diraih ${n}: ${v}. Ini bukti rute dan pendekatan ke pelanggan berjalan dengan baik. Pertahankan ya!`,
+          (n, v) => `Selamat untuk ${n}! Capaian ${v} hari ini patut ditiru oleh seluruh tim.`,
+        ],
+      },
+      rata2BulanBerjalan: {
+        fmt: (v) => fmtNum(v) + " btl/hari",
+        tpl: [
+          (n, v) => `${n} paling konsisten bulan ini dengan rata-rata ${v}. Konsisten itu kunci, dan ${n} sudah membuktikannya.`,
+          (n, v) => `Rata-rata bulan ini terbaik dipegang ${n}: ${v}. Kerja rutin yang disiplin, hasilnya terasa. Terima kasih!`,
+          (n, v) => `Dari hari ke hari ${n} menjaga performa di angka ${v}. Teladan yang baik untuk rekan-rekan.`,
+        ],
+      },
+      vsMingguLaluPct: {
+        fmt: (v) => fmtPct(v),
+        tpl: [
+          (n, v) => `${n} mencatat kenaikan terbesar dibanding minggu lalu: ${v}. Perkembangan yang membanggakan, terus tingkatkan!`,
+          (n, v) => `Kemajuan terbaik minggu ini ada pada ${n} dengan peningkatan ${v}. Usaha ekstra tidak sia-sia.`,
+          (n, v) => `Selamat ${n}! Naik ${v} dari minggu lalu menunjukkan semangat belajar dan berbenah yang tinggi.`,
+        ],
+      },
+      persenRumah: {
+        fmt: (v) => fmtPct(v),
+        tpl: [
+          (n, v) => `${n} unggul di penjualan rumah dengan porsi ${v}. Kedekatan dengan pelanggan rumah tangga jadi kekuatan utamanya.`,
+          (n, v) => `Penjualan ke rumah tertinggi diraih ${n} (${v}). Pelayanan yang ramah dan rutin membuahkan hasil.`,
+          (n, v) => `Kerja bagus ${n}! Porsi penjualan rumah ${v} menunjukkan pelanggan percaya dan setia.`,
+        ],
+      },
+      persenRbVsPlg: {
+        fmt: (v) => fmtPct(v),
+        tpl: [
+          (n, v) => `${n} terbaik pada rasio RB vs PLG di angka ${v}. Penggalian pelanggan baru dan pelayanan pelanggan lama berjalan seimbang.`,
+          (n, v) => `Rasio RB vs PLG tertinggi dipegang ${n}: ${v}. Konsistensi merawat pelanggan terlihat dari angka ini.`,
+          (n, v) => `Selamat ${n}! Capaian RB vs PLG ${v} adalah hasil kerja yang telaten.`,
+        ],
+      },
+      propagandaHariIni: {
+        fmt: (v) => fmtNum(v) + " PB",
+        tpl: [
+          (n, v) => `${n} paling aktif melakukan propaganda hari ini dengan ${v}. Mengenalkan Yakult ke lebih banyak orang adalah investasi penjualan ke depan.`,
+          (n, v) => `PB terbanyak hari ini diraih ${n} (${v}). Semangat berbagi manfaat Yakult sangat terasa. Terima kasih!`,
+          (n, v) => `Kerja nyata ${n}: ${v} propaganda hari ini. Semoga jadi penyemangat bagi tim.`,
+        ],
+      },
+      sampahBotol: {
+        fmt: (v) => fmtNum(v) + " botol",
+        tpl: [
+          (n, v) => `${n} peduli lingkungan dengan akumulasi sampah botol ${v} yang berhasil dikumpulkan. Contoh yang baik untuk tim!`,
+          (n, v) => `Akm sampah botol terbanyak diraih ${n}: ${v}. Terima kasih sudah ikut menjaga lingkungan sekitar.`,
+          (n, v) => `Salut untuk ${n}! Akumulasi ${v} botol menunjukkan tanggung jawab di luar target penjualan.`,
+        ],
+      },
+      persenBbAkm: {
+        fmt: (v) => fmtPct(v),
+        tpl: [
+          (n, v) => `${n} paling rapi mengelola balik botol dengan % BB terendah, ${v}. Pengelolaan stok dan rute yang tepat sangat membantu.`,
+          (n, v) => `% BB terendah dicatat ${n}: ${v}. Botol retur terkendali, penjualan bersih dan efisien. Pertahankan!`,
+          (n, v) => `Kerja cermat ${n}! % BB hanya ${v}, bukti perencanaan drop-off yang baik.`,
+        ],
+      },
+    };
+
+    const pool = (categoryWinners || []).filter((c) => c.winners.length > 0);
+    if (pool.length === 0) {
+      setTestimoni({ label: "Belum ada data", text: "Belum ada pemenang kategori untuk hari ini. Coba lagi setelah data hari ini terisi." });
+      setTestimoniCopied(false);
+      return;
+    }
+    // Hindari kategori yang sama berturut-turut bila masih ada pilihan lain
+    const candidates = pool.length > 1 ? pool.filter((c) => c.label !== testimoni?.label) : pool;
+    const picked = candidates[Math.floor(Math.random() * candidates.length)];
+    const meta = META[picked.key];
+    const names = picked.winners.join(", ");
+    const valueText = meta ? meta.fmt(picked.value) : String(picked.value);
+    const tpl = meta ? meta.tpl[Math.floor(Math.random() * meta.tpl.length)] : (n: string, v: string) => `Selamat ${n} untuk capaian ${v}!`;
+    setTestimoni({ label: picked.label, text: tpl(names, valueText) });
+    setTestimoniCopied(false);
+  };
+
+  const handleSalinTestimoni = async () => {
+    if (!testimoni) return;
+    try {
+      await navigator.clipboard.writeText(`[${testimoni.label}] ${testimoni.text}`);
+      setTestimoniCopied(true);
+      setTimeout(() => setTestimoniCopied(false), 1800);
+    } catch {
+      /* abaikan bila clipboard tidak tersedia */
+    }
+  };
 
   const cleanCurrentYl = useMemo(() => cleanYlName(currentYlName), [currentYlName]);
 
@@ -983,7 +1176,7 @@ export function EvaluasiView({
     <div
       className={
         isFullscreenEval
-          ? "fixed inset-0 z-[9999] bg-neutral-950 text-neutral-100 overflow-y-auto p-2 sm:p-4 space-y-3"
+          ? "fixed inset-0 z-[9999] bg-neutral-950 text-neutral-100 overflow-y-auto p-1.5 lg:p-4 space-y-2"
           : "space-y-3"
       }
     >
@@ -1013,32 +1206,42 @@ export function EvaluasiView({
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-stretch">
-        {/* 1. PALING ATAS (KIRI): Laporan Evaluasi Harian (Mirror Sheet Table Card) */}
-        <div className={`col-span-1 ${role === "yl" ? "md:col-span-12 w-full" : "md:col-span-9"} bd-card text-neutral-900 dark:text-neutral-100 p-1 flex flex-col justify-between overflow-hidden h-full`}>
-          {/* Header */}
-          <div className="py-2.5 px-3 bg-[var(--bg-header)] text-[var(--ink)] border-b border-[var(--line)] flex flex-col sm:flex-row sm:items-center justify-between shrink-0 rounded-t-xl gap-1.5 sm:gap-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="bd-title uppercase tracking-tight flex items-center gap-1.5">
-                <MenuTitleIcon id="evaluasi" role={role === "yl" ? "yl" : "manager"} className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                {role === "yl"
-                  ? `Laporan Evaluasi Harian Perkunjungan (${cleanYlName(currentYlName || "Yakult Lady")})`
-                  : "Laporan Evaluasi Harian (Mirror Sheet)"}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 items-stretch">
+        {/* 1. PALING ATAS (KIRI): Kartu Tabel Laporan Evaluasi Harian */}
+        <div className={`col-span-1 ${role === "yl" ? "lg:col-span-12 w-full" : "lg:col-span-9"} bd-card text-neutral-900 dark:text-neutral-100 p-1 flex flex-col justify-between overflow-hidden h-full`}>
+          {/* Header — satu baris ramping; tombol Acak Testimoni ada di sini */}
+          <div className="py-1.5 px-2 bg-[var(--bg-header)] text-[var(--ink)] border-b border-[var(--line)] flex flex-wrap sm:flex-nowrap items-center justify-between shrink-0 rounded-t-xl gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h3 className="bd-title uppercase tracking-tight flex items-center gap-1 min-w-0 !text-[11px] sm:!text-xs">
+                <MenuTitleIcon id="evaluasi" role={role === "yl" ? "yl" : "manager"} className="w-3.5 h-3.5 shrink-0 text-brand-600 dark:text-brand-400" />
+                <span className="truncate">
+                  {role === "yl"
+                    ? `Evaluasi Harian Perkunjungan (${cleanYlName(currentYlName || "Yakult Lady")})`
+                    : "Laporan Evaluasi Harian"}
+                </span>
               </h3>
-              <div className="text-[10px] bg-brand-500/15 text-brand-300 border border-brand-500/30 px-2 py-0.5 rounded-lg font-bold flex items-center whitespace-nowrap">
-                {role === "yl" ? "32 Kolom Lengkap" : showFullEvalTable ? "32 Kolom Lengkap" : "8 Kategori Utama"}
+              <div className="text-[10px] bg-brand-500/15 text-brand-300 border border-brand-500/30 px-1.5 py-px rounded-md font-bold whitespace-nowrap shrink-0">
+                {role === "yl" ? "32 Kolom" : showFullEvalTable ? "32 Kolom" : "8 Kategori"}
               </div>
               {role === "yl" && (
-                <div className="text-[10px] bg-amber-500/15 border border-amber-500/30 text-amber-300 px-2 py-0.5 rounded-lg font-bold flex items-center whitespace-nowrap">
+                <div className="text-[10px] bg-amber-500/15 border border-amber-500/30 text-amber-300 px-1.5 py-px rounded-md font-bold whitespace-nowrap shrink-0">
                   {ylDailyEvaluation.totalKunjungan} Hari Kunjungan
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {isFullscreenEval && (
-                <div className="text-[10px] bg-emerald-600/90 text-white px-2 py-0.5 rounded-lg font-bold animate-pulse flex items-center whitespace-nowrap">
-                  Mode Slide Layar Penuh
-                </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {role !== "yl" && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAcakTestimoni();
+                  }}
+                  className="text-neutral-200 bg-neutral-800 hover:bg-neutral-700 hover:text-white border border-neutral-700 px-2 py-0.5 rounded-lg transition-all flex items-center gap-1 font-bold text-[10px] cursor-pointer whitespace-nowrap"
+                  title="Acak Testimoni"
+                >
+                  <Dices className="w-3 h-3 text-brand-400" />
+                  <span>Acak Testimoni</span>
+                </button>
               )}
               {role !== "yl" && (
                 <button
@@ -1046,28 +1249,28 @@ export function EvaluasiView({
                     e.stopPropagation();
                     setShowFullEvalTable(!showFullEvalTable);
                   }}
-                  className="text-neutral-200 bg-neutral-800 hover:bg-neutral-700 hover:text-white border border-neutral-700 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 font-bold text-[10px] cursor-pointer whitespace-nowrap"
+                  className="text-neutral-200 bg-neutral-800 hover:bg-neutral-700 hover:text-white border border-neutral-700 px-2 py-0.5 rounded-lg transition-all flex items-center gap-1 font-bold text-[10px] cursor-pointer whitespace-nowrap"
                 >
-                  {showFullEvalTable ? "Sembunyikan Kolom" : "Tampilkan Tabel Lengkap"}
+                  {showFullEvalTable ? "Sembunyikan Kolom" : "Tabel Lengkap"}
                 </button>
               )}
               {!isFullscreenEval ? (
                 <button
                   onClick={() => setIsFullscreenEval(true)}
-                  className="text-neutral-200 bg-neutral-800 hover:bg-neutral-700 hover:text-white border border-neutral-700 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 font-bold text-[10px] cursor-pointer whitespace-nowrap"
+                  className="text-neutral-200 bg-neutral-800 hover:bg-neutral-700 hover:text-white border border-neutral-700 px-2 py-0.5 rounded-lg transition-all flex items-center gap-1 font-bold text-[10px] cursor-pointer whitespace-nowrap"
                   title="Layar Penuh"
                 >
                   <Maximize2 className="w-3 h-3 text-brand-400" />
-                  <span>Slide Layar Penuh</span>
+                  <span>Slide</span>
                 </button>
               ) : (
                 <button
                   onClick={() => setIsFullscreenEval(false)}
-                  className="text-neutral-200 bg-neutral-800 hover:bg-neutral-700 hover:text-white border border-neutral-700 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 font-bold text-[10px] cursor-pointer whitespace-nowrap"
+                  className="text-neutral-200 bg-neutral-800 hover:bg-neutral-700 hover:text-white border border-neutral-700 px-2 py-0.5 rounded-lg transition-all flex items-center gap-1 font-bold text-[10px] cursor-pointer whitespace-nowrap"
                   title="Keluar Layar Penuh"
                 >
                   <Minimize2 className="w-3 h-3 text-brand-400" />
-                  <span>Keluar Slide</span>
+                  <span>Keluar</span>
                 </button>
               )}
             </div>
@@ -1080,16 +1283,16 @@ export function EvaluasiView({
             }}
             title={isFullscreenEval ? "" : "Klik tabel untuk masuk Mode Presentasi Slide"}
           >
-            <table className="w-full text-left border-collapse relative text-xs sm:text-sm bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 font-sans tabular-nums font-semibold">
-              <thead className="sticky top-0 z-10 bg-brand-50 dark:bg-brand-950/40 text-brand-900 dark:text-brand-300 text-[11px] sm:text-[11.5px] uppercase tracking-wider text-center font-bold">
+            <table className="w-full text-left border-collapse relative text-xs lg:text-sm bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 font-sans tabular-nums font-semibold">
+              <thead className="sticky top-0 z-10 bg-brand-50 dark:bg-brand-950/40 text-brand-900 dark:text-brand-300 text-[10px] lg:text-[11.5px] uppercase tracking-normal lg:tracking-wider text-center font-bold">
                 {/* Row 0 */}
                 <tr className="border-b border-brand-200 dark:border-brand-800">
-                  <th rowSpan={3} className="py-1 px-1 border-r border-brand-200 dark:border-brand-800 min-w-[32px] text-neutral-900 dark:text-neutral-100">
+                  <th rowSpan={3} className={`py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-neutral-900 dark:text-neutral-100 ${role === "yl" ? "min-w-[32px]" : "sticky left-0 z-20 w-[46px] min-w-[46px] max-w-[46px] bg-brand-50 dark:bg-brand-950"}`}>
                     {role === "yl" ? "Tanggal" : "Area"}
                   </th>
                   <th
                     rowSpan={3}
-                    className="py-1 px-1.5 border-r border-brand-200 dark:border-brand-800 text-left min-w-[75px] text-neutral-900 dark:text-neutral-100"
+                    className={`py-1 px-1.5 border-r border-brand-200 dark:border-brand-800 text-left text-neutral-900 dark:text-neutral-100 ${role === "yl" ? "min-w-[75px]" : STICKY_NAMA_CLS + " z-20 bg-brand-50 dark:bg-brand-950"}`}
                   >
                     {role === "yl" ? "Hari" : "Nama YL"}
                   </th>
@@ -1150,7 +1353,7 @@ export function EvaluasiView({
                         Akm Sampah
                       </th>
                       <th rowSpan={3} className="py-1 px-1 text-rose-800 dark:text-rose-300">
-                        Akm BB
+                        Persen BB
                       </th>
                     </>
                   )}
@@ -1321,12 +1524,12 @@ export function EvaluasiView({
                       if (pbSum > maxCols.pb) maxCols.pb = pbSum;
                       if ((row[26] || 0) > maxCols.c26) maxCols.c26 = row[26] || 0;
 
-                      const bb = typeof row[28] === "number" ? row[28] : 0;
+                      const bb = typeof row[31] === "number" ? row[31] : 0;
                       if (bb < maxCols.c28) maxCols.c28 = bb;
                     });
                   }
 
-                  const visibleCols = [0, 1, 3, 4, 5, 6, 7, 13, 15, 18, 21, 22, 23, 26, 30];
+                  const visibleCols = [0, 1, 3, 4, 5, 6, 7, 13, 15, 18, 21, 22, 23, 26, 31];
                   const displayRows = role === "yl" ? ylDailyEvaluation.rows : (activeEvaluasiData?.dataRows || []);
                   const displayTotalRow = role === "yl" ? ylDailyEvaluation.totalRow : activeEvaluasiData?.totalRow;
 
@@ -1391,25 +1594,25 @@ export function EvaluasiView({
                             )
                               isTopPerf = true;
                             if (cIdx === 26 && val > 0 && val === maxCols.c26) isTopPerf = true;
-                            if (cIdx === 30 && maxCols.c28 !== Infinity && val === maxCols.c28) isTopPerf = true;
+                            if (cIdx === 31 && maxCols.c28 !== Infinity && val === maxCols.c28) isTopPerf = true;
                           }
 
-                          const displayVal = cIdx === 1 && typeof val === "string" && role !== "yl" ? cleanYlName(val) : val;
+                          const displayVal = cIdx === 1 && typeof val === "string" && role !== "yl" ? firstName(cleanYlName(val)) : val;
 
                           return (
                             <td
                               key={cIdx}
-                              className={`py-0.5 px-1 border-r border-neutral-100 dark:border-neutral-800 text-center whitespace-nowrap ${
+                              className={`py-0.5 px-1 border-r border-neutral-100 dark:border-neutral-800 text-center whitespace-nowrap ${stickyCellCls(cIdx, role, isCurrentYl ? "bg-amber-50 dark:bg-amber-950" : "bg-white dark:bg-neutral-900")} ${
                                 cIdx === 1
                                   ? (role === "yl"
                                       ? val === "Min"
                                         ? "text-rose-600 dark:text-rose-400 font-bold"
                                         : "text-neutral-700 dark:text-neutral-300 font-semibold"
-                                      : "text-left font-sans font-bold text-neutral-900 dark:text-neutral-100 min-w-[70px]")
+                                      : "text-left font-sans font-bold text-neutral-900 dark:text-neutral-100")
                                   : cIdx === 0 && role === "yl"
                                   ? "font-semibold text-neutral-800 dark:text-neutral-200"
                                   : "font-sans tabular-nums font-semibold"
-                              } ${isTopPerf ? "bg-emerald-50/50 dark:bg-emerald-950/40 font-bold text-emerald-700 dark:text-emerald-300" : ""}`}
+                              } ${isTopPerf ? "shadow-[inset_0_0_0_3px_#047857] dark:shadow-[inset_0_0_0_3px_#34d399] rounded-sm font-bold" : ""}`}
                             >
                               {cIdx === 0 && isToday ? (
                                 <span className="flex items-center justify-center gap-1">
@@ -1452,13 +1655,13 @@ export function EvaluasiView({
                 {activeTotalRow && (
                   <tr className="bg-neutral-50 dark:bg-neutral-800/40 font-bold border-t-2 border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100">
                     {(activeTotalRow || []).map((val: any, cIdx: number) => {
-                      const visibleCols = [0, 1, 3, 4, 5, 6, 7, 13, 15, 18, 21, 22, 23, 26, 30];
+                      const visibleCols = [0, 1, 3, 4, 5, 6, 7, 13, 15, 18, 21, 22, 23, 26, 31];
                       if (!isFullCols && !visibleCols.includes(cIdx)) return null;
-                      const displayVal = cIdx === 1 && typeof val === "string" && role !== "yl" ? cleanYlName(val) : val;
+                      const displayVal = cIdx === 1 && typeof val === "string" && role !== "yl" ? firstName(cleanYlName(val)) : val;
                       return (
                         <td
                           key={cIdx}
-                          className={`py-0.5 px-1 border-r border-neutral-200 dark:border-neutral-800 text-center whitespace-nowrap ${
+                          className={`py-0.5 px-1 border-r border-neutral-200 dark:border-neutral-800 text-center whitespace-nowrap ${stickyCellCls(cIdx, role, "bg-neutral-50 dark:bg-neutral-900")} ${
                             cIdx === 1 ? "text-left font-sans" : "font-sans tabular-nums"
                           }`}
                         >
@@ -1499,7 +1702,7 @@ export function EvaluasiView({
         {role !== "yl" && (
           <>
             {/* 2. PALING ATAS (KANAN): RINGKASAN PRESTASI */}
-            <div className="col-span-1 md:col-span-3 bg-white dark:bg-neutral-900 rounded-2xl p-1.5 sm:p-2 border-2 border-neutral-200 dark:border-neutral-800 shadow-md flex flex-col justify-between h-full text-neutral-900 dark:text-neutral-100">
+            <div className="col-span-1 lg:col-span-3 bg-white dark:bg-neutral-900 rounded-2xl p-1.5 sm:p-2 border-2 border-neutral-200 dark:border-neutral-800 shadow-md flex flex-col justify-between h-full text-neutral-900 dark:text-neutral-100">
           <div className="flex items-center justify-between shrink-0 mb-1 pb-1 border-b border-neutral-100 dark:border-neutral-800">
             <h3 className="text-sm sm:text-[14px] font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-tight flex items-center gap-1.5 min-w-0">
               <Award className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" /> Ringkasan Prestasi
@@ -1507,16 +1710,16 @@ export function EvaluasiView({
             <span className="text-[10px] font-bold text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0 ml-2">8 Kategori</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-1 flex-1 items-stretch">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 gap-1 flex-1 items-stretch">
             {/* Block 1 */}
             <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-brand-200 dark:border-brand-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
               <div className="flex items-center justify-between gap-1 leading-none">
                 <TrendingUp className="w-3 h-3 text-brand-600 dark:text-brand-400 shrink-0" />
-                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-brand-800 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-800 px-0.5 py-0 rounded">
-                  Hari Ini
+                <span className="min-w-0 flex items-center gap-0.5 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
+                  <span className="truncate">PJL Hari Ini</span>
+                  <ArrowUp className="w-3 h-3 shrink-0 text-neutral-500 dark:text-neutral-400" />
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">Penjualan</p>
               {evaluasiBlocks?.block1 ? (
                 <div className="mt-0.5 leading-tight">
                   <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
@@ -1536,11 +1739,11 @@ export function EvaluasiView({
             <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-amber-200 dark:border-amber-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
               <div className="flex items-center justify-between gap-1 leading-none">
                 <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 border border-amber-200 dark:border-amber-800 px-0.5 py-0 rounded">
-                  Bulan Ini
+                <span className="min-w-0 flex items-center gap-0.5 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
+                  <span className="truncate">Rata2</span>
+                  <ArrowUp className="w-3 h-3 shrink-0 text-neutral-500 dark:text-neutral-400" />
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">Rata-Rata</p>
               {evaluasiBlocks?.block2 ? (
                 <div className="mt-0.5 leading-tight">
                   <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
@@ -1560,11 +1763,11 @@ export function EvaluasiView({
             <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-emerald-200 dark:border-emerald-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
               <div className="flex items-center justify-between gap-1 leading-none">
                 <Zap className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 px-0.5 py-0 rounded">
-                  vs Mgg
+                <span className="min-w-0 flex items-center gap-0.5 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
+                  <span className="truncate">vs Mgg Lalu</span>
+                  <ArrowUp className="w-3 h-3 shrink-0 text-neutral-500 dark:text-neutral-400" />
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">vs Mgg Lalu</p>
               {evaluasiBlocks?.block3 ? (
                 <div className="mt-0.5 leading-tight">
                   <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
@@ -1583,11 +1786,11 @@ export function EvaluasiView({
             <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-brand-200 dark:border-brand-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
               <div className="flex items-center justify-between gap-1 leading-none">
                 <Home className="w-3 h-3 text-brand-600 dark:text-brand-400 shrink-0" />
-                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-brand-800 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-800 px-0.5 py-0 rounded">
-                  Potensi
+                <span className="min-w-0 flex items-center gap-0.5 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
+                  <span className="truncate">% Rumah</span>
+                  <ArrowUp className="w-3 h-3 shrink-0 text-neutral-500 dark:text-neutral-400" />
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">% Rumah</p>
               {evaluasiBlocks?.block4 ? (
                 <div className="mt-0.5 leading-tight">
                   <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
@@ -1606,11 +1809,11 @@ export function EvaluasiView({
             <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-purple-200 dark:border-purple-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
               <div className="flex items-center justify-between gap-1 leading-none">
                 <UserCheck className="w-3 h-3 text-purple-600 dark:text-purple-400 shrink-0" />
-                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-purple-800 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/50 border border-purple-200 dark:border-purple-800 px-0.5 py-0 rounded">
-                  Kunjungan
+                <span className="min-w-0 flex items-center gap-0.5 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
+                  <span className="truncate">% RB/PLG</span>
+                  <ArrowUp className="w-3 h-3 shrink-0 text-neutral-500 dark:text-neutral-400" />
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">% RB/PLG</p>
               {evaluasiBlocks?.block5 ? (
                 <div className="mt-0.5 leading-tight">
                   <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
@@ -1629,11 +1832,11 @@ export function EvaluasiView({
             <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-indigo-200 dark:border-indigo-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
               <div className="flex items-center justify-between gap-1 leading-none">
                 <Megaphone className="w-3 h-3 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-indigo-800 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 px-0.5 py-0 rounded">
-                  Propaganda
+                <span className="min-w-0 flex items-center gap-0.5 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
+                  <span className="truncate">PB Hari Ini</span>
+                  <ArrowUp className="w-3 h-3 shrink-0 text-neutral-500 dark:text-neutral-400" />
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">PB Hari Ini</p>
               {evaluasiBlocks?.block6 ? (
                 <div className="mt-0.5 leading-tight">
                   <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
@@ -1653,11 +1856,11 @@ export function EvaluasiView({
             <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-teal-200 dark:border-teal-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
               <div className="flex items-center justify-between gap-1 leading-none">
                 <Trash2 className="w-3 h-3 text-teal-600 dark:text-teal-400 shrink-0" />
-                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-teal-800 dark:text-teal-300 bg-teal-100 dark:bg-teal-900/50 border border-teal-200 dark:border-teal-800 px-0.5 py-0 rounded">
-                  Lingkungan
+                <span className="min-w-0 flex items-center gap-0.5 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
+                  <span className="truncate">Akm Sampah</span>
+                  <ArrowUp className="w-3 h-3 shrink-0 text-neutral-500 dark:text-neutral-400" />
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">Akm Sampah</p>
               {evaluasiBlocks?.block7 ? (
                 <div className="mt-0.5 leading-tight">
                   <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
@@ -1677,19 +1880,21 @@ export function EvaluasiView({
             <div className="bg-white dark:bg-neutral-900 p-1 rounded-md border border-emerald-200 dark:border-emerald-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between text-neutral-900 dark:text-neutral-100">
               <div className="flex items-center justify-between gap-1 leading-none">
                 <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-tight text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 px-0.5 py-0 rounded">
-                  Retur
+                <span className="min-w-0 flex items-center gap-0.5 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
+                  <span className="truncate">% BB</span>
+                  <ArrowDown className="w-3 h-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 mt-0.5 truncate leading-none">Akm BB</p>
               {evaluasiBlocks?.block8 ? (
                 <div className="mt-0.5 leading-tight">
-                  <p className="text-xs font-bold text-neutral-950 dark:text-white truncate">
-                    {cleanYlName(evaluasiBlocks!.block8.nama)}
-                  </p>
+                  {(evaluasiBlocks!.block8 as any).allTied ? (
+                    <p className="text-xs font-bold text-neutral-950 dark:text-white">Semua</p>
+                  ) : (
+                    <PackedNames names={(evaluasiBlocks!.block8 as any).names as string[]} />
+                  )}
                   <p className="text-sm font-black text-neutral-900 dark:text-white font-mono tabular-nums">
-                    {((evaluasiBlocks!.block8 as any).akmBb ?? evaluasiBlocks!.block8.bb)}{" "}
-                    <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">btl</span>
+                    {((evaluasiBlocks!.block8 as any).persenBbAkm ?? 0)}
+                    <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">%</span>
                   </p>
                 </div>
               ) : (
@@ -1700,89 +1905,89 @@ export function EvaluasiView({
         </div>
 
         {/* 3. BARIS KEDUA: PERFORMA TERBAIK & PERFORMA TURUN */}
-        <div className="col-span-1 md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div className="col-span-1 lg:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-2">
           {/* Top Performer Card */}
-          <div className="bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl p-2 sm:p-2.5 border-2 border-emerald-300/70 dark:border-emerald-800 shadow-sm text-neutral-900 dark:text-neutral-100 flex flex-col justify-between">
+          <div className="ev-card ev-ok">
             <div>
-              <h3 className="text-sm sm:text-[14px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-tight mb-1 flex items-center gap-1.5">
+              <h3 className="ev-title">
                 🏆 PERFORMA TERBAIK
               </h3>
               {top ? (
-                <div className="text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 space-y-0.5 leading-snug">
+                <div className="ev-body">
                   <p>
-                    <strong className="font-bold text-neutral-950 dark:text-white">{cleanYlName(top.nama)}</strong> memimpin
+                    <strong className="ev-name">{cleanYlName(top.nama)}</strong> memimpin
                     dengan memenangkan{" "}
-                    <span className="font-bold text-emerald-700 dark:text-emerald-300">{(top as any).winCount || 0} dari 8 kategori</span>.
+                    <span className="ev-accent">{(top as any).winCount || 0} dari 8 kategori</span>.
                   </p>
                   {(top as any).wonCategories && (top as any).wonCategories.length > 0 && (
-                    <p className="text-neutral-600 dark:text-neutral-400 text-xs">
+                    <p className="ev-muted">
                       Keunggulan di:{" "}
-                      <strong className="font-bold text-emerald-800 dark:text-emerald-300">{(top as any).wonCategories.join(", ")}</strong>.
+                      <strong className="ev-accent">{(top as any).wonCategories.join(", ")}</strong>.
                     </p>
                   )}
                 </div>
               ) : (
-                <p className="text-xs text-emerald-700 dark:text-emerald-300 italic">Memuat data...</p>
+                <p className="ev-muted italic">Memuat data...</p>
               )}
             </div>
-            <div className="text-[11.5px] font-bold text-emerald-900 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-950/60 px-2 py-1 rounded-md border border-emerald-200 dark:border-emerald-800 mt-1">
+            <div className="ev-note">
               👍 Pertahankan efisiensi kunjungan dan rute di potensi andalan Anda!
             </div>
           </div>
 
           {/* Need Improvement Card */}
-          <div className="bg-rose-50/70 dark:bg-rose-950/30 rounded-xl p-2 sm:p-2.5 border-2 border-rose-300/70 dark:border-rose-800 shadow-sm text-neutral-900 dark:text-neutral-100 flex flex-col justify-between">
+          <div className="ev-card ev-bad">
             <div>
-              <h3 className="text-sm sm:text-[14px] font-bold text-rose-800 dark:text-rose-300 uppercase tracking-tight mb-1 flex items-center gap-1.5">
+              <h3 className="ev-title">
                 ⚠️ PERFORMA TURUN
               </h3>
               {needImprovement ? (
-                <div className="text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 space-y-0.5 leading-snug">
+                <div className="ev-body">
                   <p>
-                    <strong className="font-bold text-neutral-950 dark:text-white">{cleanYlName(needImprovement.nama)}</strong> berada
+                    <strong className="ev-name">{cleanYlName(needImprovement.nama)}</strong> berada
                     di posisi terbawah pada{" "}
-                    <span className="font-bold text-rose-700 dark:text-rose-300">
+                    <span className="ev-accent">
                       {(needImprovement as any).loseCount || 0} dari 8 kategori
                     </span>
                     .
                   </p>
                   {(needImprovement as any).lostCategories && (needImprovement as any).lostCategories.length > 0 && (
-                    <p className="text-neutral-600 dark:text-neutral-400 text-[11px]">
+                    <p className="ev-muted">
                       Kelemahan di:{" "}
-                      <strong className="font-bold text-rose-800 dark:text-rose-300">
+                      <strong className="ev-accent">
                         {(needImprovement as any).lostCategories.join(", ")}
                       </strong>
                       .
                     </p>
                   )}
                   {highestBB && (
-                    <p className="text-xs">
-                      Balik Botol (BB) terbanyak:{" "}
-                      <strong className="font-bold text-neutral-950 dark:text-white">{cleanYlName(highestBB.nama)}</strong> (
-                      {highestBB.bb} btl).
+                    <p>
+                      Persen Balik Botol (BB) tertinggi:{" "}
+                      <strong className="ev-name">{cleanYlName(highestBB.nama)}</strong> (
+                      {highestBB.persenBbAkm}%).
                     </p>
                   )}
                 </div>
               ) : (
-                <p className="text-xs text-rose-700 dark:text-rose-300 italic">Memuat data...</p>
+                <p className="ev-muted italic">Memuat data...</p>
               )}
             </div>
-            <div className="text-[11.5px] font-bold text-rose-900 dark:text-rose-300 bg-rose-100/60 dark:bg-rose-950/60 px-2 py-1 rounded-md border border-rose-200 dark:border-rose-800 mt-1">
+            <div className="ev-note">
               🚨 Tindakan: Review rute drop-off dan sisa stock harian agar botol retur tidak membengkak!
             </div>
           </div>
         </div>
 
         {/* 4. BARIS KETIGA: AI DEEP EVALUATION CARD (Paling Bawah) */}
-        <div className="col-span-1 md:col-span-12 bg-indigo-50/70 dark:bg-indigo-950/30 rounded-2xl p-3.5 sm:p-4 border-2 border-indigo-200/80 dark:border-indigo-800 shadow-md text-neutral-900 dark:text-neutral-100 relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-pulse" /> Analisis & Evaluasi AI Jember 1
+        <div className="ev-card ev-ai col-span-1 lg:col-span-12 relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <h3 className="ev-title !mb-0">
+              <Sparkles className="w-4 h-4 animate-pulse" /> Analisis & Evaluasi AI Jember 1
             </h3>
             <button
               onClick={runAiInsight}
               disabled={isAiLoading}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg transition-all shadow-sm flex items-center gap-1 disabled:opacity-50 cursor-pointer shrink-0"
             >
               {isAiLoading ? "Sedang Menganalisis..." : "Jalankan Analisis AI"}
             </button>
@@ -1791,17 +1996,17 @@ export function EvaluasiView({
           {isAiLoading ? (
             <div className="flex flex-col items-center justify-center py-5 text-center">
               <div className="w-7 h-7 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-[10px] text-indigo-700 dark:text-indigo-300 font-bold mt-2">
+              <span className="ev-ai-loading mt-2">
                 Menganalisis data lembar evaluasi harian dengan Gemini...
               </span>
             </div>
           ) : aiInsight ? (
             <div
-              className="text-xs text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-900 rounded-xl p-2.5 border border-indigo-100/50 dark:border-indigo-900/50 prose max-w-none shadow-sm leading-relaxed max-h-[280px] overflow-y-auto"
+              className="ev-ai-body max-h-[320px] overflow-y-auto"
               dangerouslySetInnerHTML={{ __html: aiInsight }}
             />
           ) : (
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 italic">
+            <p className="ev-muted italic">
               Klik tombol di atas untuk memanggil modul kecerdasan buatan Gemini guna menganalisis laporan dropping tim
               secara mendalam.
             </p>
@@ -1810,6 +2015,35 @@ export function EvaluasiView({
           </>
         )}
       </div>
+
+      {testimoni &&
+        createPortal(
+          <div className="testi-overlay" onClick={() => setTestimoni(null)}>
+            <div
+              className="testi-dialog"
+              role="dialog"
+              aria-modal="true"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="testi-head">
+                <span className="testi-label">Kategori: {testimoni.label}</span>
+                <button type="button" onClick={() => setTestimoni(null)} className="testi-close" aria-label="Tutup">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="testi-text">{testimoni.text}</p>
+              <div className="testi-actions">
+                <button type="button" onClick={handleAcakTestimoni} className="testi-btn testi-btn-primary">
+                  <Dices className="w-3.5 h-3.5" /> Acak Lagi
+                </button>
+                <button type="button" onClick={handleSalinTestimoni} className="testi-btn">
+                  <Copy className="w-3.5 h-3.5" /> {testimoniCopied ? "Disalin ✓" : "Salin"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

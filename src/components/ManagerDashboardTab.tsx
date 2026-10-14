@@ -461,6 +461,17 @@ function ManagerDashboardTabInner({
                   <span className={`${isFullscreen ? "text-xs sm:text-sm" : "text-sm sm:text-base"} font-black text-neutral-900 dark:text-white font-mono tabular-nums mt-0.5 block`}>
                     {dashboardData?.jwp || 0}
                   </span>
+                  {(() => {
+                    // EWP = (JWP - frekuensi absen) / JWP x 100%
+                    const jwpVal = Number(dashboardData?.jwp) || 0;
+                    const frekVal = Number(dashboardData?.frekuensiAbsen) || 0;
+                    const ewp = jwpVal > 0 ? Math.max(0, ((jwpVal - frekVal) / jwpVal) * 100) : 0;
+                    return (
+                      <span className={`${isFullscreen ? "text-[9px] sm:text-[10px]" : "text-[10px] sm:text-xs"} font-bold text-neutral-600 dark:text-neutral-300 font-mono tabular-nums block whitespace-nowrap mt-0.5`}>
+                        EWP {ewp.toFixed(1).replace(".", ",")}%
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className={`bd-subcard text-center ${isFullscreen ? "p-1 sm:p-1.5" : "p-1.5 sm:p-3"}`}>
                   <span className="bd-label block">AKM BB (btl) / BB %</span>
