@@ -30,8 +30,6 @@ export interface DashboardTheme {
   product: string[]; // 4 warna: YO, OM, OS, YT
   sektor: string[]; // warna rotasi untuk sektor
   tren: { penjualan: string; target: string; bulanLalu: string; tahunLalu: string; balikBotol: string };
-  rankingBase: string; // warna dasar bar non-podium (rank 4+), dipakai sbg basis gradasi
-  rankingPodium: [string, string, string]; // warna Juara 1, 2, 3 (ikut berubah per tema)
   tva: { target: string; actual: string; bulanLalu: string; tahunLalu: string };
 }
 
@@ -41,8 +39,6 @@ export const DASHBOARD_THEMES: DashboardTheme[] = [
     product: ["#dc2626", "#eab308", "#ec4899", "#2563eb"], // YO merah, OM kuning-oren, OS pink, YT biru (tetap di semua varian)
     sektor: ["#1d4ed8", "#0284c7", "#059669", "#d97706", "#7c3aed", "#ec4899"],
     tren: { penjualan: "#2563eb", target: "#059669", bulanLalu: "#d97706", tahunLalu: "#7c3aed", balikBotol: "#0284c7" },
-    rankingBase: "#93c5fd",
-    rankingPodium: ["#eab308", "#2563eb", "#60a5fa"],
     tva: { target: "#93c5fd", actual: "#1d4ed8", bulanLalu: "#d97706", tahunLalu: "#7c3aed" },
   },
   {
@@ -50,8 +46,6 @@ export const DASHBOARD_THEMES: DashboardTheme[] = [
     product: ["#dc2626", "#eab308", "#ec4899", "#2563eb"], // YO merah, OM kuning-oren, OS pink, YT biru (tetap di semua varian)
     sektor: ["#10b981", "#0ea5e9", "#f59e0b", "#a855f7", "#f43f5e", "#84cc16"],
     tren: { penjualan: "#059669", target: "#f59e0b", bulanLalu: "#0ea5e9", tahunLalu: "#f43f5e", balikBotol: "#84cc16" },
-    rankingBase: "#6ee7b7",
-    rankingPodium: ["#d97706", "#059669", "#6ee7b7"],
     tva: { target: "#a7f3d0", actual: "#059669", bulanLalu: "#0ea5e9", tahunLalu: "#f43f5e" },
   },
   {
@@ -59,8 +53,6 @@ export const DASHBOARD_THEMES: DashboardTheme[] = [
     product: ["#dc2626", "#eab308", "#ec4899", "#2563eb"], // YO merah, OM kuning-oren, OS pink, YT biru (tetap di semua varian)
     sektor: ["#6366f1", "#f43f5e", "#14b8a6", "#eab308", "#ec4899", "#22c55e"],
     tren: { penjualan: "#4f46e5", target: "#22c55e", bulanLalu: "#eab308", tahunLalu: "#ec4899", balikBotol: "#14b8a6" },
-    rankingBase: "#a5b4fc",
-    rankingPodium: ["#ca8a04", "#4f46e5", "#a5b4fc"],
     tva: { target: "#c7d2fe", actual: "#4f46e5", bulanLalu: "#eab308", tahunLalu: "#ec4899" },
   },
 ];
@@ -68,159 +60,6 @@ export const DASHBOARD_THEMES: DashboardTheme[] = [
 // Palet warna PATEN untuk produk (tidak ikut berubah saat ganti tema/tampilan)
 // YO = Merah, OM = Kuning, OS = Pink, YT = Biru
 export const FIXED_PRODUCT_COLORS = ["#dc2626", "#eab308", "#ec4899", "#2563eb"];
-
-// Mencampur warna hex dengan putih sebesar `ratio` (0 = warna asli, 1 = putih penuh)
-// Dipakai untuk membuat efek gradasi warna pada bar ranking (rank 4 ke bawah)
-function mixWithWhite(hex: string, ratio: number): string {
-  const clean = (hex || "#fca5a5").replace("#", "");
-  const r = parseInt(clean.substring(0, 2), 16) || 0;
-  const g = parseInt(clean.substring(2, 4), 16) || 0;
-  const b = parseInt(clean.substring(4, 6), 16) || 0;
-  const clampRatio = Math.min(1, Math.max(0, ratio));
-  const nr = Math.round(r + (255 - r) * clampRatio);
-  const ng = Math.round(g + (255 - g) * clampRatio);
-  const nb = Math.round(b + (255 - b) * clampRatio);
-  return `rgb(${nr}, ${ng}, ${nb})`;
-}
-
-// 1. Ranking Penjualan Antar YL (Bulan Ini) - Bar Chart (horizontal atau vertikal)
-interface RankingYLProps {
-  data: { nama: string; akumulasi: number }[];
-  isCompact?: boolean;
-  height?: string | number;
-  rankingBaseColor?: string;
-  podiumColors?: [string, string, string];
-  chartType?: "horizontal" | "vertical";
-}
-
-const CustomRankingTooltip = ({ active, payload, sortedData }: any) => {
-  if (active && payload && payload.length) {
-    const item = payload[0].payload;
-    const value = Number(item.akumulasi || 0);
-    const rankIndex = (sortedData || []).findIndex((d: any) => d.nama === item.nama);
-    const rankNumber = rankIndex >= 0 ? rankIndex + 1 : null;
-
-    let badgeBg = "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200";
-    let badgeText = rankNumber ? `#${rankNumber}` : "";
-    if (rankNumber === 1) {
-      badgeBg = "bg-amber-400 text-slate-950 font-black";
-      badgeText = "🥇 Juara 1";
-    } else if (rankNumber === 2) {
-      badgeBg = "bg-red-500 text-white font-bold";
-      badgeText = "🥈 Juara 2";
-    } else if (rankNumber === 3) {
-      badgeBg = "bg-rose-400 text-slate-950 font-bold";
-      badgeText = "🥉 Juara 3";
-    }
-
-    return (
-      <div className="bg-white dark:bg-neutral-900 p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs shadow-lg min-w-[180px] z-50 space-y-2">
-        <div className="flex items-center justify-between gap-2 border-b border-neutral-200 dark:border-neutral-700 pb-1.5">
-          <span className="font-black text-neutral-900 dark:text-white text-sm">{item.nama}</span>
-          {badgeText && (
-            <span className={`text-[10px] px-2 py-0.5 rounded-md font-black uppercase tracking-wider ${badgeBg}`}>
-              {badgeText}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center justify-between gap-3 text-xs pt-0.5">
-          <span className="text-neutral-600 dark:text-neutral-300 font-medium">Akumulasi Penjualan:</span>
-          <span className="font-black text-amber-400 font-mono text-sm">
-            {value.toLocaleString("id-ID")} btl
-          </span>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
-
-// Menghitung warna tiap bar: podium (rank 1-3) pakai warna tema, rank 4+ pakai gradasi dari rankingBaseColor
-function getRankColor(index: number, total: number, rankingBaseColor?: string, podiumColors?: [string, string, string]) {
-  if (index === 0) return podiumColors?.[0] || "#eab308";
-  if (index === 1) return podiumColors?.[1] || "#dc2626";
-  if (index === 2) return podiumColors?.[2] || "#f87171";
-  const gradientPoolSize = Math.max(1, total - 3);
-  const posInGradient = index - 3;
-  const ratio = (posInGradient / gradientPoolSize) * 0.7; // maks 70% memudar ke putih
-  return mixWithWhite(rankingBaseColor || "#fca5a5", ratio);
-}
-
-export const RankingYLChart = memo(function RankingYLChart({ data = [], isCompact = false, height, rankingBaseColor, podiumColors, chartType = "horizontal" }: RankingYLProps) {
-  const sortedData = [...(data || [])].sort((a, b) => b.akumulasi - a.akumulasi);
-
-  if (chartType === "vertical") {
-    // Variasi tampilan: bar tegak (kolom), nama YL di sumbu X, diurutkan tetap sesuai ranking
-    const containerStyle = height ? { height } : { height: isCompact ? "100%" : 300, minHeight: isCompact ? 260 : undefined };
-    return (
-      <div className="w-full h-full" style={containerStyle}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={sortedData} margin={{ top: 20, right: 10, left: -15, bottom: 55 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis
-              dataKey="nama"
-              stroke="#475569"
-              fontSize={isCompact ? 8 : 9}
-              fontWeight={600}
-              tickLine={false}
-              interval={0}
-              angle={-45}
-              textAnchor="end"
-              height={70}
-            />
-            <YAxis type="number" stroke="#94a3b8" fontSize={9} />
-            <Tooltip content={(props) => <CustomRankingTooltip {...props} sortedData={sortedData} />} />
-            <Bar dataKey="akumulasi" radius={[4, 4, 0, 0]} maxBarSize={38}>
-              <LabelList dataKey="akumulasi" position="top" fontSize={9} fill="#64748b" fontWeight="bold" />
-              {sortedData.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={getRankColor(index, sortedData.length, rankingBaseColor, podiumColors)} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    );
-  }
-
-  const calculatedHeight = Math.max(260, sortedData.length * 28);
-  const containerStyle = height
-    ? { height }
-    : isCompact
-    ? { height: "100%", minHeight: calculatedHeight }
-    : { height: calculatedHeight };
-
-  return (
-    <div className="w-full h-full" style={containerStyle}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={sortedData}
-          layout="vertical"
-          margin={{ top: 2, right: 35, left: 5, bottom: 2 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-          <XAxis type="number" stroke="#94a3b8" fontSize={9} />
-          <YAxis
-            dataKey="nama"
-            type="category"
-            stroke="#475569"
-            fontSize={isCompact ? 9 : 10}
-            fontWeight={600}
-            width={isCompact ? 105 : 120}
-            tickLine={false}
-            interval={0}
-          />
-          <Tooltip content={(props) => <CustomRankingTooltip {...props} sortedData={sortedData} />} />
-          <Bar dataKey="akumulasi" radius={[0, 4, 4, 0]}>
-            <LabelList dataKey="akumulasi" position="right" fontSize={9} fill="#64748b" fontWeight="bold" />
-            {sortedData.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={getRankColor(index, sortedData.length, rankingBaseColor, podiumColors)} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-});
 
 // 2. Komposisi Produk - Donut Chart
 interface KomposisiProps {

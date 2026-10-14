@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { X, Maximize2, Palette } from "lucide-react";
 import { MenuTitleIcon } from "./AppSidebar";
 import {
-  RankingYLChart,
   KomposisiProdukChart,
   SektorTimChart,
   TrenHarianJocChart,
@@ -18,8 +17,7 @@ const CARD_CHART_VARIANTS: Record<number, number> = {
   1: 2, // Komposisi Produk: donut <-> bar
   2: 2, // Potensi Sektor Tim: bar <-> donut
   3: 1, // Tren Harian: hanya gaya JOC
-  4: 2, // Ranking YL: horizontal <-> vertikal (kolom), warna + podium ikut berubah
-  5: 1, // Kinerja Akumulatif (tabel)
+  4: 1, // Capaian & Peringkat YL (tabel)
 };
 
 const ACCENT_THEMES = [
@@ -27,7 +25,7 @@ const ACCENT_THEMES = [
     accentBar: "bg-blue-600", ring: "hover:ring-blue-500/40", headerDark: "bg-neutral-900 dark:bg-neutral-950", badgeDarkBg: "bg-blue-900/40", badgeDarkText: "text-blue-400", badgeLightText: "group-hover:text-blue-600", badgeLightBg: "group-hover:bg-blue-50",
     // Warna font untuk Card 0 (Ringkasan Utama Tim) - hitam saat terang, putih saat gelap
     totalPenjualan: "text-neutral-900 dark:text-white", rataRataTim: "text-neutral-900 dark:text-white", vsTarget: "text-indigo-600 dark:text-indigo-400", vsBulanLalu: "text-purple-600 dark:text-purple-400", vsTahunLalu: "text-teal-600 dark:text-teal-400", bbTim: "text-rose-600 dark:text-rose-400",
-    // Warna font untuk Card 5 (Kinerja Akumulatif)
+    // Warna font untuk Card 4 (Capaian & Peringkat YL)
     akm: "text-sky-700 dark:text-sky-300", rata2Table: "text-emerald-700 dark:text-emerald-300", vsTgtTable: "text-indigo-600 dark:text-indigo-400", vsBlnTable: "text-purple-600 dark:text-purple-400", vsThnTable: "text-teal-600 dark:text-teal-400", bbTable: "text-rose-600 dark:text-rose-400",
   },
   {
@@ -50,9 +48,13 @@ function loadCardStyles(): number[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        // Migrasikan preferensi lama: buang Target vs Actual, pertahankan gaya Kinerja Akumulatif.
-        const migrated = parsed.length === 7 ? [...parsed.slice(0, 5), parsed[6]] : parsed;
-        if (migrated.length === 6) {
+        // Migrasikan preferensi lama: card Target vs Actual (indeks 5 lama) dan Ranking YL (indeks 4 lama) sudah dihapus.
+        // Gaya card Capaian & Peringkat YL dipertahankan.
+        const migrated =
+          parsed.length === 7 ? [...parsed.slice(0, 4), parsed[6]] :
+          parsed.length === 6 ? [...parsed.slice(0, 4), parsed[5]] :
+          parsed;
+        if (migrated.length === 5) {
           // Abaikan varian lama yang tersimpan agar Tren Harian selalu memakai tampilan JOC.
           migrated[3] = 0;
           return migrated;
@@ -62,7 +64,81 @@ function loadCardStyles(): number[] {
   } catch {
     // ignore
   }
-  return [0, 0, 0, 0, 0, 0];
+  return [0, 0, 0, 0, 0];
+}
+
+// Peringkat YL: sistem poin (total maksimal 100).
+//  - Vs Th Lalu  : maks 30 poin (proporsional terhadap capaian %, mentok di 100%)
+//  - Vs Target   : maks 25 poin (proporsional, mentok di 100%)
+//  - Vs Bln Lalu : maks 20 poin (proporsional, mentok di 100%)
+//  - Rata2/hari  : >350 = 15, >300 = 10, >=250 = 5, di bawah 250 = 0
+//  - BB %        : 0 s/d 5% = 10, >5 s/d 10% = 5, >10% = 0
+// Faktor vs yang pembandingnya kosong (mis. YL baru tanpa data tahun lalu) dilewati,
+// lalu skor dihitung ulang terhadap poin maksimal faktor yang tersedia (skala 0..100).
+// Skor sama -> tie-break: persen vs Th Lalu tertinggi, lalu vs Target, lalu vs Bulan Lalu.
+const RANK_MIN_RATA2 = 250;
+const RANK_MAX_POIN = { thn: 30, tgt: 25, bln: 20, rata2: 15, bb: 10 };
+
+function poinVs(rata2: number, base: number, maxPoin: number): number | null {
+  if (!(base > 0)) return null;
+  const pct = Math.min(Math.max((rata2 / base) * 100, 0), 100);
+  return (pct / 100) * maxPoin;
+}
+
+function poinRata2(rata2: number): number {
+  const r = Math.trunc(Number(rata2) || 0);
+  if (r > 350) return 15;
+  if (r > 300) return 10;
+  if (r >= 250) return 5;
+  return 0;
+}
+
+function poinBB(bbPct: number): number {
+  if (bbPct <= 5) return 10;
+  if (bbPct <= 10) return 5;
+  return 0;
+}
+
+function buildYlRanking(perYL: Record<string, any> | undefined) {
+  const rows = Object.values(perYL || {}).map((y: any) => {
+    const vsTgt = y.targetYL > 0 ? Math.trunc((y.rata2 / y.targetYL) * 100) : 0;
+    const vsBln = y.bulanLaluYL > 0 ? Math.trunc((y.rata2 / y.bulanLaluYL) * 100) : 0;
+    const vsThn = y.tahunLaluYL > 0 ? Math.trunc((y.rata2 / y.tahunLaluYL) * 100) : 0;
+    const bbPctNum = (y.akumulasi + y.bbYL) > 0 ? (y.bbYL / (y.akumulasi + y.bbYL)) * 100 : 0;
+    const poin = {
+      thn: poinVs(y.rata2, y.tahunLaluYL, RANK_MAX_POIN.thn),
+      tgt: poinVs(y.rata2, y.targetYL, RANK_MAX_POIN.tgt),
+      bln: poinVs(y.rata2, y.bulanLaluYL, RANK_MAX_POIN.bln),
+      rata2: poinRata2(y.rata2),
+      bb: poinBB(bbPctNum),
+    };
+    let earned = 0;
+    let available = 0;
+    (Object.keys(poin) as (keyof typeof poin)[]).forEach((k) => {
+      const v = poin[k];
+      if (v !== null) { earned += v; available += RANK_MAX_POIN[k]; }
+    });
+    return {
+      y, vsTgt, vsBln, vsThn, bbPctNum, poin,
+      score: available > 0 ? (earned / available) * 100 : 0,
+      lolos: Math.trunc(Number(y.rata2) || 0) >= RANK_MIN_RATA2,
+      // Pembanding untuk tie-break (persen asli, tanpa dibatasi 100%); kosong = paling bawah
+      rThn: y.tahunLaluYL > 0 ? y.rata2 / y.tahunLaluYL : -1,
+      rTgt: y.targetYL > 0 ? y.rata2 / y.targetYL : -1,
+      rBln: y.bulanLaluYL > 0 ? y.rata2 / y.bulanLaluYL : -1,
+    };
+  });
+  // Urutan: lolos 250 dulu, lalu skor (dibulatkan 2 desimal). Kalau skor sama (mis. sama-sama
+  // poin penuh), yang persen vs Th Lalu tertinggi menang, lalu vs Target, lalu vs Bulan Lalu.
+  const sc = (r: { score: number }) => Math.round(r.score * 100) / 100;
+  return rows.sort(
+    (a, b) =>
+      Number(b.lolos) - Number(a.lolos) ||
+      sc(b) - sc(a) ||
+      b.rThn - a.rThn ||
+      b.rTgt - a.rTgt ||
+      b.rBln - a.rBln
+  );
 }
 
 // Tombol kecil untuk mengganti tampilan (jenis grafik + tema warna) sebuah card
@@ -181,7 +257,7 @@ function ManagerDashboardTabInner({
     setFullscreenCardIndex(index);
   };
 
-  const cardsCount = 6;
+  const cardsCount = 5;
 
   const handleNextCard = () => {
     setFullscreenCardIndex(prev => (prev === null ? null : (prev + 1) % cardsCount));
@@ -333,14 +409,13 @@ function ManagerDashboardTabInner({
     );
   }
 
-  // Define details for each of the 6 dashboard cards
+  // Define details for each of the 5 dashboard cards
   const cardTitles = [
     "Ringkasan Utama Tim",
     "Komposisi & Performa Produk",
     "Potensi Tim",
     "Tren Penjualan",
-    "Ranking Penjualan Antar YL",
-    "Kinerja Akumulatif & Rata-Rata YL",
+    "Capaian & Peringkat YL",
   ];
 
   // Card Content Renderers
@@ -745,42 +820,14 @@ function ManagerDashboardTabInner({
           </div>
         );
 
-      case 4: // 5. Ranking Penjualan Antar YL
-        return (
-          <div className={`bd-card p-3 sm:p-5 text-neutral-900 dark:text-neutral-100 ${isFullscreen ? "w-full min-h-full p-2 sm:p-3 border-0 shadow-none flex flex-col justify-center my-auto" : ""}`}>
-            {!isFullscreen && (
-              <div className="flex items-center justify-between mb-2 sm:mb-3 border-b border-[var(--line)] pb-2">
-                <h3 className="bd-title uppercase">
-                  Ranking Penjualan Antar YL
-                </h3>
-                <div className="flex items-center gap-1.5">
-                  <StyleToggleButton onClick={() => cycleCardStyle(4)} />
-                  <span className="text-[9px] font-bold text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 px-1.5 py-0.5 rounded hidden sm:inline-flex items-center gap-1">
-                    <Maximize2 className="w-2.5 h-2.5" /> 2x Layar Penuh
-                  </span>
-                </div>
-              </div>
-            )}
-            <div className={isFullscreen ? "w-full min-h-[280px] sm:min-h-[320px]" : "w-full min-h-[280px] sm:min-h-[320px]"}>
-              <RankingYLChart
-                data={Object.values(dashboardData?.perYL || {}).map(y => ({ nama: safeClean(y.nama), akumulasi: y.akumulasi }))}
-                isCompact={isFullscreen}
-                rankingBaseColor={style.chartTheme.rankingBase}
-                podiumColors={style.chartTheme.rankingPodium}
-                chartType={style.variantIdx === 1 ? "vertical" : "horizontal"}
-              />
-            </div>
-          </div>
-        );
-
-      case 5: // 6. Kinerja Akumulatif & Rata-Rata YL
+      case 4: // 5. Capaian & Peringkat YL
         return (
           <div className={`bd-card overflow-hidden text-neutral-900 dark:text-neutral-100 ${isFullscreen ? "w-full min-h-full border-0 shadow-none flex flex-col justify-start my-auto bg-white dark:bg-neutral-900" : ""}`}>
             {!isFullscreen && (
               <div className="p-2.5 sm:p-3.5 bg-[var(--bg-header)] text-[var(--ink)] border-b border-[var(--line)] flex items-center justify-between shrink-0">
-                <h3 className="bd-title uppercase">Kinerja Akumulatif & Rata-Rata YL</h3>
+                <h3 className="bd-title uppercase">Capaian & Peringkat YL</h3>
                 <div className="flex items-center gap-2">
-                  <StyleToggleButton onClick={() => cycleCardStyle(5)} />
+                  <StyleToggleButton onClick={() => cycleCardStyle(4)} />
                   <span className={`text-[9px] font-bold ${style.accent.badgeDarkText} ${style.accent.badgeDarkBg} px-1.5 py-0.5 rounded transition-all hidden sm:inline-flex items-center gap-1`}>
                     <Maximize2 className="w-2.5 h-2.5" /> 2x Layar Penuh
                   </span>
@@ -789,9 +836,10 @@ function ManagerDashboardTabInner({
               </div>
             )}
             <div className={`overflow-x-auto overflow-y-auto ${isFullscreen ? "flex-1 min-h-0" : ""}`}>
-              <table className="w-full text-left text-xs border-collapse min-w-[460px] sm:min-w-full">
+              <table className="w-full text-left text-xs border-collapse min-w-[520px] sm:min-w-full">
                 <thead className="sticky top-0 bg-[var(--bg-inset)] z-10 border-b border-[var(--line)]">
                   <tr className="text-[var(--ink-2)] font-semibold uppercase text-[10px]">
+                    <th className={`text-center bg-[var(--bg-inset)] whitespace-nowrap ${isFullscreen ? "p-1 sm:p-1.5 text-[9px] sm:text-[9px]" : "p-2 sm:p-3"}`}>#</th>
                     <th className={`bg-[var(--bg-inset)] whitespace-nowrap ${isFullscreen ? "p-1 sm:p-1.5 text-[9px] sm:text-[9px]" : "p-2 sm:p-3"}`}>Nama YL</th>
                     <th className={`text-right bg-[var(--bg-inset)] whitespace-nowrap ${isFullscreen ? "p-1 sm:p-1.5 text-[9px] sm:text-[9px]" : "p-2 sm:p-3"}`}>Akm</th>
                     <th className={`text-right bg-[var(--bg-inset)] whitespace-nowrap ${isFullscreen ? "p-1 sm:p-1.5 text-[9px] sm:text-[9px]" : "p-2 sm:p-3"}`}>Rata2/hr</th>
@@ -799,25 +847,37 @@ function ManagerDashboardTabInner({
                     <th className={`text-right bg-[var(--bg-inset)] whitespace-nowrap ${isFullscreen ? "p-1 sm:p-1.5 text-[9px] sm:text-[9px]" : "p-2 sm:p-3"}`}>vs Bln</th>
                     <th className={`text-right bg-[var(--bg-inset)] whitespace-nowrap ${isFullscreen ? "p-1 sm:p-1.5 text-[9px] sm:text-[9px]" : "p-2 sm:p-3"}`}>vs Thn</th>
                     <th className={`text-right bg-[var(--bg-inset)] whitespace-nowrap ${isFullscreen ? "p-1 sm:p-1.5 text-[9px] sm:text-[9px]" : "p-2 sm:p-3"}`}>BB %</th>
+                    <th className={`text-right bg-[var(--bg-inset)] whitespace-nowrap ${isFullscreen ? "p-1 sm:p-1.5 text-[9px] sm:text-[9px]" : "p-2 sm:p-3"}`}>Skor</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--divider)] font-bold">
-                  {Object.values(dashboardData?.perYL || {}).map((y: any) => {
-                    const vsTgt = y.targetYL > 0 ? Math.trunc((y.rata2 / y.targetYL) * 100) : 0;
-                    const vsBln = y.bulanLaluYL > 0 ? Math.trunc((y.rata2 / y.bulanLaluYL) * 100) : 0;
-                    const vsThn = y.tahunLaluYL > 0 ? Math.trunc((y.rata2 / y.tahunLaluYL) * 100) : 0;
-                    const bbPctNum = (y.akumulasi + y.bbYL) > 0 ? (y.bbYL / (y.akumulasi + y.bbYL)) * 100 : 0;
+                  {buildYlRanking(dashboardData?.perYL).map((r, idx, arr) => {
+                    const { y, vsTgt, vsBln, vsThn, bbPctNum, score, lolos, poin } = r;
+                    const rincianPoin = `Vs Th Lalu: ${poin.thn === null ? "-" : poin.thn.toFixed(1)}/${RANK_MAX_POIN.thn} | Vs Tgt: ${poin.tgt === null ? "-" : poin.tgt.toFixed(1)}/${RANK_MAX_POIN.tgt} | Vs Bln: ${poin.bln === null ? "-" : poin.bln.toFixed(1)}/${RANK_MAX_POIN.bln} | Rata2: ${poin.rata2}/${RANK_MAX_POIN.rata2} | BB: ${poin.bb}/${RANK_MAX_POIN.bb}`;
                     const bbPct = formatTruncated(bbPctNum, 1, false);
+                    const showDivider = !lolos && (idx === 0 || arr[idx - 1].lolos);
+                    const rankLabel = lolos && idx < 3 ? ["🥇", "🥈", "🥉"][idx] : String(idx + 1);
                     return (
-                      <tr key={y.nama} className="odd:bg-transparent even:bg-neutral-50/70 dark:even:bg-white/[0.03] text-neutral-900 dark:text-white transition-colors">
-                        <td className={`truncate font-bold max-w-[100px] sm:max-w-[140px] ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{y.nama}</td>
-                        <td className={`text-right ${style.accent.akm} font-bold font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{y.akumulasi}</td>
-                        <td className={`text-right ${rata2ColorClass(y.rata2)} font-bold font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{Math.trunc(y.rata2)}</td>
-                        <td className={`text-right ${vsPctColorClass(vsTgt)} font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{vsTgt}%</td>
-                        <td className={`text-right ${vsPctColorClass(vsBln)} font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{vsBln}%</td>
-                        <td className={`text-right ${vsPctColorClass(vsThn)} font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{vsThn}%</td>
-                        <td className={`text-right ${bbColorClass(bbPctNum)} font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{bbPct}%</td>
-                      </tr>
+                      <React.Fragment key={y.nama}>
+                        {showDivider && (
+                          <tr className="bg-red-50 dark:bg-red-950/30">
+                            <td colSpan={9} className="px-2 py-1 text-[9px] sm:text-[10px] font-bold uppercase text-red-600 dark:text-red-400">
+                              Di bawah {RANK_MIN_RATA2}/hari — perlu evaluasi
+                            </td>
+                          </tr>
+                        )}
+                        <tr className="odd:bg-transparent even:bg-neutral-50/70 dark:even:bg-white/[0.03] text-neutral-900 dark:text-white transition-colors">
+                          <td className={`text-center font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{rankLabel}</td>
+                          <td className={`truncate font-bold max-w-[100px] sm:max-w-[140px] ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{y.nama}</td>
+                          <td className={`text-right ${style.accent.akm} font-bold font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{y.akumulasi}</td>
+                          <td className={`text-right ${rata2ColorClass(y.rata2)} font-bold font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{Math.trunc(y.rata2)}</td>
+                          <td className={`text-right ${vsPctColorClass(vsTgt)} font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{vsTgt}%</td>
+                          <td className={`text-right ${vsPctColorClass(vsBln)} font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{vsBln}%</td>
+                          <td className={`text-right ${vsPctColorClass(vsThn)} font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{vsThn}%</td>
+                          <td className={`text-right ${bbColorClass(bbPctNum)} font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{bbPct}%</td>
+                          <td title={rincianPoin} className={`text-right font-mono tabular-nums whitespace-nowrap ${isFullscreen ? "px-1 py-0.5 sm:px-1.5 sm:py-1 text-[10px] sm:text-xs" : "p-2 sm:p-3"}`}>{Math.round(score)}</td>
+                        </tr>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -945,7 +1005,7 @@ function ManagerDashboardTabInner({
         {renderCardContent(3)}
       </div>
 
-      {/* 5. Ranking Penjualan Antar YL (Card 4) */}
+      {/* 5. Capaian & Peringkat YL (Card 4) */}
       <div
         onDoubleClick={(e) => handleCardDoubleClick(4, e)}
         onTouchStart={handleCardTouchStart}
@@ -954,17 +1014,6 @@ function ManagerDashboardTabInner({
         title="Ketuk 2x untuk Layar Penuh"
       >
         {renderCardContent(4)}
-      </div>
-
-      {/* 6. Kinerja Akumulatif & Rata-Rata YL (Card 5) */}
-      <div
-        onDoubleClick={(e) => handleCardDoubleClick(5, e)}
-        onTouchStart={handleCardTouchStart}
-        onTouchEnd={(e) => handleCardTouchEnd(5, e)}
-        className={`cursor-pointer transition-all hover:ring-2 ${getCardStyle(5).accent.ring} rounded-2xl group select-none`}
-        title="Ketuk 2x untuk Layar Penuh"
-      >
-        {renderCardContent(5)}
       </div>
     </div>
   );

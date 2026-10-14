@@ -5690,7 +5690,7 @@ async function startServer() {
     cachedDb = buildDbFromLocal();
   }
 
-  app.use(express.static(path.join(process.cwd(), "public"), { maxAge: "1d" }));
+  app.use(express.static(path.join(process.cwd(), "public"), { maxAge: "1h" }));
 
   if (isProduction) {
     if (hasDist) {
@@ -5699,7 +5699,12 @@ async function startServer() {
           maxAge: "1d",
           setHeaders(res, filePath) {
             if (filePath.includes("/assets/")) {
+              // File ber-hash: aman di-cache lama, karena nama berubah tiap build.
               res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+            } else if (filePath.endsWith(".html")) {
+              // index.html JANGAN di-cache: ia yang menunjuk ke file JS/CSS versi terbaru.
+              // Tanpa ini WebView/HP memakai index.html lama sampai cache dihapus manual.
+              res.setHeader("Cache-Control", "no-cache, must-revalidate");
             }
           },
         })
