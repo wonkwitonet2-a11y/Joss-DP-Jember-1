@@ -364,6 +364,8 @@ export default function App() {
   // saja menyimpan sesuatu di 20 detik terakhir).
   const lastPayloadRef = useRef<Record<string, string>>({});
   const lastSlowPollRef = useRef<number>(0);
+  const lastDataVersionRef = useRef<string>("");
+  const lastManagerFetchRef = useRef<number>(0);
 
   const setIfChanged = <T,>(key: string, data: T, setter: (value: T) => void) => {
     const serialized = JSON.stringify(data);
@@ -393,7 +395,21 @@ export default function App() {
       if (shouldPollSlowConfigs) {
         lastSlowPollRef.current = now;
       }
-      const shouldFetchManagerData = !isYl || !isBackground;
+      let shouldFetchManagerData = !isYl || !isBackground;
+
+      // Hemat bandwidth: polling latar belakang manajer cukup tanya versi data (beberapa byte).
+      // Dasbor + evaluasi (~230 KB) baru diunduh kalau versi berubah, atau paling lama tiap 2 menit
+      // sebagai pengaman. Refresh manual / ganti bulan / kembali ke aplikasi selalu unduh penuh.
+      if (!isYl) {
+        const vRes = await safeFetchJson<{ v?: string }>("/api/getDataVersion");
+        const ver = vRes?.v || "";
+        const unchanged =
+          isBackground && !!ver && ver === lastDataVersionRef.current &&
+          now - lastManagerFetchRef.current < 120000;
+        if (ver) lastDataVersionRef.current = ver;
+        if (unchanged) shouldFetchManagerData = false;
+      }
+      if (shouldFetchManagerData) lastManagerFetchRef.current = now;
 
       const [db, ev, mot, knt, pins, ylListData, globalMonthData, mineData] = await Promise.all([
         shouldFetchManagerData ? safeFetchJson(`/api/getDashboardDP1?month=${globalMonth}`) : Promise.resolve(null),

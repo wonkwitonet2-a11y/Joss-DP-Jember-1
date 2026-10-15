@@ -628,6 +628,11 @@ let cachedDb: any = null;
 let writeTimeout: ReturnType<typeof setTimeout> | null = null;
 let dashboardDP1Cache: any = null;
 let dashboardCacheDirty = true;
+// Versi data in-memory: naik setiap data berubah (simpan lokal / disegarkan dari Supabase).
+// Dipakai klien manajer untuk polling murah (/api/getDataVersion) tanpa unduh ulang dashboard
+// 230 KB setiap 20 detik. bootId acak supaya pindah instance server = versi berbeda.
+const DATA_BOOT_ID = Math.random().toString(36).slice(2, 8);
+let dataVersion = 0;
 
 function safeWriteFile(filePath: string, content: string) {
   try {
@@ -1022,6 +1027,7 @@ async function refreshFromSupabaseIfStale(minIntervalMs: number): Promise<void> 
       remoteStamp[prop] = stampOf(row.updated_at);
     }
     dashboardCacheDirty = true;
+    dataVersion++;
     console.log("[Supabase] Cache disegarkan dari remote untuk key:", staleKeys.join(", "));
   } catch (e: any) {
     console.warn("[Supabase] Exception saat menyegarkan data remote:", e?.message || e);
@@ -1326,6 +1332,7 @@ async function saveData(data: any) {
   // yang sama) langsung melihat data terbaru.
   cachedDb = data;
   dashboardCacheDirty = true;
+  dataVersion++;
 
   // Tulis ke disk lokal (berguna untuk dev/Termux; di Netlify filesystem
   // read-only jadi safeWriteFile akan diam-diam skip, tidak masalah).
@@ -5443,6 +5450,11 @@ app.get("/api/getTarget", async (req, res) => {
 });
 
 // 8. General Dashboard DP1 (Main statistics card source)
+app.get("/api/getDataVersion", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ v: `${DATA_BOOT_ID}-${dataVersion}` });
+});
+
 app.get("/api/getDashboardDP1", async (req, res) => {
   const { month } = req.query;
   const db = loadData();

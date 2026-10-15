@@ -407,13 +407,19 @@ export interface CustomSlideRecord {
   updatedAt?: string;
 }
 
+// Foto base64 tidak disimpan di localStorage (membengkakkan memori browser & kuota 5MB).
+// localStorage hanya menyimpan metadata; foto disimpan di Supabase + state React.
+function stripFoto<T extends { foto?: string }>(rec: T): T {
+  return { ...rec, foto: "" };
+}
+
 function resizeCustomSlidePhoto(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const MAX_DIM = 1400;
+        const MAX_DIM = 900;
         let width = img.width;
         let height = img.height;
         if (width > height) {
@@ -432,7 +438,7 @@ function resizeCustomSlidePhoto(file: File): Promise<string> {
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", 0.85));
+        resolve(canvas.toDataURL("image/jpeg", 0.7));
       };
       img.onerror = reject;
       img.src = reader.result as string;
@@ -459,8 +465,24 @@ function useCustomSlide(storageKey: string) {
     (async () => {
       try {
         const local = localStorage.getItem(storageKey);
-        if (local) {
-          if (!cancelled) setRecord(JSON.parse(local));
+        const localRec: CustomSlideRecord | null = local ? JSON.parse(local) : null;
+        if (localRec && localRec.foto) {
+          // Migrasi data lama: foto besar masih di localStorage -> pindahkan ke Supabase, bersihkan localStorage
+          if (!cancelled) setRecord(localRec);
+          try {
+            const res = await saveToSupabase(storageKey, localRec);
+            // Hanya bersihkan localStorage kalau foto sudah aman di Supabase
+            if (res?.success) localStorage.setItem(storageKey, JSON.stringify(stripFoto(localRec)));
+          } catch (e) {
+            console.error("Migrasi foto slide kustom ke Supabase gagal, data lama dibiarkan:", e);
+          }
+        } else if (localRec) {
+          // Metadata lokal tanpa foto: tampilkan dulu, lalu ambil foto dari Supabase
+          if (!cancelled) setRecord(localRec);
+          if (localRec.enabled || localRec.fotoName) {
+            const remote = await loadFromSupabase<CustomSlideRecord>(storageKey);
+            if (!cancelled && remote?.foto) setRecord({ ...localRec, foto: remote.foto, fotoName: localRec.fotoName || remote.fotoName });
+          }
         } else {
           const remote = await loadFromSupabase<CustomSlideRecord>(storageKey);
           if (!cancelled && remote) setRecord(remote);
@@ -478,7 +500,7 @@ function useCustomSlide(storageKey: string) {
     const payload = { ...rec, updatedAt: new Date().toISOString() };
     setRecord(payload);
     try {
-      localStorage.setItem(storageKey, JSON.stringify(payload));
+      localStorage.setItem(storageKey, JSON.stringify(stripFoto(payload)));
     } catch (e) {
       console.error(e);
     }
@@ -2572,6 +2594,21 @@ export default function PresentasiView({ globalMonth }: { globalMonth?: string }
         const parsed = JSON.parse(saved);
         setCoverFoto(parsed.foto || "");
         setCoverFotoName(parsed.fotoName || "");
+        if (parsed.foto) {
+          // Migrasi data lama: pindahkan foto ke Supabase, sisakan nama saja di localStorage
+          saveToSupabase(coverKey, { foto: parsed.foto, fotoName: parsed.fotoName || "" })
+            .then((res) => {
+              if (res?.success) localStorage.setItem(coverKey, JSON.stringify({ foto: "", fotoName: parsed.fotoName || "" }));
+            })
+            .catch((e) => console.error("Migrasi foto cover gagal:", e));
+        } else {
+          loadFromSupabase<{ foto?: string; fotoName?: string }>(coverKey)
+            .then((remote) => { if (remote?.foto) setCoverFoto(remote.foto); })
+            .catch(() => {});
+        }
+      } else {
+        setCoverFoto("");
+        setCoverFotoName("");
       }
     } catch {}
   }, [selectedYear, periode, monthIndex]);
@@ -2849,7 +2886,12 @@ export default function PresentasiView({ globalMonth }: { globalMonth?: string }
       setCoverFoto(b64);
       setCoverFotoName(file.name);
       const coverKey = `presentasi_cover_foto_${selectedYear}_${periode}_${periode === "bulanan" ? monthIndex : "all"}`;
-      localStorage.setItem(coverKey, JSON.stringify({ foto: b64, fotoName: file.name }));
+      localStorage.setItem(coverKey, JSON.stringify({ foto: "", fotoName: file.name }));
+      try {
+        await saveToSupabase(coverKey, { foto: b64, fotoName: file.name });
+      } catch (e) {
+        console.error("Gagal menyinkronkan foto cover ke Supabase:", e);
+      }
     } catch (err) {
       console.error("Gagal upload cover foto:", err);
     }
@@ -2860,6 +2902,7 @@ export default function PresentasiView({ globalMonth }: { globalMonth?: string }
     setCoverFotoName("");
     const coverKey = `presentasi_cover_foto_${selectedYear}_${periode}_${periode === "bulanan" ? monthIndex : "all"}`;
     localStorage.removeItem(coverKey);
+    deleteFromSupabase(coverKey).catch((e) => console.error("Gagal menghapus foto cover dari Supabase:", e));
   };
 
   // Bangun slide untuk Mode Presentasi sesuai periode yang aktif
