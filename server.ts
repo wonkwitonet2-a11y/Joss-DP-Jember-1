@@ -3746,8 +3746,59 @@ app.get("/api/getLhppPdm", async (req, res) => {
     pdmYlm: currentPdmYlm,
     rowsData: currentPdm,
     prevPdmMap,
-    prevSourceDate
+    prevSourceDate,
+    // Draf bersama lintas perangkat (ikut di respons yg sama -> tidak ada request tambahan)
+    draft: (db.lhppDraft && db.lhppDraft[dateKey]) || null
   });
+});
+
+// POST /api/saveLhppDraft - Simpan draf LHPP (belum resmi) supaya bisa dibuka di HP/tab lain.
+// Hemat egress: dilewati kalau isi sama persis, hanya 1 draf per tanggal, maks 5 tanggal terbaru.
+app.post("/api/saveLhppDraft", async (req, res) => {
+  try {
+    const { tanggal, month, day, rows, summary, savedAt, deviceId } = req.body || {};
+    const dateKey = tanggal || `${month}-${String(day || 1).padStart(2, "0")}`;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || !Array.isArray(rows)) {
+      return res.status(400).json({ ok: false, error: "Data draf tidak valid" });
+    }
+    const db = loadData();
+    if (!db.lhppDraft) db.lhppDraft = {};
+    const next = {
+      rows,
+      summary: summary || null,
+      savedAt: savedAt || new Date().toISOString(),
+      deviceId: String(deviceId || "")
+    };
+    const prev = db.lhppDraft[dateKey];
+    if (prev && JSON.stringify(prev.rows) === JSON.stringify(next.rows) &&
+        JSON.stringify(prev.summary) === JSON.stringify(next.summary)) {
+      return res.json({ ok: true, unchanged: true });
+    }
+    db.lhppDraft[dateKey] = next;
+    const keys = Object.keys(db.lhppDraft).sort((a, b) =>
+      String(db.lhppDraft[a]?.savedAt || "").localeCompare(String(db.lhppDraft[b]?.savedAt || "")));
+    while (keys.length > 5) delete db.lhppDraft[keys.shift() as string];
+    await saveData(db);
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("Error in saveLhppDraft:", err);
+    res.status(500).json({ ok: false, error: err?.message || "Gagal menyimpan draf" });
+  }
+});
+
+// POST /api/deleteLhppDraft - Buang draf satu tanggal
+app.post("/api/deleteLhppDraft", async (req, res) => {
+  try {
+    const { tanggal, month, day } = req.body || {};
+    const dateKey = tanggal || `${month}-${String(day || 1).padStart(2, "0")}`;
+    const db = loadData();
+    if (!db.lhppDraft) db.lhppDraft = {};
+    db.lhppDraft[dateKey] = { rows: null, summary: null, clearedAt: new Date().toISOString() };
+    await saveData(db);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message || "Gagal membuang draf" });
+  }
 });
 
 // POST /api/saveLhppPdm - Save LHPP PDM data and patch transactions (tot_* and bb_*)
@@ -3954,6 +4005,13 @@ app.post("/api/saveLhppPdm", async (req, res) => {
 
     cleanEmptyTransactions(db);
 
+    // Simpan penuh (ada summary) = draf tanggal ini sudah resmi -> buang draf bersama
+    // (diganti penanda kecil "clearedAt" agar draf lama di perangkat lain tidak hidup lagi)
+    if (summary) {
+      if (!db.lhppDraft) db.lhppDraft = {};
+      db.lhppDraft[dateKey] = { rows: null, summary: null, clearedAt: new Date().toISOString() };
+    }
+
     await saveData(db);
 
     res.json({ ok: true, message: "✅ Data LHPP tersimpan & tersambung ke Realisasi" });
@@ -3983,6 +4041,8 @@ app.post("/api/deleteLhppPdm", async (req, res) => {
       delete db.lhppPdmYlm[dateKey];
       delete db.lhppPdmYlm[`${month}-${dayStr}`];
     }
+    if (!db.lhppDraft) db.lhppDraft = {};
+    db.lhppDraft[dateKey] = { rows: null, summary: null, clearedAt: new Date().toISOString() };
     if (db.lhppRealisasi) {
       delete db.lhppRealisasi[dateKey];
       delete db.lhppRealisasi[`${month}-${dayStr}`];

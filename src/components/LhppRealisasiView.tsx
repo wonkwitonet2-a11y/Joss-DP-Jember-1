@@ -95,6 +95,20 @@ const getInitialLhppDay = (scope: string, month: string): number => {
   return fallback;
 };
 
+const getLhppDeviceId = (): string => {
+  if (typeof window === "undefined") return "";
+  try {
+    let id = window.localStorage.getItem("lhppDeviceId");
+    if (!id) {
+      id = Math.random().toString(36).slice(2, 10);
+      window.localStorage.setItem("lhppDeviceId", id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+};
+
 const clearLhppLocalDraft = (scope: string, month: string, day: number) => {
   if (typeof window === "undefined") return;
   try {
@@ -131,6 +145,7 @@ function LhppRealisasiViewInner({
   const [showQuickInput] = useState<boolean>(true);
   const [hasUnsaved, setHasUnsaved] = useState<boolean>(false);
   const [selectedYlIndex, setSelectedYlIndex] = useState<number>(0);
+  const lastUploadedDraftRef = useRef<string>("");
   const prevPdmMapRef = useRef<Record<string, { yo: number; om: number; os: number; yt: number }>>({});
   const loadedDateRef = useRef({ month: selectedMonth, day: selectedDay });
 
@@ -148,6 +163,21 @@ function LhppRealisasiViewInner({
     try {
       const res = await safeFetchJson<any>(`/api/getLhppPdm?month=${month}&day=${day}`);
       if (res && res.ok) {
+        // --- Draf bersama lintas perangkat: pilih yang paling baru antara draf lokal & draf server ---
+        let draft = localDraft;
+        const srvDraft = res.draft || null;
+        const clearedAt: string = srvDraft?.clearedAt ? String(srvDraft.clearedAt) : "";
+        if (draft && clearedAt && String(draft.savedAt || "") < clearedAt) {
+          // Draf lokal ini sudah dibuang / sudah disimpan resmi dari perangkat lain
+          clearLhppLocalDraft(draftScope, month, day);
+          draft = null;
+        }
+        const srvUsable = draftScope === "live" && srvDraft && Array.isArray(srvDraft.rows) && srvDraft.summary?.pdmYlm;
+        let draftFromServer = false;
+        if (srvUsable && (!draft || String(srvDraft.savedAt || "") > String(draft.savedAt || ""))) {
+          draft = { rows: srvDraft.rows, summary: srvDraft.summary, savedAt: srvDraft.savedAt };
+          draftFromServer = true;
+        }
         const summaryData: LhppYlmSummary = {
           pdmYlm: res.pdmYlm || { yo: 0, om: 0, os: 0, yt: 0 },
           sisaYlm: { yo: 0, om: 0, os: 0, yt: 0 },
@@ -190,7 +220,7 @@ function LhppRealisasiViewInner({
         });
 
         const draftRowsByArea = new Map<string, LhppRow>(
-          (localDraft?.rows || []).map((row): [string, LhppRow] => [String(row.area), row])
+          (draft?.rows || []).map((row): [string, LhppRow] => [String(row.area), row])
         );
         const restoredRows = newRows.map((serverRow) => {
           const draftRow = draftRowsByArea.get(String(serverRow.area));
@@ -210,11 +240,15 @@ function LhppRealisasiViewInner({
         });
 
         setRows(restoredRows);
-        setSummary(localDraft?.summary || summaryData);
+        setSummary(draft?.summary || summaryData);
         setUndoStack([]);
         setRedoStack([]);
-        isDirtyRef.current = !!localDraft;
-        setHasUnsaved(!!localDraft);
+        isDirtyRef.current = !!draft;
+        setHasUnsaved(!!draft);
+        // Draf yang baru diambil dari server tidak perlu diunggah balik
+        if (draftFromServer && draft) {
+          lastUploadedDraftRef.current = JSON.stringify({ rows: restoredRows, summary: draft.summary });
+        }
       }
     } catch (err) {
       console.error("Error loading LHPP data from server:", err);
@@ -290,6 +324,36 @@ function LhppRealisasiViewInner({
     } catch (err) {
       console.warn("Tidak dapat menyimpan draf LHPP di browser:", err);
     }
+  }, [rows, summary, hasUnsaved, draftScope]);
+
+  // Unggah draf ke server (hemat egress): hanya setelah berhenti mengetik 3 detik,
+  // hanya kalau isi berubah dari yang terakhir terkirim, 1 draf per tanggal.
+  useEffect(() => {
+    if (!hasUnsaved || draftScope !== "live") return;
+    const { month, day } = loadedDateRef.current;
+    const body = JSON.stringify({ rows, summary });
+    if (body === lastUploadedDraftRef.current) return;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await safeFetchJson<{ ok: boolean }>("/api/saveLhppDraft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tanggal: `${month}-${String(day).padStart(2, "0")}`,
+            month,
+            day,
+            rows,
+            summary,
+            savedAt: new Date().toISOString(),
+            deviceId: getLhppDeviceId()
+          })
+        });
+        if (res && res.ok) lastUploadedDraftRef.current = body;
+      } catch {
+        // Gagal unggah tidak apa-apa: draf tetap aman di perangkat ini, dicoba lagi saat ada perubahan
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
   }, [rows, summary, hasUnsaved, draftScope]);
 
   const recordHistory = useCallback(() => {
@@ -480,6 +544,7 @@ function LhppRealisasiViewInner({
           isDirtyRef.current = false;
           setHasUnsaved(false);
           clearLhppLocalDraft(draftScope, selectedMonth, selectedDay);
+          lastUploadedDraftRef.current = "";
         }
         setMsg("✅ Data LHPP tersimpan & tersambung ke Realisasi");
         setTimeout(() => setMsg(""), 4000);
@@ -537,6 +602,32 @@ function LhppRealisasiViewInner({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Buang draf (di perangkat ini dan di server) lalu muat ulang data resmi dari server
+  const handleDiscardDraft = async () => {
+    if (isSaving || isLoading) return;
+    if (!window.confirm(`Buang draf LHPP tanggal ${selectedDay}? Data yang belum disimpan akan hilang di semua perangkat.`)) return;
+    try {
+      await safeFetchJson("/api/deleteLhppDraft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tanggal: `${selectedMonth}-${String(selectedDay).padStart(2, "0")}`,
+          month: selectedMonth,
+          day: selectedDay
+        })
+      });
+    } catch {
+      // abaikan: draf lokal tetap dibuang
+    }
+    clearLhppLocalDraft(draftScope, selectedMonth, selectedDay);
+    lastUploadedDraftRef.current = "";
+    isDirtyRef.current = false;
+    setHasUnsaved(false);
+    await loadDataFromServer(selectedMonth, selectedDay);
+    setMsg("🗑️ Draf dibuang, data dimuat ulang dari server");
+    setTimeout(() => setMsg(""), 3000);
   };
 
   const handleDayChange = async (newDay: number) => {
@@ -1709,8 +1800,18 @@ function LhppRealisasiViewInner({
         {/* Tombol Simpan (di bawah tabel) */}
         <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 sm:p-3 border-t border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800">
           <span className={`text-[11px] font-bold ${hasUnsaved ? "text-amber-700 dark:text-amber-300" : "text-neutral-500 dark:text-neutral-400"}`}>
-            {hasUnsaved ? "📝 Draf tersimpan di perangkat, belum ke Realisasi" : "Semua perubahan sudah tersimpan"}
+            {hasUnsaved ? "📝 Draf tersimpan & terhubung ke semua perangkat, belum ke Realisasi" : "Semua perubahan sudah tersimpan"}
           </span>
+          {hasUnsaved && draftScope === "live" && (
+            <button
+              onClick={handleDiscardDraft}
+              disabled={isSaving || isLoading}
+              className="h-9 px-3 text-[11px] font-bold rounded-lg border border-rose-400 text-rose-600 dark:text-rose-300 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+              title="Buang draf tanggal ini"
+            >
+              Buang draf
+            </button>
+          )}
           <button
             onClick={handleSaveLhpp}
             disabled={isSaving || isLoading}
