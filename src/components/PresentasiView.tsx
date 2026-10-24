@@ -419,7 +419,7 @@ function resizeCustomSlidePhoto(file: File): Promise<string> {
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const MAX_DIM = 900;
+        const MAX_DIM = 1280;
         let width = img.width;
         let height = img.height;
         if (width > height) {
@@ -437,8 +437,9 @@ function resizeCustomSlidePhoto(file: File): Promise<string> {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
+        if (ctx) { ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high"; }
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", 0.7));
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
       };
       img.onerror = reject;
       img.src = reader.result as string;
@@ -1824,7 +1825,7 @@ function resizePhotoToBase64(file: File): Promise<string> {
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const MAX_SIZE = 900; // tajam di layar presentasi, tetap hemat (~100-150 kB)
+        const MAX_SIZE = 1280; // tajam di layar presentasi, tetap hemat (~200-500 kB)
         let width = img.width;
         let height = img.height;
         if (width > height) {
@@ -1838,7 +1839,7 @@ function resizePhotoToBase64(file: File): Promise<string> {
         const ctx = canvas.getContext("2d");
         if (ctx) { ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high"; }
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", 0.8));
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
       };
       img.onerror = reject;
       img.src = reader.result as string;
