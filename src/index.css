@@ -681,6 +681,17 @@ html.dark { --variant-yo: #f87171; --variant-om: #fbbf24; --variant-os: #f472b6;
 .bd-tfoot-all .bd-td { background: var(--bg-hover) !important; color: var(--ink); font-weight: 700; }
 .bd-tfoot-all .bd-td-name { background: var(--bg-hover) !important; }
 
+/* Menu Breakdown & Realisasi Admin: kolom nama depan mepet ke nama terpanjang */
+.bd-table-breakdown th.bd-th-name,
+.bd-table-breakdown td.bd-td-name {
+  min-width: 4.5rem !important;
+  max-width: 5.25rem !important;
+  width: 4.8rem !important;
+  padding-left: 0.45rem !important;
+  padding-right: 0.45rem !important;
+  white-space: nowrap;
+}
+
 /* ==========================================================================
    PERBAIKAN MODE GELAP — kontras kartu, teks, angka, ukuran huruf.
    Kelas warna gelap (700–950) tanpa varian dark: otomatis dibuat terang,
@@ -949,4 +960,213 @@ svg[role="img"]:focus-visible {
 }
 .recharts-wrapper, .recharts-surface, svg[role="img"] {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* ==========================================================================
+   EVALUASI HARIAN - 100% OPAQUE SOLID STICKY HEADERS & COLUMNS
+   (Anti tembus pandang saat tabel digulir ke kanan/kiri/atas/bawah)
+   ========================================================================== */
+.eval-table thead,
+.eval-table-header {
+  background-color: #f1f5f9 !important;
+  opacity: 1 !important;
+}
+html.dark .eval-table thead,
+html.dark .eval-table-header {
+  background-color: #171717 !important;
+  opacity: 1 !important;
+}
+
+.eval-table th {
+  background-color: #f1f5f9 !important;
+  opacity: 1 !important;
+}
+html.dark .eval-table th {
+  background-color: #171717 !important;
+  opacity: 1 !important;
+}
+
+/* Kolom sticky header (Area & Nama YL) */
+.eval-table th.eval-sticky-col-0,
+.eval-table th.eval-sticky-col-1 {
+  background-color: #e2e8f0 !important;
+  opacity: 1 !important;
+  z-index: 30 !important;
+}
+html.dark .eval-table th.eval-sticky-col-0,
+html.dark .eval-table th.eval-sticky-col-1 {
+  background-color: #1a1a1a !important;
+  opacity: 1 !important;
+  z-index: 30 !important;
+}
+
+/* Kolom sticky body data (Area & Nama YL) */
+.eval-table td.eval-sticky-col-0,
+.eval-table td.eval-sticky-col-1 {
+  background-color: #ffffff !important;
+  opacity: 1 !important;
+  z-index: 10 !important;
+}
+html.dark .eval-table td.eval-sticky-col-0,
+html.dark .eval-table td.eval-sticky-col-1 {
+  background-color: #171717 !important;
+  opacity: 1 !important;
+  z-index: 10 !important;
+}
+
+/* Baris data saat hover atau highlight */
+.eval-table tr.eval-row-hl td.eval-sticky-col-0,
+.eval-table tr.eval-row-hl td.eval-sticky-col-1 {
+  background-color: #fef3c7 !important;
+}
+html.dark .eval-table tr.eval-row-hl td.eval-sticky-col-0,
+html.dark .eval-table tr.eval-row-hl td.eval-sticky-col-1 {
+  background-color: #2a2012 !important;
+}
+
+/* Total row di bawah */
+.eval-table tr.eval-row-total td.eval-sticky-col-0,
+.eval-table tr.eval-row-total td.eval-sticky-col-1 {
+  background-color: #f1f5f9 !important;
+  opacity: 1 !important;
+  z-index: 15 !important;
+}
+html.dark .eval-table tr.eval-row-total td.eval-sticky-col-0,
+html.dark .eval-table tr.eval-row-total td.eval-sticky-col-1 {
+  background-color: #212121 !important;
+  opacity: 1 !important;
+  z-index: 15 !important;
+}
+
+/* ==========================================================================
+   PRODUCT KNOWLEDGE - WARNA KARTU & TEKS KONTRAS TINGGI
+   Kebal dari pembajakan selector global button[class~="..."] & text-amber-*
+   ========================================================================== */
+.pk-card-krem {
+  background-color: #fef6dc !important;
+  border: 1px solid #fde68a !important;
+}
+html.dark .pk-card-krem {
+  background-color: #fae8b4 !important;
+  border: 1px solid #fcd34d !important;
+}
+.pk-card-krem .pk-title,
+.pk-card-krem .pk-tag {
+  color: #451a03 !important;
+}
+.pk-card-krem .pk-tag {
+  background-color: rgba(69, 26, 3, 0.12) !important;
+}
+
+.pk-card-ungu {
+  background-color: #9333ea !important;
+  border: 1px solid #a855f7 !important;
+}
+html.dark .pk-card-ungu {
+  background-color: #7e22ce !important;
+  border: 1px solid #9333ea !important;
+}
+.pk-card-ungu .pk-title,
+.pk-card-ungu .pk-tag {
+  color: #ffffff !important;
+}
+.pk-card-ungu .pk-tag {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+.pk-card-merah {
+  background-color: #dc2626 !important;
+  border: 1px solid #ef4444 !important;
+}
+html.dark .pk-card-merah {
+  background-color: #b91c1c !important;
+  border: 1px solid #dc2626 !important;
+}
+.pk-card-merah .pk-title,
+.pk-card-merah .pk-tag {
+  color: #ffffff !important;
+}
+.pk-card-merah .pk-tag {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+.pk-card-coklat {
+  background-color: #a7734a !important;
+  border: 1px solid #b7835a !important;
+}
+html.dark .pk-card-coklat {
+  background-color: #8b5a32 !important;
+  border: 1px solid #9c673e !important;
+}
+.pk-card-coklat .pk-title,
+.pk-card-coklat .pk-tag {
+  color: #ffffff !important;
+}
+.pk-card-coklat .pk-tag {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+.pk-card-biru {
+  background-color: #2563eb !important;
+  border: 1px solid #3b82f6 !important;
+}
+html.dark .pk-card-biru {
+  background-color: #1d4ed8 !important;
+  border: 1px solid #2563eb !important;
+}
+.pk-card-biru .pk-title,
+.pk-card-biru .pk-tag {
+  color: #ffffff !important;
+}
+.pk-card-biru .pk-tag {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+.pk-card-kuning {
+  background-color: #f59e0b !important;
+  border: 1px solid #fbbf24 !important;
+}
+html.dark .pk-card-kuning {
+  background-color: #d97706 !important;
+  border: 1px solid #f59e0b !important;
+}
+.pk-card-kuning .pk-title,
+.pk-card-kuning .pk-tag {
+  color: #1c1917 !important;
+  font-weight: 800 !important;
+}
+.pk-card-kuning .pk-tag {
+  background-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+.pk-card-pink {
+  background-color: #ec4899 !important;
+  border: 1px solid #f472b6 !important;
+}
+html.dark .pk-card-pink {
+  background-color: #db2777 !important;
+  border: 1px solid #ec4899 !important;
+}
+.pk-card-pink .pk-title,
+.pk-card-pink .pk-tag {
+  color: #ffffff !important;
+}
+.pk-card-pink .pk-tag {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+.pk-card-hijau {
+  background-color: #16a34a !important;
+  border: 1px solid #22c55e !important;
+}
+html.dark .pk-card-hijau {
+  background-color: #15803d !important;
+  border: 1px solid #16a34a !important;
+}
+.pk-card-hijau .pk-title,
+.pk-card-hijau .pk-tag {
+  color: #ffffff !important;
+}
+.pk-card-hijau .pk-tag {
+  background-color: rgba(255, 255, 255, 0.22) !important;
 }

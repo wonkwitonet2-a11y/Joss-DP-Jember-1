@@ -31,13 +31,18 @@ import { loadFromSupabase, getSupabaseDebugInfo } from "../lib/supabaseClient";
 // Nama depan YL: "Ria Resti W" -> "Ria"
 const firstName = (full: string): string => (full || "").trim().split(/\s+/)[0] || "";
 
-// Kolom Area & Nama YL (tabel manager) tetap di kiri saat tabel digulir ke samping.
-// Lebar kolom Area dikunci supaya offset kolom Nama (left-[46px]) selalu pas.
-const STICKY_NAMA_CLS = "sticky left-[46px] shadow-[inset_-1px_0_0_rgba(128,128,128,0.4)]";
-const stickyCellCls = (cIdx: number, role: string, bgCls: string): string =>
-  role !== "yl" && cIdx <= 1
-    ? `sticky z-[5] ${bgCls} ${cIdx === 0 ? "left-0 w-[46px] min-w-[46px] max-w-[46px]" : "left-[46px] shadow-[inset_-1px_0_0_rgba(128,128,128,0.4)]"}`
-    : "";
+// Kolom Area & Nama YL tetap di kiri saat tabel digulir ke samping (100% solid & tidak transparan).
+const STICKY_NAMA_CLS = "sticky left-[48px] eval-sticky-col-1 min-w-[88px] max-w-[115px] shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.1)]";
+const stickyCellCls = (cIdx: number, role: string, isHighlighted: boolean = false): string => {
+  if (role === "yl") {
+    if (cIdx === 0) return `sticky left-0 eval-sticky-col-0 w-[42px] min-w-[42px] max-w-[42px] border-r border-neutral-200 dark:border-neutral-800 ${isHighlighted ? "!bg-amber-100 dark:!bg-amber-950/80" : ""}`;
+    if (cIdx === 1) return `sticky left-[42px] eval-sticky-col-1 min-w-[65px] max-w-[80px] border-r border-neutral-300 dark:border-neutral-700 shadow-[1px_0_0_0_rgba(0,0,0,0.08)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.08)] ${isHighlighted ? "!bg-amber-100 dark:!bg-amber-950/80" : ""}`;
+    return "";
+  }
+  if (cIdx === 0) return `sticky left-0 eval-sticky-col-0 w-[48px] min-w-[48px] max-w-[48px] border-r border-neutral-200 dark:border-neutral-800 ${isHighlighted ? "!bg-amber-100 dark:!bg-amber-950/80" : ""}`;
+  if (cIdx === 1) return `sticky left-[48px] eval-sticky-col-1 min-w-[88px] max-w-[115px] border-r border-neutral-300 dark:border-neutral-700 shadow-[1px_0_0_0_rgba(0,0,0,0.08)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.08)] ${isHighlighted ? "!bg-amber-100 dark:!bg-amber-950/80" : ""}`;
+  return "";
+};
 
 /**
  * Menampilkan daftar nama (nama depan) dipisah koma, mengalir ke samping dan turun
@@ -342,6 +347,7 @@ export function EvaluasiView({
           (typeof row[23] === "number" ? row[23] : parseFloat(row[23]) || 0);
         const sampahBotol = typeof row[26] === "number" ? row[26] : parseFloat(row[26]) || 0;
         const bb = typeof row[28] === "number" ? row[28] : parseFloat(row[28]) || 0;
+        const bbHari = bb;
         const akmBb = typeof row[30] === "number" ? row[30] : parseFloat(row[30]) || 0;
         const persenBbAkm = typeof row[31] === "number" ? row[31] : parseFloat(row[31]) || 0;
 
@@ -356,13 +362,14 @@ export function EvaluasiView({
           propagandaHariIni,
           sampahBotol,
           bb,
+          bbHari,
           akmBb,
           persenBbAkm,
           propagandaVs900: null
         };
       });
     }
-    return (activeEvaluasiData.analisis || []).map((a: any) => ({ ...a, akmBb: a.akmBb ?? a.bb ?? 0, persenBbAkm: a.persenBbAkm ?? 0 }));
+    return (activeEvaluasiData.analisis || []).map((a: any) => ({ ...a, bbHari: a.bbHari ?? a.bb ?? 0, akmBb: a.akmBb ?? a.bb ?? 0, persenBbAkm: a.persenBbAkm ?? 0 }));
   }, [activeEvaluasiData]);
 
   // Compute daily evaluation rows per visit date for YL role
@@ -903,7 +910,7 @@ export function EvaluasiView({
       { key: "persenRbVsPlg", label: "Persen RB vs PLG", type: "max", requirePositive: true },
       { key: "propagandaHariIni", label: "PB Hari Ini", type: "max", requirePositive: true },
       { key: "sampahBotol", label: "Akm Sampah", type: "max", requirePositive: true },
-      { key: "persenBbAkm", label: "% BB", type: "min", requirePositive: false }
+      { key: "bbHari", label: "BB Hari Ini", type: "min", requirePositive: false }
     ];
 
     const categoryStats = EVAL_CATEGORIES.map((cat) => {
@@ -995,14 +1002,14 @@ export function EvaluasiView({
         }
       : null;
 
-    const sortedBB = [...list].sort((a, b) => (b.persenBbAkm ?? 0) - (a.persenBbAkm ?? 0));
-    const bbVal = sortedBB[0]?.persenBbAkm ?? 0;
-    const allBBs = sortedBB.filter((x) => (x.persenBbAkm ?? 0) === bbVal);
+    const sortedBB = [...list].sort((a, b) => (b.bbHari ?? 0) - (a.bbHari ?? 0));
+    const bbVal = sortedBB[0]?.bbHari ?? 0;
+    const allBBs = sortedBB.filter((x) => (x.bbHari ?? 0) === bbVal);
     const highestBB = sortedBB[0]
       ? {
           ...sortedBB[0],
           nama: allBBs.map((x) => cleanYlName(x.nama)).join(", "),
-          persenBbAkm: bbVal
+          bbHari: bbVal
         }
       : null;
 
@@ -1026,7 +1033,7 @@ export function EvaluasiView({
     const getTop = (key: keyof (typeof list)[0], ascending = false) => {
       if (list.length === 0) return null;
       let validList = list;
-      if (key !== "persenBbAkm") {
+      if (key !== "bbHari" && key !== "persenBbAkm") {
         validList = list.filter((item) => (item[key] as number) > 0);
       }
       if (validList.length === 0) return null;
@@ -1053,7 +1060,7 @@ export function EvaluasiView({
     const block5 = getTop("persenRbVsPlg");
     const block6 = getTop("propagandaHariIni");
     const block7 = getTop("sampahBotol");
-    const block8 = getTop("persenBbAkm", true); // % BB terendah (retur paling kecil)
+    const block8 = getTop("bbHari", true); // BB Hari Ini terendah (retur paling kecil)
 
     return { block1, block2, block3, block4, block5, block6, block7, block8 };
   }, [normalizedAnalisis]);
@@ -1121,12 +1128,12 @@ export function EvaluasiView({
           (n, v) => `Salut untuk ${n}! Akumulasi ${v} botol menunjukkan tanggung jawab di luar target penjualan.`,
         ],
       },
-      persenBbAkm: {
-        fmt: (v) => fmtPct(v),
+      bbHari: {
+        fmt: (v) => fmtNum(v) + " btl",
         tpl: [
-          (n, v) => `${n} paling rapi mengelola balik botol dengan % BB terendah, ${v}. Pengelolaan stok dan rute yang tepat sangat membantu.`,
-          (n, v) => `% BB terendah dicatat ${n}: ${v}. Botol retur terkendali, penjualan bersih dan efisien. Pertahankan!`,
-          (n, v) => `Kerja cermat ${n}! % BB hanya ${v}, bukti perencanaan drop-off yang baik.`,
+          (n, v) => `${n} paling rapi mengelola balik botol hari ini dengan BB terendah (${v}). Pengelolaan stok dan rute yang tepat sangat membantu.`,
+          (n, v) => `BB hari ini terendah dicatat ${n}: ${v}. Botol retur terkendali, penjualan bersih dan efisien. Pertahankan!`,
+          (n, v) => `Kerja cermat ${n}! BB hari ini hanya ${v}, bukti perencanaan drop-off yang baik.`,
         ],
       },
     };
@@ -1283,16 +1290,16 @@ export function EvaluasiView({
             }}
             title={isFullscreenEval ? "" : "Klik tabel untuk masuk Mode Presentasi Slide"}
           >
-            <table className="w-full text-left border-collapse relative text-xs lg:text-sm bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 font-sans tabular-nums font-semibold">
-              <thead className="sticky top-0 z-10 bg-brand-50 dark:bg-brand-950/40 text-brand-900 dark:text-brand-300 text-[10px] lg:text-[11.5px] uppercase tracking-normal lg:tracking-wider text-center font-bold">
+            <table className="w-full text-left border-collapse relative text-xs lg:text-sm bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 font-sans tabular-nums font-semibold eval-table">
+              <thead className="sticky top-0 z-20 eval-table-header text-brand-900 dark:text-brand-300 text-[10px] lg:text-[11.5px] uppercase tracking-normal lg:tracking-wider text-center font-bold">
                 {/* Row 0 */}
                 <tr className="border-b border-brand-200 dark:border-brand-800">
-                  <th rowSpan={3} className={`py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-neutral-900 dark:text-neutral-100 ${role === "yl" ? "min-w-[32px]" : "sticky left-0 z-20 w-[46px] min-w-[46px] max-w-[46px] bg-brand-50 dark:bg-brand-950"}`}>
+                  <th rowSpan={3} className={`py-1 px-1 border-r border-brand-200 dark:border-brand-800 text-neutral-900 dark:text-neutral-100 eval-sticky-col-0 ${role === "yl" ? "sticky left-0 w-[42px] min-w-[42px] max-w-[42px]" : "sticky left-0 w-[48px] min-w-[48px] max-w-[48px]"}`}>
                     {role === "yl" ? "Tanggal" : "Area"}
                   </th>
                   <th
                     rowSpan={3}
-                    className={`py-1 px-1.5 border-r border-brand-200 dark:border-brand-800 text-left text-neutral-900 dark:text-neutral-100 ${role === "yl" ? "min-w-[75px]" : STICKY_NAMA_CLS + " z-20 bg-brand-50 dark:bg-brand-950"}`}
+                    className={`py-1 px-1.5 border-r border-brand-200 dark:border-brand-800 text-left text-neutral-900 dark:text-neutral-100 eval-sticky-col-1 ${role === "yl" ? "sticky left-[42px] min-w-[65px] max-w-[80px]" : "sticky left-[48px] min-w-[88px] max-w-[115px] shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.1)]"}`}
                   >
                     {role === "yl" ? "Hari" : "Nama YL"}
                   </th>
@@ -1353,7 +1360,7 @@ export function EvaluasiView({
                         Akm Sampah
                       </th>
                       <th rowSpan={3} className="py-1 px-1 text-rose-800 dark:text-rose-300">
-                        Persen BB
+                        BB Hari Ini
                       </th>
                     </>
                   )}
@@ -1524,12 +1531,12 @@ export function EvaluasiView({
                       if (pbSum > maxCols.pb) maxCols.pb = pbSum;
                       if ((row[26] || 0) > maxCols.c26) maxCols.c26 = row[26] || 0;
 
-                      const bb = typeof row[31] === "number" ? row[31] : 0;
+                      const bb = typeof row[28] === "number" ? row[28] : 0;
                       if (bb < maxCols.c28) maxCols.c28 = bb;
                     });
                   }
 
-                  const visibleCols = [0, 1, 3, 4, 5, 6, 7, 13, 15, 18, 21, 22, 23, 26, 31];
+                  const visibleCols = [0, 1, 3, 4, 5, 6, 7, 13, 15, 18, 21, 22, 23, 26, 28];
                   const displayRows = role === "yl" ? ylDailyEvaluation.rows : (activeEvaluasiData?.dataRows || []);
                   const displayTotalRow = role === "yl" ? ylDailyEvaluation.totalRow : activeEvaluasiData?.totalRow;
 
@@ -1565,10 +1572,8 @@ export function EvaluasiView({
                       <tr
                         key={rIdx}
                         className={`transition-colors border-b border-neutral-200 dark:border-neutral-800 ${
-                          isToday
-                            ? "bg-amber-50/90 dark:bg-amber-950/40 font-bold"
-                            : isCurrentYl
-                            ? "bg-amber-50/80 dark:bg-amber-950/30 font-bold"
+                          isToday || isCurrentYl
+                            ? "eval-row-hl font-bold"
                             : isSunday
                             ? "bg-neutral-50/70 dark:bg-neutral-800/70 text-neutral-500 dark:text-neutral-400"
                             : "hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
@@ -1594,7 +1599,7 @@ export function EvaluasiView({
                             )
                               isTopPerf = true;
                             if (cIdx === 26 && val > 0 && val === maxCols.c26) isTopPerf = true;
-                            if (cIdx === 31 && maxCols.c28 !== Infinity && val === maxCols.c28) isTopPerf = true;
+                            if (cIdx === 28 && maxCols.c28 !== Infinity && val === maxCols.c28) isTopPerf = true;
                           }
 
                           const displayVal = cIdx === 1 && typeof val === "string" && role !== "yl" ? firstName(cleanYlName(val)) : val;
@@ -1602,7 +1607,7 @@ export function EvaluasiView({
                           return (
                             <td
                               key={cIdx}
-                              className={`py-0.5 px-1 border-r border-neutral-100 dark:border-neutral-800 text-center whitespace-nowrap ${stickyCellCls(cIdx, role, isCurrentYl ? "bg-amber-50 dark:bg-amber-950" : "bg-white dark:bg-neutral-900")} ${
+                              className={`py-0.5 px-1 border-r border-neutral-100 dark:border-neutral-800 text-center whitespace-nowrap ${stickyCellCls(cIdx, role, isCurrentYl || isToday)} ${
                                 cIdx === 1
                                   ? (role === "yl"
                                       ? val === "Min"
@@ -1631,6 +1636,8 @@ export function EvaluasiView({
                               ) : typeof displayVal === "number" ? (
                                 [29, 31].includes(cIdx) ? (
                                   <span className={`font-bold ${bbColorClass(displayVal)}`}>{displayVal}%</span>
+                                ) : cIdx === 28 ? (
+                                  <span className={displayVal > 0 ? "font-bold text-rose-600 dark:text-rose-400" : ""}>{displayVal.toLocaleString("id-ID")}</span>
                                 ) : cIdx === 15 && displayVal > 0 ? (
                                   <span className={`font-bold ${vsPctColorClass(displayVal)}`}>{displayVal}%</span>
                                 ) : [2, 13, 14].includes(cIdx) && displayVal > 0 ? (
@@ -1653,21 +1660,23 @@ export function EvaluasiView({
                   });
                 })()}
                 {activeTotalRow && (
-                  <tr className="bg-neutral-50 dark:bg-neutral-800/40 font-bold border-t-2 border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100">
+                  <tr className="eval-row-total font-bold border-t-2 border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100">
                     {(activeTotalRow || []).map((val: any, cIdx: number) => {
-                      const visibleCols = [0, 1, 3, 4, 5, 6, 7, 13, 15, 18, 21, 22, 23, 26, 31];
+                      const visibleCols = [0, 1, 3, 4, 5, 6, 7, 13, 15, 18, 21, 22, 23, 26, 28];
                       if (!isFullCols && !visibleCols.includes(cIdx)) return null;
                       const displayVal = cIdx === 1 && typeof val === "string" && role !== "yl" ? firstName(cleanYlName(val)) : val;
                       return (
                         <td
                           key={cIdx}
-                          className={`py-0.5 px-1 border-r border-neutral-200 dark:border-neutral-800 text-center whitespace-nowrap ${stickyCellCls(cIdx, role, "bg-neutral-50 dark:bg-neutral-900")} ${
+                          className={`py-0.5 px-1 border-r border-neutral-200 dark:border-neutral-800 text-center whitespace-nowrap ${stickyCellCls(cIdx, role)} ${
                             cIdx === 1 ? "text-left font-sans" : "font-sans tabular-nums"
                           }`}
                         >
                           {typeof displayVal === "number"
                             ? [29, 31].includes(cIdx)
                               ? <span className={`font-bold ${bbColorClass(displayVal)}`}>{displayVal}%</span>
+                              : cIdx === 28
+                              ? <span className={displayVal > 0 ? "font-bold text-rose-600 dark:text-rose-400" : ""}>{displayVal.toLocaleString("id-ID")}</span>
                               : cIdx === 15 && displayVal > 0
                               ? <span className={`font-bold ${vsPctColorClass(displayVal)}`}>{displayVal}%</span>
                               : [13, 14].includes(cIdx) && displayVal > 0
@@ -1881,7 +1890,7 @@ export function EvaluasiView({
               <div className="flex items-center justify-between gap-1 leading-none">
                 <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span className="min-w-0 flex items-center gap-0.5 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
-                  <span className="truncate">% BB</span>
+                  <span className="truncate">BB Hari Ini</span>
                   <ArrowDown className="w-3 h-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 </span>
               </div>
@@ -1893,8 +1902,8 @@ export function EvaluasiView({
                     <PackedNames names={(evaluasiBlocks!.block8 as any).names as string[]} />
                   )}
                   <p className="text-sm font-black text-neutral-900 dark:text-white font-mono tabular-nums">
-                    {((evaluasiBlocks!.block8 as any).persenBbAkm ?? 0)}
-                    <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">%</span>
+                    {Number((evaluasiBlocks!.block8 as any).bbHari ?? (evaluasiBlocks!.block8 as any).bb ?? 0).toLocaleString("id-ID")}{" "}
+                    <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">btl</span>
                   </p>
                 </div>
               ) : (
@@ -1962,9 +1971,9 @@ export function EvaluasiView({
                   )}
                   {highestBB && (
                     <p>
-                      Persen Balik Botol (BB) tertinggi:{" "}
+                      Balik Botol (BB) Hari Ini tertinggi:{" "}
                       <strong className="ev-name">{cleanYlName(highestBB.nama)}</strong> (
-                      {highestBB.persenBbAkm}%).
+                      {Number((highestBB as any).bbHari ?? (highestBB as any).bb ?? 0).toLocaleString("id-ID")} btl).
                     </p>
                   )}
                 </div>

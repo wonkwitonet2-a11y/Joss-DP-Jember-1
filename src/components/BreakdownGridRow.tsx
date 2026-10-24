@@ -73,6 +73,7 @@ function BreakdownGridRowInner({
     .replace(/^\[\d+\]\s*/, "")
     .replace(/^\d+(?:\s*[-–—.)/:]\s*|\s+)/, "")
     .trim();
+  const firstName = displayName.split(/\s+/)[0] || displayName;
   const ylPlan = activeGridMap[area] || { pembagiTanggal: 25, days: {} };
 
   // Compute grand totals
@@ -125,7 +126,7 @@ function BreakdownGridRowInner({
     <tr className="bd-row optimized-table-row">
       {/* Nama YL (sticky) */}
       <td className="bd-td-name bd-td" onClick={() => selectRow?.(rIdx)}>
-        <span>{displayName}</span>
+        <span title={displayName}>{firstName}</span>
       </td>
 
       {/* Sel input harian (blok seleksi ala spreadsheet) */}

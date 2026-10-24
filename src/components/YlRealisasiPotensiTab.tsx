@@ -118,8 +118,8 @@ function YlRealisasiPotensiTabInner({
             </span>
             {isEditRealisasi ? (
               <div className="flex items-center gap-2 shrink-0">
-                <button onClick={handleToggleEditRealisasi} className="text-xs sm:text-sm bg-slate-200 hover:bg-slate-300 text-slate-800 dark:text-slate-100 font-bold py-1.5 px-3 rounded-lg cursor-pointer">Batal</button>
-                <button onClick={handleSaveEditRealisasi} disabled={isSavingRealisasi} className="text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded-lg disabled:opacity-50 cursor-pointer">
+                <button onClick={handleToggleEditRealisasi} className="text-xs sm:text-sm bg-neutral-200 hover:bg-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 font-bold py-1.5 px-3 rounded-lg cursor-pointer transition-colors shadow-sm">Batal</button>
+                <button onClick={handleSaveEditRealisasi} disabled={isSavingRealisasi} className="text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded-lg disabled:opacity-50 cursor-pointer shadow-sm">
                   {isSavingRealisasi ? "Menyimpan..." : "Simpan Perubahan"}
                 </button>
               </div>

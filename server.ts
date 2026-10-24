@@ -112,7 +112,7 @@ app.get(["/health", "/healthz"], (_req, res) => {
 // ---------------------------------------------------------------------------
 const DB_LOCK_EXEMPT = new Set([
   "/ai/chat", "/ai/evaluate-presentasi", "/gemini/evaluate", "/gemini/evaluate-yl",
-  "/exportRealisasi", "/saveSupabaseConfig", "/saveSupabaseMediaConfig", "/migrateMediaToStorage",
+  "/exportRealisasi", "/saveSupabaseConfig", "/saveSupabaseMediaConfig", "/migrateMediaToStorage", "/uploadMedia", "/deleteMediaFolder", "/mediaStatus",
 ]);
 let dbLockTail: Promise<void> = Promise.resolve();
 function acquireDbLock(): Promise<() => void> {
@@ -1835,6 +1835,63 @@ const migrateMediaToStorageHandler = async (_req: any, res: any) => {
 app.post("/api/migrateMediaToStorage", migrateMediaToStorageHandler);
 // Versi GET supaya bisa dijalankan langsung dari browser HP (aman diulang; hanya memindahkan yang masih base64)
 app.get("/api/migrateMediaToStorage", migrateMediaToStorageHandler);
+
+// Upload 1 gambar (data URL) dari browser ke Storage media (akun kedua).
+// Dipakai saveToSupabase di browser agar foto Presentasi tidak lagi menjadi base64 di tabel app_store.
+app.post("/api/uploadMedia", async (req, res) => {
+  try {
+    const { path: objPath, dataUrl } = req.body || {};
+    if (typeof objPath !== "string" || !/^(presentasi|lainnya)\/[A-Za-z0-9_-]{1,80}\/[A-Za-z0-9_-]{1,80}\.jpg$/.test(objPath)) {
+      return res.status(400).json({ ok: false, message: "Path tidak valid" });
+    }
+    if (!isInlineImage(dataUrl)) {
+      return res.status(400).json({ ok: false, message: "Data gambar tidak valid" });
+    }
+    if (!supabaseMedia) {
+      return res.json({ ok: false, message: "Supabase Media belum aktif" });
+    }
+    const url = await uploadImageToStorage(objPath, dataUrl);
+    if (!url) return res.json({ ok: false, message: "Upload ke Storage gagal" });
+    res.json({ ok: true, url });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, message: e?.message || "Gagal upload media" });
+  }
+});
+
+// Cek cepat dari browser HP: https://<alamat-app>/api/mediaStatus
+// Kalau muncul JSON ini = server versi baru sudah aktif. mediaActive/storageUsable harus true.
+app.get("/api/mediaStatus", (_req, res) => {
+  res.json({
+    ok: true,
+    version: "media-delete-v2",
+    mediaActive: !!supabaseMedia,
+    storageUsable: !!supabaseMedia && storageUsable(),
+    bucket: MEDIA_BUCKET,
+  });
+});
+
+// Hapus semua file foto di 1 folder Storage milik 1 key presentasi (dipanggil saat foto/slide dihapus dari app).
+// Dibatasi KETAT: hanya folder presentasi/<key>, tidak bisa menyentuh seragam/foto profil/folder lain.
+app.post("/api/deleteMediaFolder", async (req, res) => {
+  try {
+    const { folder } = req.body || {};
+    if (typeof folder !== "string" || !/^presentasi\/[A-Za-z0-9_-]{1,80}$/.test(folder)) {
+      return res.status(400).json({ ok: false, message: "Folder tidak valid" });
+    }
+    if (!supabaseMedia || !storageUsable()) {
+      return res.json({ ok: false, message: "Supabase Media belum aktif" });
+    }
+    const { data: files, error: listErr } = await supabaseMedia.storage.from(MEDIA_BUCKET).list(folder, { limit: 100 });
+    if (listErr) throw new Error(listErr.message || "gagal membaca folder");
+    const paths = (files || []).filter((f: any) => f && f.name).map((f: any) => `${folder}/${f.name}`);
+    if (paths.length === 0) return res.json({ ok: true, deleted: 0 });
+    const { error: delErr } = await supabaseMedia.storage.from(MEDIA_BUCKET).remove(paths);
+    if (delErr) throw new Error(delErr.message || "gagal menghapus file");
+    res.json({ ok: true, deleted: paths.length });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, message: e?.message || "Gagal menghapus media" });
+  }
+});
 
 // Trigger migrasi manual foto, seragam, & motivasi ke Supabase Media baru
 app.post("/api/migrateMediaToSecondary", async (req, res) => {

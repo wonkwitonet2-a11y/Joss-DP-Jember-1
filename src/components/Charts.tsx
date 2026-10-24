@@ -139,10 +139,7 @@ export const KomposisiProdukChart = memo(function KomposisiProdukChart({ yo, om,
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip
-                cursor={chartType === "bar" ? { fill: "rgba(148,163,184,0.15)" } : undefined}
-                content={<KomposisiTooltip total={total} />}
-              />
+              <Tooltip content={<KomposisiTooltip total={total} />} />
             </PieChart>
           )}
         </ResponsiveContainer>
@@ -249,17 +246,17 @@ export const SektorTimChart = memo(function SektorTimChart({ data = [], chartTyp
             layout="vertical"
             margin={{ top: 5, right: 80, left: 10, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:[stroke:#334155]" />
             <XAxis
               type="number"
-              stroke="#64748b"
+              stroke="#94a3b8"
               fontSize={10}
               tickFormatter={(v) => Number(v).toLocaleString("id-ID")}
             />
             <YAxis
               dataKey="name"
               type="category"
-              stroke="#475569"
+              stroke="#94a3b8"
               fontSize={10}
               fontWeight={600}
               tickLine={false}
@@ -271,7 +268,8 @@ export const SektorTimChart = memo(function SektorTimChart({ data = [], chartTyp
                 dataKey="value" 
                 position="right" 
                 fontSize={9} 
-                fill="#64748b" 
+                fill="#94a3b8" 
+                className="fill-neutral-600 dark:fill-neutral-300"
                 fontWeight="bold" 
                 formatter={(val: number) => {
                   const pct = totalValue > 0 ? ((val / totalValue) * 100).toFixed(1) : "0.0";

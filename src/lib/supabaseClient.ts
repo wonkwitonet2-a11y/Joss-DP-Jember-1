@@ -171,11 +171,146 @@ export async function testSupabaseConnection(): Promise<{ success: boolean; mess
   }
 }
 
-export async function saveToSupabase(key: string, data: any): Promise<{ success: boolean; error?: string }> {
+
+// ---------------------------------------------------------------------------
+// GAMBAR -> STORAGE MEDIA (akun Supabase kedua), BUKAN di tabel app_store
+// Foto Presentasi (slide kustom, cover, Yakult Lady of the Month, dll) dulu
+// disimpan sebagai teks base64 di dalam baris app_store. Sekarang setiap
+// string "data:image/..." otomatis diunggah ke bucket Storage lewat server
+// (/api/uploadMedia) dan yang disimpan di baris tabel hanya LINK pendeknya.
+// - Hemat egress: baris tabel jadi sangat kecil, gambar dimuat dari CDN + cache.
+// - Aman: kalau upload gagal, data base64 tetap dipakai (tidak ada foto hilang).
+// - Baris lama yang masih base64 dipindahkan otomatis sekali saja saat dibaca.
+// ---------------------------------------------------------------------------
+const inlineUrlCache = new Map<string, string>();
+const migratedKeys = new Set<string>();
+
+function hashStr(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+function slugPart(s: string, max = 60): string {
+  return (String(s || "x").normalize("NFKD").replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, max)) || "x";
+}
+
+function isInlineImage(v: any): v is string {
+  return typeof v === "string" && v.startsWith("data:image/");
+}
+
+function hasInlineImage(v: any, depth = 0): boolean {
+  if (depth > 8) return false;
+  if (isInlineImage(v)) return true;
+  if (Array.isArray(v)) return v.some((x) => hasInlineImage(x, depth + 1));
+  if (v && typeof v === "object") return Object.keys(v).some((k) => hasInlineImage(v[k], depth + 1));
+  return false;
+}
+
+function hasStorageImageUrl(v: any, depth = 0): boolean {
+  if (depth > 8) return false;
+  if (typeof v === "string") return v.includes("/storage/v1/object/public/");
+  if (Array.isArray(v)) return v.some((x) => hasStorageImageUrl(x, depth + 1));
+  if (v && typeof v === "object") return Object.keys(v).some((k) => hasStorageImageUrl(v[k], depth + 1));
+  return false;
+}
+
+// Hapus file foto di folder Storage milik 1 key presentasi (hanya folder key itu saja). Gagal = diabaikan.
+async function deleteMediaFolderForKey(key: string): Promise<void> {
+  if (!/^presentasi/.test(key)) return;
+  try {
+    const r = await fetch("/api/deleteMediaFolder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folder: `presentasi/${slugPart(key, 80)}` }),
+    });
+    if (!r.ok) console.warn(`[Media] Hapus file Storage ${key} ditolak server (HTTP ${r.status})`);
+  } catch (e) {
+    console.warn(`[Media] Gagal menghapus file Storage untuk ${key}:`, e);
+  }
+}
+
+async function uploadInlineImage(objectPath: string, dataUrl: string): Promise<string | null> {
+  const ck = objectPath + "|" + dataUrl.length + "|" + hashStr(dataUrl);
+  const hit = inlineUrlCache.get(ck);
+  if (hit) return hit;
+  try {
+    const resp = await fetch("/api/uploadMedia", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: objectPath, dataUrl }),
+    });
+    if (!resp.ok) return null;
+    const j = await resp.json();
+    if (j && j.ok && typeof j.url === "string") {
+      inlineUrlCache.set(ck, j.url);
+      return j.url;
+    }
+  } catch (e) {
+    console.warn("[Media] Upload gambar ke Storage gagal, pakai penyimpanan lama:", e);
+  }
+  return null;
+}
+
+/** Ganti semua data:image/... di dalam `data` dengan link Storage. Gagal = dibiarkan base64. */
+export async function offloadImagesToMedia<T>(key: string, data: T): Promise<{ data: T; changed: boolean; failed: boolean }> {
+  if (!hasInlineImage(data)) return { data, changed: false, failed: false };
+  const folder = /^presentasi/.test(key) ? "presentasi" : "lainnya";
+  const base = `${folder}/${slugPart(key, 80)}`;
+  let changed = false;
+  let failed = false;
+  const walk = async (node: any, trail: string, depth: number): Promise<any> => {
+    if (depth > 8) return node;
+    if (isInlineImage(node)) {
+      const url = await uploadInlineImage(`${base}/${slugPart(trail || "foto")}.jpg`, node);
+      if (url) { changed = true; return url; }
+      failed = true;
+      return node;
+    }
+    if (Array.isArray(node)) {
+      const out: any[] = [];
+      for (let i = 0; i < node.length; i++) out.push(await walk(node[i], `${trail}_${i}`, depth + 1));
+      return out;
+    }
+    if (node && typeof node === "object") {
+      const out: any = {};
+      for (const k of Object.keys(node)) out[k] = await walk(node[k], trail ? `${trail}_${k}` : k, depth + 1);
+      return out;
+    }
+    return node;
+  };
+  const converted = await walk(data, "", 0);
+  return { data: converted as T, changed, failed };
+}
+
+// Pindahkan baris lama yang masih base64 ke Storage (sekali per key per sesi).
+function migrateInlineRow(key: string, value: any) {
+  if (migratedKeys.has(key) || !hasInlineImage(value)) return;
+  migratedKeys.add(key);
+  (async () => {
+    try {
+      const r = await offloadImagesToMedia(key, value);
+      // Tulis ulang hanya kalau SEMUA gambar berhasil pindah; kalau tidak, biarkan data lama.
+      if (r.changed && !r.failed) await saveToSupabase(key, r.data);
+    } catch (e) {
+      console.warn(`[Media] Migrasi gambar ${key} ke Storage gagal:`, e);
+    }
+  })();
+}
+
+export async function saveToSupabase(key: string, rawData: any): Promise<{ success: boolean; error?: string; data?: any }> {
   const client = getSupabaseClient();
   if (!client) return { success: false, error: "Supabase client not initialized" };
 
   try {
+    // Gambar base64 dipindah ke Storage media; yang masuk tabel hanya link-nya.
+    let data = rawData;
+    try {
+      data = (await offloadImagesToMedia(key, rawData)).data;
+    } catch (e) {
+      console.warn("[Media] Offload gambar dilewati:", e);
+      data = rawData;
+    }
     const { error } = await client
       .from('app_store')
       .upsert({ key, data, updated_at: new Date().toISOString() }, { onConflict: 'key' });
@@ -185,7 +320,11 @@ export async function saveToSupabase(key: string, data: any): Promise<{ success:
       return { success: false, error: error.message };
     }
     readCache.set(key, { at: Date.now(), ttl: readTtlFor(key), value: cloneValue(data) });
-    return { success: true };
+    // Foto dikosongkan lewat form edit (data tetap disimpan, tapi tanpa foto): hapus file lamanya di Storage.
+    if (/^presentasi/.test(key) && !hasInlineImage(data) && !hasStorageImageUrl(data)) {
+      await deleteMediaFolderForKey(key);
+    }
+    return { success: true, data };
   } catch (e: any) {
     console.error(`[Supabase] Exception saving ${key}:`, e);
     return { success: false, error: e.message };
@@ -216,6 +355,7 @@ export async function loadFromSupabase<T>(key: string): Promise<T | null> {
         return null;
       }
       readCache.set(key, { at: Date.now(), ttl: readTtlFor(key), value: data.data });
+      migrateInlineRow(key, data.data);
       return data.data as T;
     } catch (e) {
       console.error(`[Supabase] Exception loading ${key}:`, e);
@@ -243,6 +383,8 @@ export async function deleteFromSupabase(key: string): Promise<{ success: boolea
       return { success: false, error: error.message };
     }
     readCache.set(key, { at: Date.now(), ttl: READ_TTL_MISSING_MS, value: null });
+    // Foto presentasi: ikut hapus file di Storage (folder khusus key ini saja).
+    await deleteMediaFolderForKey(key);
     return { success: true };
   } catch (e: any) {
     console.error(`[Supabase] Exception deleting ${key}:`, e);

@@ -5,8 +5,10 @@ type PKCategory = {
   id: string;
   title: string;
   tags: string[];
+  pkClass: string;
   gridColor: string;
   headerColor: string;
+  textColor?: string;
   icon: React.ReactNode;
   subtitle: string;
   description: string;
@@ -19,12 +21,14 @@ const CATEGORIES: PKCategory[] = [
     id: "pertanyaan_1",
     title: "10 Pertanyaan ke-1",
     tags: ["10 soal", "Mudah"],
-    gridColor: "bg-rose-400/90",
-    headerColor: "bg-red-500",
-    icon: <HelpCircle className="w-16 h-16 absolute -bottom-4 -right-4 opacity-20" />,
+    pkClass: "pk-card-krem",
+    gridColor: "pk-card-krem",
+    headerColor: "bg-[#b45309] dark:bg-[#92400e]",
+    textColor: "text-amber-950 dark:text-amber-950",
+    icon: <HelpCircle className="w-16 h-16 absolute -bottom-4 -right-4 opacity-15 text-amber-950" />,
     subtitle: "FAQ Seputar Yakult",
     description: "Pertanyaan yang sering ditanyakan",
-    tagTheme: "bg-white/20 text-white",
+    tagTheme: "bg-amber-950/15 text-amber-950 dark:text-amber-950 font-bold",
     questions: [
       { q: "Bolehkah orang yang menderita maag minum Yakult?", a: "Boleh. Yakult aman diminum oleh orang sakit maag. Tetapi bila maag-nya parah disarankan konsultasi ke dokter." },
       { q: "Yakult boleh diminum mulai usia berapa?", a: "Yakult sudah boleh diminum sejak usia bayi yang sudah mendapat makanan tambahan, yaitu kira-kira usia 6 bulanan, dengan pemberian secara bertahap (sedikit-sedikit)." },
@@ -42,8 +46,9 @@ const CATEGORIES: PKCategory[] = [
     id: "pertanyaan_2",
     title: "10 Pertanyaan ke-2",
     tags: ["10 soal", "Lanjutan"],
-    gridColor: "bg-indigo-500/90",
-    headerColor: "bg-blue-600",
+    pkClass: "pk-card-ungu",
+    gridColor: "pk-card-ungu",
+    headerColor: "bg-purple-700 dark:bg-purple-800",
     icon: <Settings className="w-16 h-16 absolute -bottom-4 -right-4 opacity-20" />,
     subtitle: "FAQ Seputar Yakult",
     description: "Kenali lebih dalam tentang Yakult",
@@ -65,8 +70,9 @@ const CATEGORIES: PKCategory[] = [
     id: "cintai_ususmu",
     title: "Cintai Ususmu",
     tags: ["Edukasi", "Kesehatan"],
-    gridColor: "bg-emerald-600/90",
-    headerColor: "bg-green-700",
+    pkClass: "pk-card-merah",
+    gridColor: "pk-card-merah",
+    headerColor: "bg-red-700 dark:bg-red-800",
     icon: <Heart className="w-16 h-16 absolute -bottom-4 -right-4 opacity-20" />,
     subtitle: "Cintai Ususmu",
     description: "Kesehatan berawal dari usus yang sehat",
@@ -83,8 +89,9 @@ const CATEGORIES: PKCategory[] = [
     id: "pertanyaan_tambahan",
     title: "10 Pertanyaan Tambahan",
     tags: ["Bonus", "Senin"],
-    gridColor: "bg-purple-600/80",
-    headerColor: "bg-sky-500",
+    pkClass: "pk-card-coklat",
+    gridColor: "pk-card-coklat",
+    headerColor: "bg-[#8f5e38] dark:bg-[#6b4223]",
     icon: <Plus className="w-20 h-20 absolute -bottom-4 -right-4 opacity-20" />,
     subtitle: "Fakta Menarik Yakult",
     description: "Hal-hal yang perlu kamu tahu tentang Yakult",
@@ -106,8 +113,9 @@ const CATEGORIES: PKCategory[] = [
     id: "yakult_light",
     title: "Info Yakult Light",
     tags: ["Rendah gula"],
-    gridColor: "bg-amber-500/90",
-    headerColor: "bg-blue-800",
+    pkClass: "pk-card-biru",
+    gridColor: "pk-card-biru",
+    headerColor: "bg-blue-700 dark:bg-blue-800",
     icon: <Sun className="w-16 h-16 absolute -bottom-4 -right-4 opacity-20" />,
     subtitle: "Tanya Jawab Yakult Light",
     description: "7 pertanyaan seputar Yakult Light",
@@ -126,12 +134,14 @@ const CATEGORIES: PKCategory[] = [
     id: "yakult_mangga",
     title: "Yakult Rasa Mangga",
     tags: ["Baru"],
-    gridColor: "bg-[#d893a3]",
-    headerColor: "bg-gradient-to-br from-amber-400 to-amber-500",
-    icon: <Droplet className="w-16 h-16 absolute -bottom-4 -right-4 opacity-20" />,
+    pkClass: "pk-card-kuning",
+    gridColor: "pk-card-kuning",
+    headerColor: "bg-amber-600 dark:bg-amber-700",
+    textColor: "text-neutral-950",
+    icon: <Droplet className="w-16 h-16 absolute -bottom-4 -right-4 opacity-20 text-neutral-950" />,
     subtitle: "Segar & Bernutrisi",
     description: "Dengan Vitamin D & Bakteri LcS",
-    tagTheme: "bg-white/20 text-white",
+    tagTheme: "bg-black/15 text-neutral-950 font-bold",
     questions: [
       { q: "Mengapa pilihannya menggunakan Rasa Mangga?", a: "Karena buah mangga menjadi salah satu buah yang familiar dan banyak disukai masyarakat Indonesia, sehingga bisa memberikan pilihan rasa untuk mendapatkan manfaat dari bakteri LcS." },
       { q: "Yakult rasa Mangga menggunakan rasa dari Mangga murni atau buatan?", a: "Yakult rasa Mangga menggunakan perisa identik alami dari buah mangga yang aman dikonsumsi." },
@@ -143,8 +153,9 @@ const CATEGORIES: PKCategory[] = [
     id: "yakult_stroberi",
     title: "QnA Yakult Stroberi",
     tags: ["Baru", "Flip Card"],
-    gridColor: "bg-pink-600/90",
-    headerColor: "bg-pink-700",
+    pkClass: "pk-card-pink",
+    gridColor: "pk-card-pink",
+    headerColor: "bg-pink-600 dark:bg-pink-700",
     icon: <Star className="w-16 h-16 absolute -bottom-4 -right-4 opacity-20" />,
     subtitle: "Kenalan Sama Rasa Stroberi",
     description: "Tap kartu untuk lihat jawaban lengkapnya",
@@ -157,8 +168,9 @@ const CATEGORIES: PKCategory[] = [
     id: "edukasi_probiotik",
     title: "Hafalan Probiotik",
     tags: ["Flashcard", "6 soal"],
-    gridColor: "bg-blue-600/90",
-    headerColor: "bg-emerald-800",
+    pkClass: "pk-card-hijau",
+    gridColor: "pk-card-hijau",
+    headerColor: "bg-emerald-700 dark:bg-emerald-800",
     icon: <BookOpen className="w-16 h-16 absolute -bottom-4 -right-4 opacity-20" />,
     subtitle: "Sahabat Probiotikmu",
     description: "Kenali si baik yang bekerja untuk pencernaanmu",
@@ -281,25 +293,33 @@ export default function ProductKnowledgeView({ theme, onBack }: { theme?: string
       <div className="flex-1 overflow-y-auto p-4 pb-32">
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 max-w-lg md:max-w-none mx-auto">
           {CATEGORIES.map((c) => (
-            <button
+            <div
               key={c.id}
+              role="button"
+              tabIndex={0}
               onClick={() => setSelectedCategory(c.id)}
-              className={`${c.gridColor} rounded-2xl p-4 text-left relative overflow-hidden shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all aspect-[5/4] md:aspect-[4/3] flex flex-col justify-center focus:outline-none cursor-pointer`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSelectedCategory(c.id);
+                }
+              }}
+              className={`${c.pkClass} rounded-2xl p-4 text-left relative overflow-hidden shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all aspect-[5/4] md:aspect-[4/3] flex flex-col justify-center focus:outline-none cursor-pointer select-none`}
             >
               {c.icon}
               <div className="relative z-10 flex-1 flex flex-col justify-center">
-                <h3 className="text-white font-bold text-[17px] md:text-[19px] leading-tight mb-3">
+                <h3 className="pk-title font-bold text-[17px] md:text-[19px] leading-tight mb-3">
                   {c.title}
                 </h3>
                 <div className="flex flex-wrap gap-1.5 mt-auto">
                   {c.tags.map(tag => (
-                    <span key={tag} className={`text-[10px] px-2 py-0.5 rounded-full ${c.tagTheme || 'bg-white/20 text-white'}`}>
+                    <span key={tag} className="pk-tag text-[10px] px-2 py-0.5 rounded-full font-bold">
                       {tag}
                     </span>
                   ))}
                 </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </div>

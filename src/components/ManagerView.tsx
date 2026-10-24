@@ -3701,10 +3701,10 @@ export function ManagerView({
             {/* Tabel */}
             <div className="bd-card overflow-hidden">
               <div className="bd-table-wrap">
-                <table className="bd-table">
+                <table className="bd-table bd-table-breakdown">
                   <thead>
                     <tr>
-                      <th rowSpan={2} className="bd-th-name">Yakult Lady</th>
+                      <th rowSpan={2} className="bd-th-name">YL</th>
                       {bdDays.map((d) => {
                         const isRealized = realizedDaysInfo.realizedDays.includes(d);
                         return (
@@ -3780,7 +3780,7 @@ export function ManagerView({
                   </tbody>
                   <tfoot className="bd-tfoot">
                     <tr>
-                      <td className="bd-td-name bd-td">{bdIsWeek ? `Total ${bdWeek?.label}` : "Total Harian"}</td>
+                      <td className="bd-td-name bd-td">{bdIsWeek ? bdWeek?.label : "Total"}</td>
                       {bdDays.map((d) => {
                         const data = dailyGridTotals[d] || { yo: 0, om: 0, os: 0, yt: 0 };
                         return (
@@ -3862,7 +3862,7 @@ export function ManagerView({
                     </tr>
 
                     <tr className="bd-tfoot-all">
-                      <td className="bd-td-name bd-td">Total All Varian</td>
+                      <td className="bd-td-name bd-td">Total All</td>
                       {bdDays.map((d) => {
                         const data = dailyGridTotals[d] || { yo: 0, om: 0, os: 0, yt: 0 };
                         const sum = data.yo + data.om + data.os + data.yt;

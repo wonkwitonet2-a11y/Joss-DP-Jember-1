@@ -733,7 +733,7 @@ function ManagerDashboardTabInner({
                   </thead>
                   <tbody className="divide-y divide-[var(--divider)] font-bold">
                     <tr className="hover:bg-[var(--bg-hover)]">
-                      <td className="p-2 text-red-600 dark:text-red-400 font-bold">YO Original</td>
+                      <td className="p-2 text-[#dc2626] dark:text-[#ff3b30] font-black" style={{ color: "#dc2626" }}>YO Original</td>
                       <td className="p-2 text-right text-neutral-900 dark:text-white font-mono tabular-nums font-bold">{Math.trunc(dashboardData?.rataItem?.YO || 0)} btl</td>
                     </tr>
                     <tr className="hover:bg-[var(--bg-hover)]">
